@@ -9,7 +9,9 @@ def configure(conf):
     conf.check_tool("compiler_cxx")
     conf.check_tool("node_addon")
 
+
 def build(bld):
     obj = bld.new_task_gen("cxx", "shlib", "node_addon")
     obj.target = "zeromq"
     obj.source = "zeromq.cc"
+    obj.lib = ["zmq"]
