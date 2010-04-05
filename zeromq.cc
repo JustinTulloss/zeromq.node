@@ -1,9 +1,11 @@
-#include <stdio.h>
 #include <v8.h>
 #include <node.h>
 #include <node_events.h>
 #include <zmq.h>
 #include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
 
 using namespace v8;
 using namespace node;
@@ -94,14 +96,18 @@ public:
         target->Set(String::NewSymbol("Socket"), t->GetFunction());
     }
 
-    void Bind(const char *address) {
-        zmq_bind(socket_, address);
+    bool Bind(const char *address) {
+        return zmq_bind(socket_, address) == 0;
     }
 
     void Close(Local<Value> exception = Local<Value>()) {
         zmq_close(socket_);
         socket_ = NULL;
         Unref();
+    }
+
+    char * ErrorMessage() {
+        return strerror(errno);
     }
 
 protected:
@@ -131,7 +137,10 @@ protected:
         }
 
         String::Utf8Value address(args[0]->ToString());
-        socket->Bind(*address);
+        if (!socket->Bind(*address)) {
+            return ThrowException(Exception::Error(
+                String::New(socket->ErrorMessage())));
+        }
         return Undefined();
     }
 
