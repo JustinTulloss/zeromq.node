@@ -10,6 +10,8 @@ using namespace node;
 
 namespace zmq {
 
+static Persistent<Integer> p2p_symbol;
+
 class Context : public EventEmitter {
 public:
     static void
@@ -78,6 +80,14 @@ public:
         t->Inherit(EventEmitter::constructor_template);
         t->InstanceTemplate()->SetInternalFieldCount(1);
 
+        NODE_DEFINE_CONSTANT(t, ZMQ_P2P);
+        NODE_DEFINE_CONSTANT(t, ZMQ_PUB);
+        NODE_DEFINE_CONSTANT(t, ZMQ_SUB);
+        NODE_DEFINE_CONSTANT(t, ZMQ_REQ);
+        NODE_DEFINE_CONSTANT(t, ZMQ_REP);
+        NODE_DEFINE_CONSTANT(t, ZMQ_UPSTREAM);
+        NODE_DEFINE_CONSTANT(t, ZMQ_DOWNSTREAM);
+
         NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
 
         target->Set(String::NewSymbol("Socket"), t->GetFunction());
@@ -94,8 +104,13 @@ protected:
     New (const Arguments &args) {
         HandleScope scope;
         Context *context = ObjectWrap::Unwrap<Context>(args[0]->ToObject());
+        if (!args[1]->IsNumber()) {
+            return ThrowException(Exception::TypeError(
+                String::New("Type must be an integer")));
+        }
+        int type = (int) args[1]->ToInteger()->Value();
 
-        Socket *socket = new Socket(context);
+        Socket *socket = new Socket(context, type);
         socket->Wrap(args.This());
 
         return args.This();
@@ -109,9 +124,9 @@ protected:
         return Undefined();
     }
 
-    Socket (Context *context) : EventEmitter () {
+    Socket (Context *context, int type) : EventEmitter () {
         context_ = context;
-        socket_ = zmq_socket(context->getCContext(), ZMQ_P2P);
+        socket_ = zmq_socket(context->getCContext(), type);
     }
 
     ~Socket () {
