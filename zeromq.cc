@@ -91,6 +91,7 @@ public:
         NODE_DEFINE_CONSTANT(t, ZMQ_DOWNSTREAM);
 
         NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
+        NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
         NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
 
         target->Set(String::NewSymbol("Socket"), t->GetFunction());
@@ -98,6 +99,10 @@ public:
 
     bool Bind(const char *address) {
         return zmq_bind(socket_, address) == 0;
+    }
+
+    bool Connect(const char *address) {
+        return zmq_connect(socket_, address) == 0;
     }
 
     void Close(Local<Value> exception = Local<Value>()) {
@@ -125,6 +130,23 @@ protected:
         socket->Wrap(args.This());
 
         return args.This();
+    }
+
+    static Handle<Value>
+    Connect (const Arguments &args) {
+        Socket *socket = ObjectWrap::Unwrap<Socket>(args.This());
+        HandleScope scope;
+        if (!args[0]->IsString()) {
+            return ThrowException(Exception::TypeError(
+                String::New("Address must be a string!")));
+        }
+
+        String::Utf8Value address(args[0]->ToString());
+        if (!socket->Connect(*address)) {
+            return ThrowException(Exception::Error(
+                String::New(socket->ErrorMessage())));
+        }
+        return Undefined();
     }
 
     static Handle<Value>
@@ -165,6 +187,7 @@ private:
     void *socket_;
     void *context_;
 };
+
 }
 
 extern "C" void
