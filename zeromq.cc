@@ -119,6 +119,10 @@ protected:
     static Handle<Value>
     New (const Arguments &args) {
         HandleScope scope;
+        if (args.Length() != 2) {
+            return ThrowException(Exception::Error(
+                String::New("Must pass a context and a type to constructor")));
+        }
         Context *context = ObjectWrap::Unwrap<Context>(args[0]->ToObject());
         if (!args[1]->IsNumber()) {
             return ThrowException(Exception::TypeError(
