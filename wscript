@@ -12,6 +12,7 @@ def configure(conf):
 
 def build(bld):
     obj = bld.new_task_gen("cxx", "shlib", "node_addon")
+    obj.cxxflags = ["-Wall", "-Werror"]
     obj.target = "zeromq"
     obj.source = "zeromq.cc"
     obj.lib = ["zmq"]
