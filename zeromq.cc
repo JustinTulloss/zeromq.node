@@ -179,7 +179,6 @@ protected:
     }
 
     Socket (Context *context, int type) : EventEmitter () {
-        context_ = context;
         socket_ = zmq_socket(context->getCContext(), type);
     }
 
@@ -192,7 +191,6 @@ private:
         return ObjectWrap::Unwrap<Socket>(args.This());
     }
     void *socket_;
-    void *context_;
 };
 
 }
