@@ -138,7 +138,7 @@ protected:
 
     static Handle<Value>
     Connect (const Arguments &args) {
-        Socket *socket = ObjectWrap::Unwrap<Socket>(args.This());
+        Socket *socket = getSocket(args);
         HandleScope scope;
         if (!args[0]->IsString()) {
             return ThrowException(Exception::TypeError(
@@ -155,7 +155,7 @@ protected:
 
     static Handle<Value>
     Bind (const Arguments &args) {
-        Socket *socket = ObjectWrap::Unwrap<Socket>(args.This());
+        Socket *socket = getSocket(args);
         HandleScope scope;
         if (!args[0]->IsString()) {
             return ThrowException(Exception::TypeError(
@@ -172,7 +172,7 @@ protected:
 
     static Handle<Value>
     Close (const Arguments &args) {
-        Socket *socket = ObjectWrap::Unwrap<Socket>(args.This());
+        Socket *socket = getSocket(args);
         HandleScope scope;
         socket->Close();
         return Undefined();
@@ -188,6 +188,9 @@ protected:
     }
 
 private:
+    static Socket * getSocket(const Arguments &args) {
+        return ObjectWrap::Unwrap<Socket>(args.This());
+    }
     void *socket_;
     void *context_;
 };
