@@ -82,7 +82,7 @@ protected:
     }
 
     Context () : EventEmitter () {
-        context_ = zmq_init(1, 1, ZMQ_POLL);
+        context_ = zmq_init(1);
     }
 
     ~Context () {
@@ -104,7 +104,6 @@ public:
         t->Inherit(EventEmitter::constructor_template);
         t->InstanceTemplate()->SetInternalFieldCount(1);
 
-        NODE_DEFINE_CONSTANT(t, ZMQ_P2P);
         NODE_DEFINE_CONSTANT(t, ZMQ_PUB);
         NODE_DEFINE_CONSTANT(t, ZMQ_SUB);
         NODE_DEFINE_CONSTANT(t, ZMQ_REQ);
