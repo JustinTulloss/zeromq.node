@@ -110,6 +110,7 @@ public:
         NODE_DEFINE_CONSTANT(t, ZMQ_REP);
         NODE_DEFINE_CONSTANT(t, ZMQ_UPSTREAM);
         NODE_DEFINE_CONSTANT(t, ZMQ_DOWNSTREAM);
+        NODE_DEFINE_CONSTANT(t, ZMQ_PAIR);
 
         NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
         NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
