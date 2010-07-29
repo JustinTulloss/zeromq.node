@@ -29,12 +29,12 @@
 #include <string.h>
 #include <errno.h>
 
+char test[] = "hi\0";
+
 using namespace v8;
 using namespace node;
 
 namespace zmq {
-
-static Persistent<Integer> p2p_symbol;
 
 class Context : public EventEmitter {
 public:
@@ -93,6 +93,69 @@ private:
     void * context_;
 };
 
+class Message : public EventEmitter {
+public:
+    static void
+    Initialize (v8::Handle<v8::Object> target) {
+        HandleScope scope;
+
+        Local<FunctionTemplate> t = FunctionTemplate::New(New);
+
+        t->Inherit(EventEmitter::constructor_template);
+        t->InstanceTemplate()->SetInternalFieldCount(1);
+
+        NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
+
+        target->Set(String::NewSymbol("Message"), t->GetFunction());
+    }
+
+    void Close(Local<Value> exception = Local<Value>()) {
+        zmq_msg_close(&msg_);
+        Unref();
+    }
+
+    zmq_msg_t * getMessage() {
+        return &msg_;
+    }
+
+    Message () : EventEmitter () {
+        assert(zmq_msg_init(&msg_) == 0);
+    }
+
+protected:
+    static Handle<Value>
+    New (const Arguments& args) {
+        HandleScope scope;
+        Message *message;
+
+        if (args.Length() == 0) {
+            message = new Message();
+        }
+        else {
+            message = new Message(1);
+        }
+        message->Wrap(args.This());
+
+        return args.This();
+    }
+
+    static Handle<Value>
+    Close (const Arguments& args) {
+        Message *message = ObjectWrap::Unwrap<Message>(args.This());
+        HandleScope scope;
+        message->Close();
+        return Undefined();
+    }
+
+    Message(int msg) : EventEmitter() {
+        assert(zmq_msg_init_data(&msg_, test, strlen(test), NULL, NULL) == 0);
+    }
+
+private:
+    zmq_msg_t msg_;
+};
+
+
 class Socket : public EventEmitter {
 public:
     static void
@@ -114,17 +177,28 @@ public:
 
         NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
         NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
+        NODE_SET_PROTOTYPE_METHOD(t, "send", Send);
         NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
 
         target->Set(String::NewSymbol("Socket"), t->GetFunction());
     }
 
-    bool Bind(const char *address) {
+    int Bind(const char *address) {
         return zmq_bind(socket_, address) == 0;
     }
 
-    bool Connect(const char *address) {
+    int Connect(const char *address) {
         return zmq_connect(socket_, address) == 0;
+    }
+
+    int Send(zmq::Message *msg, int flags) {
+        return zmq_send(socket_, msg->getMessage(), flags);
+    }
+
+    zmq::Message * Recv(int flags) {
+        zmq::Message *msg = new zmq::Message();
+        zmq_recv(socket_, msg->getMessage(), flags);
+        return msg;
     }
 
     void Close(Local<Value> exception = Local<Value>()) {
@@ -133,8 +207,8 @@ public:
         Unref();
     }
 
-    char * ErrorMessage() {
-        return strerror(errno);
+    const char * ErrorMessage() {
+        return zmq_strerror(zmq_errno());
     }
 
 protected:
@@ -193,6 +267,30 @@ protected:
     }
 
     static Handle<Value>
+    Send (const Arguments &args) {
+        Socket *socket = getSocket(args);
+        if (!args.Length() == 1) {
+            return ThrowException(Exception::TypeError(
+                String::New("Must pass in a message to send")));
+        }
+
+        zmq::Message *message =
+            ObjectWrap::Unwrap<zmq::Message>(args[0]->ToObject());
+        if (socket->Send(message, 0)) {
+            return ThrowException(Exception::Error(
+                String::New(socket->ErrorMessage())));
+        }
+        return Undefined();
+    }
+
+    static Handle<Value>
+    Recv (const Arguments &args) {
+        Socket *socket = getSocket(args);
+        zmq::Message *message = socket->Recv(0);
+        return message;
+    }
+
+    static Handle<Value>
     Close (const Arguments &args) {
         Socket *socket = getSocket(args);
         HandleScope scope;
@@ -213,54 +311,6 @@ private:
         return ObjectWrap::Unwrap<Socket>(args.This());
     }
     void *socket_;
-};
-
-class Message : public EventEmitter {
-public:
-    static void
-    Initialize (v8::Handle<v8::Object> target) {
-        HandleScope scope;
-
-        Local<FunctionTemplate> t = FunctionTemplate::New(New);
-
-        t->Inherit(EventEmitter::constructor_template);
-        t->InstanceTemplate()->SetInternalFieldCount(1);
-
-        NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-
-        target->Set(String::NewSymbol("Message"), t->GetFunction());
-    }
-
-    void Close(Local<Value> exception = Local<Value>()) {
-        zmq_msg_close(&msg_);
-        Unref();
-    }
-
-protected:
-    static Handle<Value>
-    New (const Arguments& args) {
-        HandleScope scope;
-
-        Message *message = new Message();
-        message->Wrap(args.This());
-
-        return args.This();
-    }
-
-    static Handle<Value>
-    Close (const Arguments& args) {
-        Message *message = ObjectWrap::Unwrap<Message>(args.This());
-        HandleScope scope;
-        message->Close();
-        return Undefined();
-    }
-
-    Message () : EventEmitter () {
-        assert(zmq_msg_init(&msg_) == 0);
-    }
-
-private:
-    zmq_msg_t msg_;
 };
 
 }
