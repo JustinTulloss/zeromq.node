@@ -225,7 +225,7 @@ protected:
         Socket *socket = getSocket(args);
         if (!args.Length() == 1) {
             return ThrowException(Exception::TypeError(
-                String::New("Must pass in a buffer or string to send")));
+                String::New("Must pass in a string to send")));
         }
 
         String::Utf8Value message(args[0]);
@@ -249,6 +249,7 @@ protected:
         Local <String>js_msg = String::New(
             (char *) zmq_msg_data(&z_msg),
             zmq_msg_size(&z_msg));
+        zmq_msg_close(&z_msg);
         return scope.Close(js_msg);
     }
 
