@@ -130,11 +130,11 @@ public:
     }
 
     int Bind(const char *address) {
-        return zmq_bind(socket_, address) == 0;
+        return zmq_bind(socket_, address);
     }
 
     int Connect(const char *address) {
-        return zmq_connect(socket_, address) == 0;
+        return zmq_connect(socket_, address);
     }
 
     int Send(char *msg, int length, int flags) {
@@ -203,7 +203,7 @@ protected:
         }
 
         String::Utf8Value address(args[0]->ToString());
-        if (!socket->Connect(*address)) {
+        if (socket->Connect(*address)) {
             return ThrowException(Exception::Error(
                 String::New(socket->ErrorMessage())));
         }
@@ -214,7 +214,7 @@ protected:
     Bind (const Arguments &args) {
         HandleScope scope;
         Socket *socket = getSocket(args);
-        if (!args[0]->IsString()) {
+        if (args[0]->IsString()) {
             return ThrowException(Exception::TypeError(
                 String::New("Address must be a string!")));
         }
