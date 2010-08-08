@@ -30,11 +30,14 @@
 #include <string.h>
 #include <errno.h>
 #include <list>
+#include <unistd.h>
 
 using namespace v8;
 using namespace node;
 
 namespace zmq {
+
+zmq_msg_t z_msg;
 
 static Persistent<String> receive_symbol;
 static Persistent<String> error_symbol;
@@ -137,10 +140,9 @@ public:
         return zmq_connect(socket_, address);
     }
 
-    int Send(char *msg, int length, int flags) {
+    int Send(char *msg, int length, int flags, void* hint) {
         int rc;
-        zmq_msg_t z_msg;
-        rc = zmq_msg_init_data(&z_msg, msg, length, NULL, NULL);
+        rc = zmq_msg_init_data(&z_msg, msg, length, FreeMessage, hint);
         if (rc < 0) {
             return rc;
         }
@@ -280,6 +282,11 @@ private:
         outgoing_.push_back(p_message);
     }
 
+    static void FreeMessage(void *data, void *message) {
+        String::Utf8Value *js_msg = (String::Utf8Value *)message;
+        delete js_msg;
+    }
+
     static Socket * getSocket(const Arguments &args) {
         return ObjectWrap::Unwrap<Socket>(args.This());
     }
@@ -315,8 +322,8 @@ private:
         }
 
         if (socket->revents_ & ZMQ_POLLOUT && !socket->outgoing_.empty()) {
-            String::Utf8Value message(socket->outgoing_.front());
-            if (socket->Send(*message, message.length(), 0)) {
+            String::Utf8Value *message = new String::Utf8Value(socket->outgoing_.front());
+            if (socket->Send(**message, message->length(), 0, (void *) message)) {
                 exception = Exception::Error(
                     String::New(socket->ErrorMessage()));
                 socket->Emit(receive_symbol, 1, &exception);
