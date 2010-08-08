@@ -12,6 +12,7 @@ Dependencies
 To Build
 --------
 
+     $ node-waf configure
      $ node-waf
 
 [node.js]: http://github.com/ry/node
