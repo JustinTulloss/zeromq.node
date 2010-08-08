@@ -29,11 +29,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <list>
 
 using namespace v8;
 using namespace node;
 
 namespace zmq {
+
+static Persistent<String> receive_symbol;
+static Persistent<String> error_symbol;
+static Persistent<String> connect_symbol;
 
 class Context : public EventEmitter {
 public:
@@ -115,8 +120,11 @@ public:
         NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
         NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
         NODE_SET_PROTOTYPE_METHOD(t, "send", Send);
-        NODE_SET_PROTOTYPE_METHOD(t, "recv", Recv);
         NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
+
+        receive_symbol = NODE_PSYMBOL("receive");
+        connect_symbol = NODE_PSYMBOL("connect");
+        error_symbol = NODE_PSYMBOL("error");
 
         target->Set(String::NewSymbol("Socket"), t->GetFunction());
     }
@@ -142,7 +150,7 @@ public:
             return rc;
         }
 
-        return zmq_msg_close(&z_msg);
+        return 0;//zmq_msg_close(&z_msg);
     }
 
     int Recv(int flags, zmq_msg_t* z_msg) {
@@ -228,29 +236,10 @@ protected:
                 String::New("Must pass in a string to send")));
         }
 
-        String::Utf8Value message(args[0]);
-        if (socket->Send(*message, message.length(), 0)) {
-            return ThrowException(Exception::Error(
-                String::New(socket->ErrorMessage())));
-        }
+        socket->QueueOutgoingMessage(args[0]);
+        socket->AddEvent(ZMQ_POLLOUT);
+
         return Undefined();
-    }
-
-    static Handle<Value>
-    Recv (const Arguments &args) {
-        HandleScope scope;
-
-        Socket *socket = getSocket(args);
-        zmq_msg_t z_msg;
-        if (socket->Recv(0, &z_msg)) {
-            return ThrowException(Exception::Error(
-                String::New(socket->ErrorMessage())));
-        }
-        Local <String>js_msg = String::New(
-            (char *) zmq_msg_data(&z_msg),
-            zmq_msg_size(&z_msg));
-        zmq_msg_close(&z_msg);
-        return scope.Close(js_msg);
     }
 
     static Handle<Value>
@@ -264,6 +253,7 @@ protected:
 
     Socket (Context *context, int type) : EventEmitter () {
         socket_ = zmq_socket(context->getCContext(), type);
+        AddEvent(ZMQ_POLLIN | ZMQ_POLLERR);
     }
 
     ~Socket () {
@@ -271,10 +261,98 @@ protected:
     }
 
 private:
+
+    void AddEvent (int flags) {
+        events_ |= flags;
+
+        // start this if we haven't already
+        revents_ = 0;
+        eio_custom(DoPoll, EIO_PRI_DEFAULT, AfterPoll, this);
+        ev_ref(EV_DEFAULT_UC);
+    }
+
+    void RemoveEvent (int flags) {
+        events_ ^= flags; //TODO: Fix.
+    }
+
+    void QueueOutgoingMessage(Local <Value> message) {
+        Persistent<Value> p_message = Persistent<Value>::New(message);
+        outgoing_.push_back(p_message);
+    }
+
     static Socket * getSocket(const Arguments &args) {
         return ObjectWrap::Unwrap<Socket>(args.This());
     }
+
+    static int DoPoll(eio_req *req) {
+        Socket *socket = (Socket *) req->data;
+        zmq_pollitem_t pollers[1];
+        zmq_pollitem_t *poller = &pollers[0];
+        poller->socket = socket->socket_;
+        poller->events = socket->events_;
+        zmq_poll(pollers, 1, -1);
+        socket->revents_ = poller->revents;
+        return 0;
+    }
+
+    static int AfterPoll(eio_req *req) {
+        HandleScope scope;
+
+        Socket *socket = (Socket *)req->data;
+        Local <Value> exception;
+
+        if (socket->revents_ & ZMQ_POLLIN) {
+            zmq_msg_t z_msg;
+            if (socket->Recv(0, &z_msg)) {
+                socket->Emit(error_symbol, 1, &exception);
+            }
+            Local <Value>js_msg = String::New(
+                (char *) zmq_msg_data(&z_msg),
+                zmq_msg_size(&z_msg));
+            socket->Emit(receive_symbol, 1, &js_msg);
+            zmq_msg_close(&z_msg);
+
+        }
+
+        if (socket->revents_ & ZMQ_POLLOUT && !socket->outgoing_.empty()) {
+            String::Utf8Value message(socket->outgoing_.front());
+            if (socket->Send(*message, message.length(), 0)) {
+                exception = Exception::Error(
+                    String::New(socket->ErrorMessage()));
+                socket->Emit(receive_symbol, 1, &exception);
+            }
+
+            socket->outgoing_.front().Dispose();
+            socket->outgoing_.pop_front();
+
+            if (socket->outgoing_.empty()) {
+                socket->RemoveEvent(ZMQ_POLLOUT);
+            }
+        }
+
+        if (socket->revents_ & ZMQ_POLLERR) {
+            exception = Exception::Error(
+                String::New(socket->ErrorMessage()));
+            socket->Emit(receive_symbol, 1, &exception);
+        }
+
+        socket->revents_ = 0;
+
+        if (socket->events_) {
+            eio_custom(DoPoll, EIO_PRI_DEFAULT, AfterPoll, socket);
+        }
+        else {
+            ev_unref(EV_DEFAULT_UC);
+        }
+
+        return 0;
+    }
+
     void *socket_;
+    short revents_;
+    short events_;
+    ev_prepare watcher_;
+    std::list< Persistent <Value> > outgoing_;
 };
 
 }
