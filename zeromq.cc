@@ -23,13 +23,12 @@
 #include <v8.h>
 #include <node.h>
 #include <node_events.h>
+#include <node_buffer.h>
 #include <zmq.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-
-char test[] = "hi\0";
 
 using namespace v8;
 using namespace node;
@@ -93,68 +92,6 @@ private:
     void * context_;
 };
 
-class Message : public EventEmitter {
-public:
-    static void
-    Initialize (v8::Handle<v8::Object> target) {
-        HandleScope scope;
-
-        Local<FunctionTemplate> t = FunctionTemplate::New(New);
-
-        t->Inherit(EventEmitter::constructor_template);
-        t->InstanceTemplate()->SetInternalFieldCount(1);
-
-        NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-
-        target->Set(String::NewSymbol("Message"), t->GetFunction());
-    }
-
-    void Close(Local<Value> exception = Local<Value>()) {
-        zmq_msg_close(&msg_);
-        Unref();
-    }
-
-    zmq_msg_t * getMessage() {
-        return &msg_;
-    }
-
-    Message () : EventEmitter () {
-        assert(zmq_msg_init(&msg_) == 0);
-    }
-
-protected:
-    static Handle<Value>
-    New (const Arguments& args) {
-        HandleScope scope;
-        Message *message;
-
-        if (args.Length() == 0) {
-            message = new Message();
-        }
-        else {
-            message = new Message(1);
-        }
-        message->Wrap(args.This());
-
-        return args.This();
-    }
-
-    static Handle<Value>
-    Close (const Arguments& args) {
-        Message *message = ObjectWrap::Unwrap<Message>(args.This());
-        HandleScope scope;
-        message->Close();
-        return Undefined();
-    }
-
-    Message(int msg) : EventEmitter() {
-        assert(zmq_msg_init_data(&msg_, test, strlen(test), NULL, NULL) == 0);
-    }
-
-private:
-    zmq_msg_t msg_;
-};
-
 
 class Socket : public EventEmitter {
 public:
@@ -178,6 +115,7 @@ public:
         NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
         NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
         NODE_SET_PROTOTYPE_METHOD(t, "send", Send);
+        NODE_SET_PROTOTYPE_METHOD(t, "recv", Recv);
         NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
 
         target->Set(String::NewSymbol("Socket"), t->GetFunction());
@@ -191,14 +129,29 @@ public:
         return zmq_connect(socket_, address) == 0;
     }
 
-    int Send(zmq::Message *msg, int flags) {
-        return zmq_send(socket_, msg->getMessage(), flags);
+    int Send(char *msg, int length, int flags) {
+        int rc;
+        zmq_msg_t z_msg;
+        rc = zmq_msg_init_data(&z_msg, msg, length, NULL, NULL);
+        if (rc < 0) {
+            return rc;
+        }
+
+        rc = zmq_send(socket_, &z_msg, flags);
+        if (rc < 0) {
+            return rc;
+        }
+
+        return zmq_msg_close(&z_msg);
     }
 
-    zmq::Message * Recv(int flags) {
-        zmq::Message *msg = new zmq::Message();
-        zmq_recv(socket_, msg->getMessage(), flags);
-        return msg;
+    int Recv(int flags, zmq_msg_t* z_msg) {
+        int rc;
+        rc = zmq_msg_init(z_msg);
+        if (rc < 0) {
+            return rc;
+        }
+        return zmq_recv(socket_, z_msg, flags);
     }
 
     void Close(Local<Value> exception = Local<Value>()) {
@@ -234,8 +187,8 @@ protected:
 
     static Handle<Value>
     Connect (const Arguments &args) {
-        Socket *socket = getSocket(args);
         HandleScope scope;
+        Socket *socket = getSocket(args);
         if (!args[0]->IsString()) {
             return ThrowException(Exception::TypeError(
                 String::New("Address must be a string!")));
@@ -251,8 +204,8 @@ protected:
 
     static Handle<Value>
     Bind (const Arguments &args) {
-        Socket *socket = getSocket(args);
         HandleScope scope;
+        Socket *socket = getSocket(args);
         if (!args[0]->IsString()) {
             return ThrowException(Exception::TypeError(
                 String::New("Address must be a string!")));
@@ -268,15 +221,15 @@ protected:
 
     static Handle<Value>
     Send (const Arguments &args) {
+        HandleScope scope;
         Socket *socket = getSocket(args);
         if (!args.Length() == 1) {
             return ThrowException(Exception::TypeError(
-                String::New("Must pass in a message to send")));
+                String::New("Must pass in a buffer or string to send")));
         }
 
-        zmq::Message *message =
-            ObjectWrap::Unwrap<zmq::Message>(args[0]->ToObject());
-        if (socket->Send(message, 0)) {
+        String::Utf8Value message(args[0]);
+        if (socket->Send(*message, message.length(), 0)) {
             return ThrowException(Exception::Error(
                 String::New(socket->ErrorMessage())));
         }
@@ -285,15 +238,25 @@ protected:
 
     static Handle<Value>
     Recv (const Arguments &args) {
+        HandleScope scope;
+
         Socket *socket = getSocket(args);
-        zmq::Message *message = socket->Recv(0);
-        return message;
+        zmq_msg_t z_msg;
+        if (socket->Recv(0, &z_msg)) {
+            return ThrowException(Exception::Error(
+                String::New(socket->ErrorMessage())));
+        }
+        Local <String>js_msg = String::New(
+            (char *) zmq_msg_data(&z_msg),
+            zmq_msg_size(&z_msg));
+        return scope.Close(js_msg);
     }
 
     static Handle<Value>
     Close (const Arguments &args) {
-        Socket *socket = getSocket(args);
         HandleScope scope;
+
+        Socket *socket = getSocket(args);
         socket->Close();
         return Undefined();
     }
@@ -320,5 +283,4 @@ init (Handle<Object> target) {
     HandleScope scope;
     zmq::Context::Initialize(target);
     zmq::Socket::Initialize(target);
-    zmq::Message::Initialize(target);
 }
