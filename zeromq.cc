@@ -152,7 +152,7 @@ public:
             return rc;
         }
 
-        return 0;//zmq_msg_close(&z_msg);
+        return zmq_msg_close(&z_msg);
     }
 
     int Recv(int flags, zmq_msg_t* z_msg) {
