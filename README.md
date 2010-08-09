@@ -31,7 +31,7 @@ zeromq.Context
 --------------
 A context must be created before you can create a socket. Contexts are basically
 logical groupings of sockets. Contexts are thread safe, but who cares? This is
-node.
+node. You can read more about contexts [in the zeromq api docs][zmq-api].
 
 ### Constructor - `function()`
 The constructor takes no arguments.
