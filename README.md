@@ -33,7 +33,7 @@ A context must be created before you can create a socket. Contexts are basically
 logical groupings of sockets. Contexts are thread safe, but who cares? This is
 node.
 
-### Constructor - function()
+### Constructor - `function()`
 The constructor takes no arguments.
 
 ### Methods
@@ -44,13 +44,13 @@ zeromq.Socket
 A socket is where the action happens. You can send and receive things and it is
 oh such fun.
 
-### Constructor - function(context, type)
- * context - A zeromq.Context object that this socket is to be associated with.
- * type - The type of socket. See the ZMQ_* constants hung off of zeromq.Socket
+### Constructor - `function(context, type)`
+ * context - A `zeromq.Context` object that this socket is to be associated with.
+ * type - The type of socket. See the ZMQ_* constants hung off of `zeromq.Socket`
    for options. You can read about the different socket types [here][zmq-socket].
 
 ### Methods
- * connect(address) - Address should be a string as described in the [zeromq
+ * connect(address) - `address` should be a string as described in the [zeromq
    api docs][zmq-connect].
  * send(message) - `message` is a string to send across the wire.
  * close() - Closes the socket
