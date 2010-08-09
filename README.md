@@ -44,18 +44,18 @@ zeromq.Socket
 A socket is where the action happens. You can send and receive things and it is
 oh such fun.
 
-### Constructor - `function(context, type)`
+#### Constructor - `function(context, type)`
  * context - A `zeromq.Context` object that this socket is to be associated with.
  * type - The type of socket. See the ZMQ_* constants hung off of `zeromq.Socket`
    for options. You can read about the different socket types [here][zmq-socket].
 
-### Methods
+#### Methods
  * connect(address) - `address` should be a string as described in the [zeromq
    api docs][zmq-connect].
  * send(message) - `message` is a string to send across the wire.
  * close() - Closes the socket
 
-### Events
+#### Events
  * receive - Data was received. The only argument is the received data.
  * error - There was some error. The only argument is an exception explaining
    what the error was.
