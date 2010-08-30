@@ -43,6 +43,10 @@ static Persistent<String> receive_symbol;
 static Persistent<String> error_symbol;
 static Persistent<String> connect_symbol;
 
+//Forward declare cause they kind of interdepend
+class Socket;
+class Context;
+
 class Context : public EventEmitter {
 public:
     static void
@@ -61,6 +65,14 @@ public:
 
     void * getCContext() {
         return context_;
+    }
+
+    void AddSocket(Socket *s) {
+        sockets_.push_front(s);
+    }
+
+    void RemoveSocket(Socket *s) {
+        sockets_.remove(s);
     }
 
     void Close(Local<Value> exception = Local<Value>()) {
@@ -98,6 +110,7 @@ protected:
 
 private:
     void * context_;
+    std::list<Socket *> sockets_;
 };
 
 
@@ -164,8 +177,9 @@ public:
         return zmq_recv(socket_, z_msg, flags);
     }
 
-    void Close(Local<Value> exception = Local<Value>()) {
+    void Close() {
         zmq_close(socket_);
+        context_->RemoveSocket(this);
         socket_ = NULL;
         Unref();
     }
@@ -255,6 +269,8 @@ protected:
 
     Socket (Context *context, int type) : EventEmitter () {
         socket_ = zmq_socket(context->getCContext(), type);
+        context_ = context;
+        context->AddSocket(this);
         AddEvent(ZMQ_POLLIN | ZMQ_POLLERR);
     }
 
@@ -356,6 +372,7 @@ private:
     }
 
     void *socket_;
+    Context *context_;
     short revents_;
     short events_;
     ev_prepare watcher_;
