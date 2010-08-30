@@ -57,6 +57,9 @@ Context::AddSocket(Socket *s) {
 void
 Context::RemoveSocket(Socket *s) {
     sockets_.remove(s);
+    if (sockets_.empty()) {
+        ev_idle_stop(EV_DEFAULT_UC_ &zmq_poller_);
+    }
 }
 
 void
@@ -98,8 +101,6 @@ Context::DoPoll(EV_P_ ev_idle *watcher, int revents) {
     std::list<Socket *>::iterator s;
     assert(revents == EV_IDLE);
 
-    printf("Do Poll!\n");
-
     Context *c = (Context *) watcher->data;
 
     int i = -1;
@@ -110,9 +111,8 @@ Context::DoPoll(EV_P_ ev_idle *watcher, int revents) {
 
     for (s = c->sockets_.begin(); s != c->sockets_.end(); s++) {
         i++;
-        Socket *k = *s;
-        pollers[i].socket = k->socket_;
-        pollers[i].events = k->events_;
+        pollers[i].socket = (*s)->socket_;
+        pollers[i].events = (*s)->events_;
     }
 
     zmq_poll(pollers, i + 1, 0); // Return instantly w/timeout 0
@@ -121,7 +121,7 @@ Context::DoPoll(EV_P_ ev_idle *watcher, int revents) {
 
     for (s = c->sockets_.begin(); s != c->sockets_.end(); s++) {
         i++;
-        //s->AfterPoll(pollers[i]->revents);
+        (*s)->AfterPoll(pollers[i].revents);
     }
 }
 
@@ -284,7 +284,9 @@ Socket::Close (const Arguments &args) {
 
 Socket::Socket (Context *context, int type) : EventEmitter () {
     socket_ = zmq_socket(context->getCContext(), type);
+    events_ = ZMQ_POLLIN;
     context_ = context;
+    context_->AddSocket(this);
 }
 
 Socket::~Socket () {
@@ -295,7 +297,6 @@ void
 Socket::QueueOutgoingMessage(Local <Value> message) {
     Persistent<Value> p_message = Persistent<Value>::New(message);
     events_ |= ZMQ_POLLOUT;
-    context_->AddSocket(this);
     outgoing_.push_back(p_message);
 }
 
@@ -313,8 +314,6 @@ Socket::getSocket(const Arguments &args) {
 int
 Socket::AfterPoll(int revents) {
     HandleScope scope;
-
-    printf("got events: %x!\n", revents);
 
     Local <Value> exception;
 
@@ -341,11 +340,6 @@ Socket::AfterPoll(int revents) {
 
         outgoing_.front().Dispose();
         outgoing_.pop_front();
-
-        if (outgoing_.empty()) {
-            printf("removing socket\n");
-            context_->RemoveSocket(this);
-        }
     }
 
     return 0;
