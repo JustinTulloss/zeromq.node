@@ -246,13 +246,13 @@ Handle<Value>
 Socket::Bind (const Arguments &args) {
     HandleScope scope;
     Socket *socket = getSocket(args);
-    if (args[0]->IsString()) {
+    if (!args[0]->IsString()) {
         return ThrowException(Exception::TypeError(
             String::New("Address must be a string!")));
     }
 
     String::Utf8Value address(args[0]->ToString());
-    if (!socket->Bind(*address)) {
+    if (socket->Bind(*address)) {
         return ThrowException(Exception::Error(
             String::New(socket->ErrorMessage())));
     }
