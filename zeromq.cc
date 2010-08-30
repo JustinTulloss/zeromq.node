@@ -68,7 +68,9 @@ public:
     }
 
     void AddSocket(Socket *s) {
-        sockets_.push_front(s);
+        sockets_.push_back(s);
+        zmq_poller_.data = this;
+        ev_idle_start(EV_DEFAULT_UC_ &zmq_poller_);
     }
 
     void RemoveSocket(Socket *s) {
@@ -102,6 +104,7 @@ protected:
 
     Context () : EventEmitter () {
         context_ = zmq_init(1);
+        ev_idle_init(&zmq_poller_, DoPoll);
     }
 
     ~Context () {
@@ -109,12 +112,46 @@ protected:
     }
 
 private:
+
+    static void DoPoll(EV_P_ ev_idle *watcher, int revents) {
+        std::list<Socket *>::iterator s;
+        assert(revents == EV_IDLE);
+
+        printf("Do Poll!\n");
+
+        Context *c = (Context *) watcher->data;
+
+        int i = -1;
+
+        zmq_pollitem_t *pollers = (zmq_pollitem_t *)
+            malloc(c->sockets_.size() * sizeof(zmq_pollitem_t));
+        if (!pollers) return;
+
+        for (s = c->sockets_.begin(); s != c->sockets_.end(); s++) {
+            i++;
+            Socket *k = *s;
+            pollers[i].socket = k->socket_;
+            pollers[i].events = k->events_;
+        }
+
+        zmq_poll(pollers, i + 1, 0); // Return instantly w/timeout 0
+
+        i = -1;
+
+        for (s = c->sockets_.begin(); s != c->sockets_.end(); s++) {
+            i++;
+            //s->AfterPoll(pollers[i]->revents);
+        }
+    }
+
+    ev_idle zmq_poller_;
     void * context_;
     std::list<Socket *> sockets_;
 };
 
 
 class Socket : public EventEmitter {
+friend class Context;
 public:
     static void
     Initialize (v8::Handle<v8::Object> target) {
@@ -253,7 +290,6 @@ protected:
         }
 
         socket->QueueOutgoingMessage(args[0]);
-        socket->AddEvent(ZMQ_POLLOUT);
 
         return Undefined();
     }
@@ -270,8 +306,6 @@ protected:
     Socket (Context *context, int type) : EventEmitter () {
         socket_ = zmq_socket(context->getCContext(), type);
         context_ = context;
-        context->AddSocket(this);
-        AddEvent(ZMQ_POLLIN | ZMQ_POLLERR);
     }
 
     ~Socket () {
@@ -280,21 +314,10 @@ protected:
 
 private:
 
-    void AddEvent (int flags) {
-        events_ |= flags;
-
-        // start this if we haven't already
-        revents_ = 0;
-        eio_custom(DoPoll, EIO_PRI_DEFAULT, AfterPoll, this);
-        ev_ref(EV_DEFAULT_UC);
-    }
-
-    void RemoveEvent (int flags) {
-        events_ ^= flags; //TODO: Fix.
-    }
-
     void QueueOutgoingMessage(Local <Value> message) {
         Persistent<Value> p_message = Persistent<Value>::New(message);
+        events_ |= ZMQ_POLLOUT;
+        context_->AddSocket(this);
         outgoing_.push_back(p_message);
     }
 
@@ -307,65 +330,41 @@ private:
         return ObjectWrap::Unwrap<Socket>(args.This());
     }
 
-    static int DoPoll(eio_req *req) {
-        Socket *socket = (Socket *) req->data;
-        zmq_pollitem_t pollers[1];
-        zmq_pollitem_t *poller = &pollers[0];
-        poller->socket = socket->socket_;
-        poller->events = socket->events_;
-        zmq_poll(pollers, 1, -1);
-        socket->revents_ = poller->revents;
-        return 0;
-    }
-
-    static int AfterPoll(eio_req *req) {
+    int AfterPoll(int revents) {
         HandleScope scope;
 
-        Socket *socket = (Socket *)req->data;
+        printf("got events: %x!\n", revents);
+
         Local <Value> exception;
 
-        if (socket->revents_ & ZMQ_POLLIN) {
+        if (revents & ZMQ_POLLIN) {
             zmq_msg_t z_msg;
-            if (socket->Recv(0, &z_msg)) {
-                socket->Emit(error_symbol, 1, &exception);
+            if (Recv(0, &z_msg)) {
+                Emit(error_symbol, 1, &exception);
             }
             Local <Value>js_msg = String::New(
                 (char *) zmq_msg_data(&z_msg),
                 zmq_msg_size(&z_msg));
-            socket->Emit(receive_symbol, 1, &js_msg);
+            Emit(receive_symbol, 1, &js_msg);
             zmq_msg_close(&z_msg);
 
         }
 
-        if (socket->revents_ & ZMQ_POLLOUT && !socket->outgoing_.empty()) {
-            String::Utf8Value *message = new String::Utf8Value(socket->outgoing_.front());
-            if (socket->Send(**message, message->length(), 0, (void *) message)) {
+        if (revents & ZMQ_POLLOUT && !outgoing_.empty()) {
+            String::Utf8Value *message = new String::Utf8Value(outgoing_.front());
+            if (Send(**message, message->length(), 0, (void *) message)) {
                 exception = Exception::Error(
-                    String::New(socket->ErrorMessage()));
-                socket->Emit(receive_symbol, 1, &exception);
+                    String::New(ErrorMessage()));
+                Emit(receive_symbol, 1, &exception);
             }
 
-            socket->outgoing_.front().Dispose();
-            socket->outgoing_.pop_front();
+            outgoing_.front().Dispose();
+            outgoing_.pop_front();
 
-            if (socket->outgoing_.empty()) {
-                socket->RemoveEvent(ZMQ_POLLOUT);
+            if (outgoing_.empty()) {
+                printf("removing socket\n");
+                context_->RemoveSocket(this);
             }
-        }
-
-        if (socket->revents_ & ZMQ_POLLERR) {
-            exception = Exception::Error(
-                String::New(socket->ErrorMessage()));
-            socket->Emit(receive_symbol, 1, &exception);
-        }
-
-        socket->revents_ = 0;
-
-        if (socket->events_) {
-            eio_custom(DoPoll, EIO_PRI_DEFAULT, AfterPoll, socket);
-        }
-        else {
-            ev_unref(EV_DEFAULT_UC);
         }
 
         return 0;
@@ -373,9 +372,7 @@ private:
 
     void *socket_;
     Context *context_;
-    short revents_;
     short events_;
-    ev_prepare watcher_;
     std::list< Persistent <Value> > outgoing_;
 };
 
