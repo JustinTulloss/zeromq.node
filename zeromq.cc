@@ -123,6 +123,8 @@ Context::DoPoll(EV_P_ ev_idle *watcher, int revents) {
         i++;
         (*s)->AfterPoll(pollers[i].revents);
     }
+
+    free(pollers);
 }
 
 
