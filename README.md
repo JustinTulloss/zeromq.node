@@ -56,9 +56,13 @@ oh such fun.
    as described in the [zeromq api docs][zmq-connect]. This method is not
    asynchronous because it is non-blocking. ZeroMQ will use the provided
    address when it's necessary and will not block here.
- * bind(address) - Bind to a socket to wait for incoming data. `address` should
-   be a string as described in the [zeromq api docs][zmq-bind].
- * send(message) - `message` is a string to send across the wire.
+ * bind(address, callback) - Bind to a socket to wait for incoming data.
+   `address` should be a string as described in the [zeromq api docs][zmq-bind].
+   `callback` will be called when binding is complete and takes one argument, 
+   a string describing any errors.
+ * send(message) - `message` is a string to send across the wire. The message is
+   not sent immediately, but there is no callback indicating when it has been
+   transmitted. Have your server ack or something if you care that much.
  * close() - Closes the socket
 
 #### Events
