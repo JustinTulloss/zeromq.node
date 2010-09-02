@@ -67,6 +67,9 @@ private:
     void QueueOutgoingMessage(Local <Value>);
     int AfterPoll(int);
 
+    static int EIO_DoBind(eio_req *);
+    static int EIO_BindDone(eio_req *);
+
     static void FreeMessage(void *data, void *message);
     static Socket * getSocket(const Arguments &);
 
@@ -74,6 +77,10 @@ private:
     Context *context_;
     short events_;
     std::list< Persistent <Value> > outgoing_;
+
+    Persistent<String> bindAddress_;
+    Persistent<Function> bindCallback_;
+    int bindError_;
 };
 
 class Context : public EventEmitter {

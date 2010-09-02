@@ -248,17 +248,65 @@ Handle<Value>
 Socket::Bind (const Arguments &args) {
     HandleScope scope;
     Socket *socket = getSocket(args);
+    Local<Function> cb = Local<Function>::Cast(args[1]);
     if (!args[0]->IsString()) {
         return ThrowException(Exception::TypeError(
             String::New("Address must be a string!")));
     }
 
-    String::Utf8Value address(args[0]->ToString());
-    if (socket->Bind(*address)) {
-        return ThrowException(Exception::Error(
-            String::New(socket->ErrorMessage())));
+    if (args.Length() > 1 && !args[1]->IsFunction()) {
+        return ThrowException(Exception::TypeError(
+            String::New("Provided callback must be a function")));
     }
+
+    socket->bindCallback_ = Persistent<Function>::New(cb);
+    socket->bindAddress_ = Persistent<String>::New(args[0]->ToString());
+    eio_custom(EIO_DoBind, EIO_PRI_DEFAULT, EIO_BindDone, socket);
+
+    socket->Ref(); // Reference ourself until the callback is done
+    ev_ref(EV_DEFAULT_UC);
+
     return Undefined();
+}
+
+int
+Socket::EIO_BindDone(eio_req *req) {
+    HandleScope scope;
+
+    ev_unref(EV_DEFAULT_UC);
+
+    Socket *socket = (Socket *) req->data;
+
+    TryCatch try_catch;
+
+    Local<Value> argv[1];
+
+    if (socket->bindError_) {
+        argv[0] = String::New(socket->ErrorMessage());
+    }
+    else {
+        argv[0] = String::New("");
+    }
+    socket->bindCallback_->Call(v8::Context::GetCurrent()->Global(), 1, argv);
+
+    if (try_catch.HasCaught()) {
+        FatalException(try_catch);
+    }
+
+    socket->bindAddress_.Dispose();
+    socket->bindCallback_.Dispose();
+
+    socket->Unref();
+
+    return 0;
+}
+
+int
+Socket::EIO_DoBind(eio_req *req) {
+    Socket *socket = (Socket *) req->data;
+    String::Utf8Value address(socket->bindAddress_);
+    socket->bindError_ = socket->Bind(*address);
+    return 0;
 }
 
 Handle<Value>
