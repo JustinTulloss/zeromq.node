@@ -19,7 +19,9 @@ API
 ===
 
 The API contains elements of the [zeromq API][zmq-api]. You should refer to it
-for in depth detail of the expected behaviors of the system.
+for in depth detail of the expected behaviors of the system. These methods will
+never return error codes, but may throw an exception if any of the errors
+described in the zeromq documentation occur.
 
 First, include the module.
 
@@ -50,8 +52,12 @@ oh such fun.
    for options. You can read about the different socket types [here][zmq-socket].
 
 #### Methods
- * connect(address) - `address` should be a string as described in the [zeromq
-   api docs][zmq-connect].
+ * connect(address) - Connect to another socket. `address` should be a string
+   as described in the [zeromq api docs][zmq-connect]. This method is not
+   asynchronous because it is non-blocking. ZeroMQ will use the provided
+   address when it's necessary and will not block here.
+ * bind(address) - Bind to a socket to wait for incoming data. `address` should
+   be a string as described in the [zeromq api docs][zmq-bind].
  * send(message) - `message` is a string to send across the wire.
  * close() - Closes the socket
 
@@ -61,7 +67,8 @@ oh such fun.
    what the error was.
 
 [node.js]: http://github.com/ry/node
-[zmq]: http://www.zeromq.org/local--files/area:download/zeromq-2.0.7.tar.gz
+[zmq]: http://www.zeromq.org/local--files/area:download/zeromq-2.0.8.tar.gz
 [zmq-api]: http://api.zeromq.org/
 [zmq-socket]: http://api.zeromq.org/zmq_socket.html
 [zmq-connect]: http://api.zeromq.org/zmq_connect.html
+[zmq-bind]: http://api.zeromq.org/zmq_bind.html
