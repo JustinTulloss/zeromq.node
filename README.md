@@ -1,4 +1,4 @@
-**This isn't done yet**
+**This is barely usable. Proceed with caution**
 =======================
 
 This library allows you to access zeromq from node.js.
