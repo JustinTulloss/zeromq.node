@@ -49,6 +49,14 @@ public:
     static void Initialize (v8::Handle<v8::Object>);
     int Bind(const char *);
     int Connect(const char *);
+
+    Handle<Value> GetLongSockOpt(int option, const Arguments &args);
+    Handle<Value> SetLongSockOpt(int option, const Arguments &args);
+    Handle<Value> GetULongSockOpt(int option, const Arguments &args);
+    Handle<Value> SetULongSockOpt(int option, const Arguments &args);
+    Handle<Value> GetBytesSockOpt(int option, const Arguments &args);
+    Handle<Value> SetBytesSockOpt(int option, const Arguments &args);
+
     int Send(char *msg, int length, int flags, void* hint);
     int Recv(int flags, zmq_msg_t* z_msg);
     void Close();
@@ -57,6 +65,24 @@ public:
 protected:
     static Handle<Value> New (const Arguments &);
     static Handle<Value> Connect (const Arguments &);
+    static Handle<Value> Subscribe (const Arguments &);
+    static Handle<Value> Unsubscribe (const Arguments &);
+    static Handle<Value> GetHighWaterMark (const Arguments &);
+    static Handle<Value> SetHighWaterMark (const Arguments &);
+    static Handle<Value> GetDiskOffloadSize (const Arguments &);
+    static Handle<Value> SetDiskOffloadSize (const Arguments &);
+    static Handle<Value> SetIdentity (const Arguments &);
+    static Handle<Value> GetIdentity (const Arguments &);
+    static Handle<Value> GetMulticastDataRate (const Arguments &);
+    static Handle<Value> SetMulticastDataRate (const Arguments &);
+    static Handle<Value> GetRecoveryIVL (const Arguments &);
+    static Handle<Value> SetRecoveryIVL (const Arguments &);
+    static Handle<Value> HasMulticastLoop (const Arguments &);
+    static Handle<Value> SetMulticastLoop (const Arguments &);
+    static Handle<Value> GetTransmitBufferSize (const Arguments &);
+    static Handle<Value> SetTransmitBufferSize (const Arguments &);
+    static Handle<Value> GetReceiveBufferSize (const Arguments &);
+    static Handle<Value> SetReceiveBufferSize (const Arguments &);
     static Handle<Value> Bind (const Arguments &);
     static Handle<Value> Send (const Arguments &);
     static Handle<Value> Close (const Arguments &);
