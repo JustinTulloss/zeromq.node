@@ -149,24 +149,18 @@ Socket::Initialize (v8::Handle<v8::Object> target) {
     NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
     NODE_SET_PROTOTYPE_METHOD(t, "subscribe", Subscribe);
     NODE_SET_PROTOTYPE_METHOD(t, "unsubscribe", Unsubscribe);
-    NODE_SET_PROTOTYPE_METHOD(t, "getHighWaterMark", GetHighWaterMark);
-    NODE_SET_PROTOTYPE_METHOD(t, "setHighWaterMark", SetHighWaterMark);
-    NODE_SET_PROTOTYPE_METHOD(t, "getDiskOffloadSize", GetDiskOffloadSize);
-    NODE_SET_PROTOTYPE_METHOD(t, "setDiskOffloadSize", SetDiskOffloadSize);
-    NODE_SET_PROTOTYPE_METHOD(t, "setIdentity", SetIdentity);
-    NODE_SET_PROTOTYPE_METHOD(t, "getIdentity", GetIdentity);
-    NODE_SET_PROTOTYPE_METHOD(t, "getMulticastDataRate", GetMulticastDataRate);
-    NODE_SET_PROTOTYPE_METHOD(t, "setMulticastDataRate", SetMulticastDataRate);
-    NODE_SET_PROTOTYPE_METHOD(t, "getRecoveryIVL", GetRecoveryIVL);
-    NODE_SET_PROTOTYPE_METHOD(t, "setRecoveryIVL", SetRecoveryIVL);
-    NODE_SET_PROTOTYPE_METHOD(t, "hasMulticastLoop", HasMulticastLoop);
-    NODE_SET_PROTOTYPE_METHOD(t, "setMulticastLoop", SetMulticastLoop);
-    NODE_SET_PROTOTYPE_METHOD(t, "getTransmitBufferSize", GetTransmitBufferSize);
-    NODE_SET_PROTOTYPE_METHOD(t, "setTransmitBufferSize", SetTransmitBufferSize);
-    NODE_SET_PROTOTYPE_METHOD(t, "getReceiveBufferSize", GetReceiveBufferSize);
-    NODE_SET_PROTOTYPE_METHOD(t, "setReceiveBufferSize", SetReceiveBufferSize);
     NODE_SET_PROTOTYPE_METHOD(t, "send", Send);
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
+    
+    t->PrototypeTemplate()->SetAccessor(String::New("highwaterMark"), GetOptions, SetOptions);
+    t->PrototypeTemplate()->SetAccessor(String::New("diskOffloadSize"), GetOptions, SetOptions);
+    t->PrototypeTemplate()->SetAccessor(String::New("identity"), GetOptions, SetOptions);
+    t->PrototypeTemplate()->SetAccessor(String::New("multicastDataRate"), GetOptions, SetOptions);
+    t->PrototypeTemplate()->SetAccessor(String::New("recoveryIVL"), GetOptions, SetOptions);
+    t->PrototypeTemplate()->SetAccessor(String::New("multicastLoop"), GetOptions, SetOptions);
+    t->PrototypeTemplate()->SetAccessor(String::New("highwaterMark"), GetOptions, SetOptions);
+    t->PrototypeTemplate()->SetAccessor(String::New("sendBufferSize"), GetOptions, SetOptions);
+    t->PrototypeTemplate()->SetAccessor(String::New("receiveBufferSize"), GetOptions, SetOptions);
 
     receive_symbol = NODE_PSYMBOL("receive");
     connect_symbol = NODE_PSYMBOL("connect");
@@ -186,7 +180,7 @@ Socket::Connect(const char *address) {
 }
 
 Handle<Value> 
-Socket::GetLongSockOpt(int option, const Arguments &args) {
+Socket::GetLongSockOpt(int option) {
     int64_t value = 0;
     size_t len = sizeof(value);
     zmq_getsockopt(socket_, option, &value, &len);
@@ -194,18 +188,18 @@ Socket::GetLongSockOpt(int option, const Arguments &args) {
 }
 
 Handle<Value> 
-Socket::SetLongSockOpt(int option, const Arguments &args) {
-    if (!args[0]->IsNumber()) {
+Socket::SetLongSockOpt(int option, Local<Value> wrappedValue) {
+    if (!wrappedValue->IsNumber()) {
         return ThrowException(Exception::TypeError(
             String::New("Value must be an integer")));
     }
-    int64_t value = (int64_t)args[0]->ToInteger()->Value(); // WARNING: int cast to long!
+    int64_t value = (int64_t)wrappedValue->ToInteger()->Value(); // WARNING: int cast to long!
     zmq_setsockopt(socket_, option, &value, sizeof(value));
     return Undefined();
 }
 
 Handle<Value> 
-Socket::GetULongSockOpt(int option, const Arguments &args) {
+Socket::GetULongSockOpt(int option) {
     uint64_t value = 0;
     size_t len = sizeof(value);
     zmq_getsockopt(socket_, option, &value, &len);
@@ -213,18 +207,18 @@ Socket::GetULongSockOpt(int option, const Arguments &args) {
 }
 
 Handle<Value> 
-Socket::SetULongSockOpt(int option, const Arguments &args) {
-    if (!args[0]->IsNumber()) {
+Socket::SetULongSockOpt(int option, Local<Value> wrappedValue) {
+    if (!wrappedValue->IsNumber()) {
         return ThrowException(Exception::TypeError(
             String::New("Value must be an integer")));
     }
-    uint64_t value = (uint64_t)args[0]->ToInteger()->Value(); // WARNING: int cast to long!
+    uint64_t value = (uint64_t)wrappedValue->ToInteger()->Value(); // WARNING: int cast to long!
     zmq_setsockopt(socket_, option, &value, sizeof(value));
     return Undefined();
 }
 
 Handle<Value> 
-Socket::GetBytesSockOpt(int option, const Arguments &args) {
+Socket::GetBytesSockOpt(int option) {
     char value[1024] = {0};
     size_t len = 1023;
     zmq_getsockopt(socket_, option, value, &len);
@@ -232,12 +226,12 @@ Socket::GetBytesSockOpt(int option, const Arguments &args) {
 }
 
 Handle<Value> 
-Socket::SetBytesSockOpt(int option, const Arguments &args) {
-    if (!args[0]->IsString()) {
+Socket::SetBytesSockOpt(int option, Local<Value> wrappedValue) {
+    if (!wrappedValue->IsString()) {
         return ThrowException(Exception::TypeError(
             String::New("Value must be a string!")));
     }    
-    String::Utf8Value value(args[0]->ToString());
+    String::Utf8Value value(wrappedValue->ToString());
     zmq_setsockopt(socket_, option, *value, value.length());
     return Undefined();
 }
@@ -305,7 +299,7 @@ Socket::New (const Arguments &args) {
 Handle<Value>
 Socket::Connect (const Arguments &args) {
     HandleScope scope;
-    Socket *socket = getSocket(args);
+    Socket *socket = GetSocket(args);
     if (!args[0]->IsString()) {
         return ThrowException(Exception::TypeError(
             String::New("Address must be a string!")));
@@ -321,98 +315,66 @@ Socket::Connect (const Arguments &args) {
 
 Handle<Value> 
 Socket::Subscribe (const Arguments &args) {
-    return getSocket(args)->SetBytesSockOpt(ZMQ_SUBSCRIBE, args);
+    return GetSocket(args)->SetBytesSockOpt(ZMQ_SUBSCRIBE, args[0]);
 }
 
 Handle<Value> 
 Socket::Unsubscribe (const Arguments &args) {
-    return getSocket(args)->SetBytesSockOpt(ZMQ_UNSUBSCRIBE, args);
+    return GetSocket(args)->SetBytesSockOpt(ZMQ_UNSUBSCRIBE, args[0]);
 }
 
 Handle<Value> 
-Socket::GetHighWaterMark (const Arguments &args) {
-    return getSocket(args)->GetULongSockOpt(ZMQ_HWM, args);
+Socket::GetOptions (Local<String> name, const AccessorInfo& info) {
+    Socket *socket = GetSocket(info);
+    
+    if (name->Equals(v8::String::New("highwaterMark"))) {
+      return socket->GetULongSockOpt(ZMQ_HWM);
+    } else if (name->Equals(v8::String::New("diskOffloadSize"))) {
+      return socket->GetLongSockOpt(ZMQ_SWAP);
+    } else if (name->Equals(v8::String::New("identity"))) {
+        return socket->GetBytesSockOpt(ZMQ_IDENTITY);
+    } else if (name->Equals(v8::String::New("multicastDataRate"))) {
+        return socket->GetLongSockOpt(ZMQ_RATE);
+    } else if (name->Equals(v8::String::New("recoveryIVL"))) {
+        return socket->GetLongSockOpt(ZMQ_RECOVERY_IVL);
+    } else if (name->Equals(v8::String::New("multicastLoop"))) {
+        return socket->GetLongSockOpt(ZMQ_MCAST_LOOP);
+    } else if (name->Equals(v8::String::New("sendBufferSize"))) {
+        return socket->GetULongSockOpt(ZMQ_SNDBUF);
+    } else if (name->Equals(v8::String::New("receiveBufferSize"))) {
+        return socket->GetULongSockOpt(ZMQ_RCVBUF);
+    }
+    
+    return Undefined(); 
 }
 
-Handle<Value> 
-Socket::SetHighWaterMark (const Arguments &args) {
-    return getSocket(args)->SetULongSockOpt(ZMQ_HWM, args);
-}
-
-Handle<Value> 
-Socket::GetDiskOffloadSize (const Arguments &args) {
-    return getSocket(args)->GetLongSockOpt(ZMQ_SWAP, args);
-}
-
-Handle<Value> 
-Socket::SetDiskOffloadSize (const Arguments &args) {
-    return getSocket(args)->SetLongSockOpt(ZMQ_SWAP, args);
-}
-
-Handle<Value> 
-Socket::GetIdentity (const Arguments &args) {
-    return getSocket(args)->GetBytesSockOpt(ZMQ_IDENTITY, args);
-}
-
-Handle<Value> 
-Socket::SetIdentity (const Arguments &args) {
-    return getSocket(args)->SetBytesSockOpt(ZMQ_IDENTITY, args);
-}
-
-Handle<Value> 
-Socket::GetMulticastDataRate (const Arguments &args) {
-    return getSocket(args)->GetLongSockOpt(ZMQ_RATE, args);
-}
-
-Handle<Value> 
-Socket::SetMulticastDataRate (const Arguments &args) {
-    return getSocket(args)->SetLongSockOpt(ZMQ_RATE, args);
-}
-
-Handle<Value> 
-Socket::GetRecoveryIVL (const Arguments &args) {
-    return getSocket(args)->GetLongSockOpt(ZMQ_RECOVERY_IVL, args);
-}
-
-Handle<Value> 
-Socket::SetRecoveryIVL (const Arguments &args) {
-    return getSocket(args)->SetLongSockOpt(ZMQ_RECOVERY_IVL, args);
-}
-
-Handle<Value> 
-Socket::HasMulticastLoop (const Arguments &args) {
-    return getSocket(args)->GetLongSockOpt(ZMQ_MCAST_LOOP, args);
-}
-
-Handle<Value> 
-Socket::SetMulticastLoop (const Arguments &args) {
-    return getSocket(args)->SetLongSockOpt(ZMQ_MCAST_LOOP, args);
-}
-
-Handle<Value> 
-Socket::GetTransmitBufferSize (const Arguments &args) {
-    return getSocket(args)->GetULongSockOpt(ZMQ_SNDBUF, args);
-}
-
-Handle<Value> 
-Socket::SetTransmitBufferSize (const Arguments &args) {
-    return getSocket(args)->SetULongSockOpt(ZMQ_SNDBUF, args);
-}
-
-Handle<Value> 
-Socket::GetReceiveBufferSize (const Arguments &args) {
-    return getSocket(args)->GetULongSockOpt(ZMQ_RCVBUF, args);
-}
-
-Handle<Value> 
-Socket::SetReceiveBufferSize (const Arguments &args) {
-    return getSocket(args)->SetULongSockOpt(ZMQ_RCVBUF, args);
+void
+Socket::SetOptions (Local<String> name, Local<Value> value, const AccessorInfo& info) {
+    Socket *socket = GetSocket(info);
+    
+    if (name->Equals(v8::String::New("highwaterMark"))) {
+      socket->SetULongSockOpt(ZMQ_HWM, value);
+    } else if (name->Equals(v8::String::New("diskOffloadSize"))) {
+      socket->SetLongSockOpt(ZMQ_SWAP, value);
+    } else if (name->Equals(v8::String::New("identity"))) {
+        socket->SetBytesSockOpt(ZMQ_IDENTITY, value);
+    } else if (name->Equals(v8::String::New("multicastDataRate"))) {
+        socket->SetLongSockOpt(ZMQ_RATE, value);
+    } else if (name->Equals(v8::String::New("recoveryIVL"))) {
+        socket->SetLongSockOpt(ZMQ_RECOVERY_IVL, value);
+    } else if (name->Equals(v8::String::New("multicastLoop"))) {
+        socket->SetLongSockOpt(ZMQ_MCAST_LOOP, value);
+    } else if (name->Equals(v8::String::New("sendBufferSize"))) {
+        socket->SetULongSockOpt(ZMQ_SNDBUF, value);
+    } else if (name->Equals(v8::String::New("receiveBufferSize"))) {
+        socket->SetULongSockOpt(ZMQ_RCVBUF, value);
+    }
 }
 
 Handle<Value>
 Socket::Bind (const Arguments &args) {
     HandleScope scope;
-    Socket *socket = getSocket(args);
+    Socket *socket = GetSocket(args);
     Local<Function> cb = Local<Function>::Cast(args[1]);
     if (!args[0]->IsString()) {
         return ThrowException(Exception::TypeError(
@@ -477,7 +439,7 @@ Socket::EIO_DoBind(eio_req *req) {
 Handle<Value>
 Socket::Send (const Arguments &args) {
     HandleScope scope;
-    Socket *socket = getSocket(args);
+    Socket *socket = GetSocket(args);
     if (!args.Length() == 1) {
         return ThrowException(Exception::TypeError(
             String::New("Must pass in a string to send")));
@@ -492,7 +454,7 @@ Handle<Value>
 Socket::Close (const Arguments &args) {
     HandleScope scope;
 
-    Socket *socket = getSocket(args);
+    Socket *socket = GetSocket(args);
     socket->Close();
     return Undefined();
 }
@@ -522,8 +484,13 @@ Socket::FreeMessage(void *data, void *message) {
 }
 
 Socket *
-Socket::getSocket(const Arguments &args) {
+Socket::GetSocket(const Arguments &args) {
     return ObjectWrap::Unwrap<Socket>(args.This());
+}
+
+Socket *
+Socket::GetSocket(const AccessorInfo &info) {
+    return ObjectWrap::Unwrap<Socket>(info.This());
 }
 
 int

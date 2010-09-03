@@ -50,12 +50,12 @@ public:
     int Bind(const char *);
     int Connect(const char *);
 
-    Handle<Value> GetLongSockOpt(int option, const Arguments &args);
-    Handle<Value> SetLongSockOpt(int option, const Arguments &args);
-    Handle<Value> GetULongSockOpt(int option, const Arguments &args);
-    Handle<Value> SetULongSockOpt(int option, const Arguments &args);
-    Handle<Value> GetBytesSockOpt(int option, const Arguments &args);
-    Handle<Value> SetBytesSockOpt(int option, const Arguments &args);
+    Handle<Value> GetLongSockOpt(int option);
+    Handle<Value> SetLongSockOpt(int option, Local<v8::Value>);
+    Handle<Value> GetULongSockOpt(int option);
+    Handle<Value> SetULongSockOpt(int option, Local<v8::Value>);
+    Handle<Value> GetBytesSockOpt(int option);
+    Handle<Value> SetBytesSockOpt(int option, Local<v8::Value>);
 
     int Send(char *msg, int length, int flags, void* hint);
     int Recv(int flags, zmq_msg_t* z_msg);
@@ -67,22 +67,8 @@ protected:
     static Handle<Value> Connect (const Arguments &);
     static Handle<Value> Subscribe (const Arguments &);
     static Handle<Value> Unsubscribe (const Arguments &);
-    static Handle<Value> GetHighWaterMark (const Arguments &);
-    static Handle<Value> SetHighWaterMark (const Arguments &);
-    static Handle<Value> GetDiskOffloadSize (const Arguments &);
-    static Handle<Value> SetDiskOffloadSize (const Arguments &);
-    static Handle<Value> SetIdentity (const Arguments &);
-    static Handle<Value> GetIdentity (const Arguments &);
-    static Handle<Value> GetMulticastDataRate (const Arguments &);
-    static Handle<Value> SetMulticastDataRate (const Arguments &);
-    static Handle<Value> GetRecoveryIVL (const Arguments &);
-    static Handle<Value> SetRecoveryIVL (const Arguments &);
-    static Handle<Value> HasMulticastLoop (const Arguments &);
-    static Handle<Value> SetMulticastLoop (const Arguments &);
-    static Handle<Value> GetTransmitBufferSize (const Arguments &);
-    static Handle<Value> SetTransmitBufferSize (const Arguments &);
-    static Handle<Value> GetReceiveBufferSize (const Arguments &);
-    static Handle<Value> SetReceiveBufferSize (const Arguments &);
+    static Handle<Value> GetOptions (Local<v8::String> name, const v8::AccessorInfo& info);
+    static void SetOptions (Local<v8::String> name, Local<v8::Value>, const v8::AccessorInfo& info);
     static Handle<Value> Bind (const Arguments &);
     static Handle<Value> Send (const Arguments &);
     static Handle<Value> Close (const Arguments &);
@@ -97,7 +83,8 @@ private:
     static int EIO_BindDone(eio_req *);
 
     static void FreeMessage(void *data, void *message);
-    static Socket * getSocket(const Arguments &);
+    static Socket * GetSocket(const Arguments &);
+    static Socket * GetSocket(const AccessorInfo& info);
 
     void *socket_;
     Context *context_;
