@@ -63,6 +63,10 @@ oh such fun.
  * send(message) - `message` is a string to send across the wire. The message is
    not sent immediately, but there is no callback indicating when it has been
    transmitted. Have your server ack or something if you care that much.
+
+   The message must be either a String or a Buffer object, or bad things will
+   happen.
+
  * close() - Closes the socket
 
 #### Events
