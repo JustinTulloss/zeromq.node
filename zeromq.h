@@ -71,6 +71,9 @@ private:
     static int EIO_BindDone(eio_req *);
 
     static void FreeMessage(void *data, void *message);
+    static void FreeStringMessage(void *);
+    static void FreeBufferMessage(void *);
+
     static Socket * getSocket(const Arguments &);
 
     void *socket_;

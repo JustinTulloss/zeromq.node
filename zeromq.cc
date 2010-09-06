@@ -28,6 +28,11 @@ static Persistent<String> receive_symbol;
 static Persistent<String> error_symbol;
 static Persistent<String> connect_symbol;
 
+typedef struct outgoing_message {
+    void *data;
+    void (*freeFxn)(void *);
+} outgoing_message;
+
 void
 Context::Initialize (v8::Handle<v8::Object> target) {
     HandleScope scope;
@@ -352,8 +357,22 @@ Socket::QueueOutgoingMessage(Local <Value> message) {
 
 void
 Socket::FreeMessage(void *data, void *message) {
+    outgoing_message *msg = (outgoing_message *) message;
+    msg->freeFxn(msg->data);
+    free(message);
+}
+
+void
+Socket::FreeStringMessage(void *message) {
     String::Utf8Value *js_msg = (String::Utf8Value *)message;
     delete js_msg;
+}
+
+void
+Socket::FreeBufferMessage(void *message) {
+    Persistent <Buffer> *buffer = (Persistent <Buffer> *) message;
+    buffer->Dispose();
+    delete buffer;
 }
 
 Socket *
@@ -368,24 +387,41 @@ Socket::AfterPoll(int revents) {
     Local <Value> exception;
 
     if (revents & ZMQ_POLLIN) {
+
         zmq_msg_t z_msg;
         if (Recv(0, &z_msg)) {
             Emit(error_symbol, 1, &exception);
         }
-        Local <Value>js_msg = String::New(
-            (char *) zmq_msg_data(&z_msg),
-            zmq_msg_size(&z_msg));
-        Emit(receive_symbol, 1, &js_msg);
+        ssize_t length = zmq_msg_size(&z_msg);
+        Local<Value> argv[] = {
+            String::New((char *) zmq_msg_data(&z_msg), length)
+        };
+        Emit(receive_symbol, 1, argv);
         zmq_msg_close(&z_msg);
-
     }
 
     if (revents & ZMQ_POLLOUT && !outgoing_.empty()) {
-        String::Utf8Value *message = new String::Utf8Value(outgoing_.front());
-        if (Send(**message, message->length(), 0, (void *) message)) {
+        Local <Value> out = Local<Value>::New(outgoing_.front());
+        outgoing_message *og =
+            (outgoing_message *) malloc(sizeof(outgoing_message));
+        //TODO: Check return value, throw exception on NULL
+        int rc = 0;
+        if (out->IsString()) {
+            String::Utf8Value *message = new String::Utf8Value(out);
+            og->data = (void *) message;
+            og->freeFxn = &FreeStringMessage;
+            rc = Send(**message, message->length(), 0, (void *) og);
+        }
+        else { // Assume buffer. XXX: What if it's not? Segfault I hope.
+            Buffer *buffer = ObjectWrap::Unwrap<Buffer>(out->ToObject());
+            og->data = (void *) buffer;
+            og->freeFxn = &FreeBufferMessage;
+            rc = Send(buffer->data(), buffer->length(), 0, (void *)og);
+        }
+        if (rc) {
             exception = Exception::Error(
                 String::New(ErrorMessage()));
-            Emit(receive_symbol, 1, &exception);
+            Emit(error_symbol, 1, &exception);
         }
 
         outgoing_.front().Dispose();
