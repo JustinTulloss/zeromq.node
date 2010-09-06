@@ -404,7 +404,12 @@ Socket::AfterPoll(int revents) {
         Local <Value> out = Local<Value>::New(outgoing_.front());
         outgoing_message *og =
             (outgoing_message *) malloc(sizeof(outgoing_message));
-        //TODO: Check return value, throw exception on NULL
+        if (!og) {
+            exception = Exception::Error(
+                String::New("Could not allocate a minute amount of memory"));
+            Emit(error_symbol, 1, &exception);
+            return -1;
+        }
         int rc = 0;
         if (out->IsString()) {
             String::Utf8Value *message = new String::Utf8Value(out);
