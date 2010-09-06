@@ -70,9 +70,25 @@ oh such fun.
  * error - There was some error. The only argument is an exception explaining
    what the error was.
 
+Testing
+=======
+
+Tests are pretty incomplete right now, but to run what's there:
+
+    node examples/simple-server.js
+    # in another terminal:
+    npm install vows
+    vows tests/*
+
+Licensing
+=========
+
+Licensed under the very permissive [MIT License][mit-license]
+
 [node.js]: http://github.com/ry/node
 [zmq]: http://www.zeromq.org/local--files/area:download/zeromq-2.0.8.tar.gz
 [zmq-api]: http://api.zeromq.org/
 [zmq-socket]: http://api.zeromq.org/zmq_socket.html
 [zmq-connect]: http://api.zeromq.org/zmq_connect.html
 [zmq-bind]: http://api.zeromq.org/zmq_bind.html
+[mit-license]: http://www.opensource.org/licenses/mit-license.php
