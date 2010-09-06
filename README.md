@@ -75,10 +75,10 @@ Testing
 
 Tests are pretty incomplete right now, but to run what's there:
 
-    node examples/simple-server.js
+    $ node examples/simple-server.js
     # in another terminal:
-    npm install vows
-    vows tests/*
+    $ npm install vows
+    $ vows tests/*
 
 Licensing
 =========
