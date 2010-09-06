@@ -417,18 +417,26 @@ Socket::AfterPoll(int revents) {
             og->freeFxn = &FreeStringMessage;
             rc = Send(**message, message->length(), 0, (void *) og);
         }
-        else { // Assume buffer. XXX: What if it's not? Segfault I hope.
+        else if (Buffer::HasInstance(out)) {
             Buffer *buffer = ObjectWrap::Unwrap<Buffer>(out->ToObject());
             og->data = (void *) buffer;
             og->freeFxn = &FreeBufferMessage;
             rc = Send(buffer->data(), buffer->length(), 0, (void *)og);
         }
+        else {
+            exception = Exception::Error(
+                String::New("Can only send messages of type String or Buffer"));
+                Emit(error_symbol, 1, &exception);
+        }
+
         if (rc) {
             exception = Exception::Error(
                 String::New(ErrorMessage()));
             Emit(error_symbol, 1, &exception);
         }
 
+        // TODO: document the consequences of disposing even when there's an
+        // error in transmission
         outgoing_.front().Dispose();
         outgoing_.pop_front();
     }

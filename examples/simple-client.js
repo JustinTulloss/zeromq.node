@@ -15,6 +15,11 @@ s.on('receive', function(data) {
         s.close();
     }
 });
+s.on('error', function(error) {
+    count--;
+    sys.puts(error);
+});
+
 s.connect('tcp://127.0.0.1:5554');
 s.send(msg);
 count++;
