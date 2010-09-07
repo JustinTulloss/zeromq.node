@@ -49,6 +49,14 @@ public:
     static void Initialize (v8::Handle<v8::Object>);
     int Bind(const char *);
     int Connect(const char *);
+
+    Handle<Value> GetLongSockOpt(int option);
+    Handle<Value> SetLongSockOpt(int option, Local<v8::Value>);
+    Handle<Value> GetULongSockOpt(int option);
+    Handle<Value> SetULongSockOpt(int option, Local<v8::Value>);
+    Handle<Value> GetBytesSockOpt(int option);
+    Handle<Value> SetBytesSockOpt(int option, Local<v8::Value>);
+
     int Send(char *msg, int length, int flags, void* hint);
     int Recv(int flags, zmq_msg_t* z_msg);
     void Close();
@@ -57,6 +65,10 @@ public:
 protected:
     static Handle<Value> New (const Arguments &);
     static Handle<Value> Connect (const Arguments &);
+    static Handle<Value> Subscribe (const Arguments &);
+    static Handle<Value> Unsubscribe (const Arguments &);
+    static Handle<Value> GetOptions (Local<v8::String> name, const v8::AccessorInfo& info);
+    static void SetOptions (Local<v8::String> name, Local<v8::Value>, const v8::AccessorInfo& info);
     static Handle<Value> Bind (const Arguments &);
     static Handle<Value> Send (const Arguments &);
     static Handle<Value> Close (const Arguments &);
@@ -74,7 +86,8 @@ private:
     static void FreeStringMessage(void *);
     static void FreeBufferMessage(void *);
 
-    static Socket * getSocket(const Arguments &);
+    static Socket * GetSocket(const Arguments &);
+    static Socket * GetSocket(const AccessorInfo& info);
 
     void *socket_;
     Context *context_;
