@@ -1,0 +1,11 @@
+New Architecture
+
+This isn't right right now. Reads just spin forever even though nothing is
+happening.
+
+Idea 1:
+
+ - Don't do anything until a context is "run".
+ - After a context is run, eio_custom thread it to read. Block.
+ - Send in idle time, ev_idle like it is now.
+   - Is zmq_poll with the same sockets safe across threads? I'm pretty sure it is...
