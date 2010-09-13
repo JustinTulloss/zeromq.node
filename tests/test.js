@@ -47,6 +47,12 @@ vows.describe('ZeroMQ')
                         s.send("hey there!");
                     });
                 },
+                'can set highwater mark': function(s) {
+                    assert.doesNotThrow(function() {
+                        s.highwaterMark = 10;
+                    });
+                    assert.equal(s.highwaterMark, 10);
+                },
                 'after successful `send`': {
                     topic: function(s) {
                         var self = this;

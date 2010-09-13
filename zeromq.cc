@@ -22,6 +22,12 @@
 
 #include "zeromq.h"
 
+#define SET_SOCKET_ACCESSOR(name)                                         \
+do {                                                                      \
+    t->PrototypeTemplate()->SetAccessor(String::New(name),                \
+            GetOptions, SetOptions);                                      \
+} while (0)
+
 namespace zmq {
 
 static Persistent<String> receive_symbol;
@@ -165,16 +171,15 @@ Socket::Initialize (v8::Handle<v8::Object> target) {
     NODE_SET_PROTOTYPE_METHOD(t, "unsubscribe", Unsubscribe);
     NODE_SET_PROTOTYPE_METHOD(t, "send", Send);
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-    
-    t->PrototypeTemplate()->SetAccessor(String::New("highwaterMark"), GetOptions, SetOptions);
-    t->PrototypeTemplate()->SetAccessor(String::New("diskOffloadSize"), GetOptions, SetOptions);
-    t->PrototypeTemplate()->SetAccessor(String::New("identity"), GetOptions, SetOptions);
-    t->PrototypeTemplate()->SetAccessor(String::New("multicastDataRate"), GetOptions, SetOptions);
-    t->PrototypeTemplate()->SetAccessor(String::New("recoveryIVL"), GetOptions, SetOptions);
-    t->PrototypeTemplate()->SetAccessor(String::New("multicastLoop"), GetOptions, SetOptions);
-    t->PrototypeTemplate()->SetAccessor(String::New("highwaterMark"), GetOptions, SetOptions);
-    t->PrototypeTemplate()->SetAccessor(String::New("sendBufferSize"), GetOptions, SetOptions);
-    t->PrototypeTemplate()->SetAccessor(String::New("receiveBufferSize"), GetOptions, SetOptions);
+
+    SET_SOCKET_ACCESSOR("highwaterMark");
+    SET_SOCKET_ACCESSOR("diskOffloadSize");
+    SET_SOCKET_ACCESSOR("identity");
+    SET_SOCKET_ACCESSOR("multicastDataRate");
+    SET_SOCKET_ACCESSOR("recoveryIVL");
+    SET_SOCKET_ACCESSOR("multicastLoop");
+    SET_SOCKET_ACCESSOR("sendBufferSize");
+    SET_SOCKET_ACCESSOR("receiveBufferSize");
 
     receive_symbol = NODE_PSYMBOL("receive");
     connect_symbol = NODE_PSYMBOL("connect");
