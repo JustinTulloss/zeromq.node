@@ -69,6 +69,10 @@ Context::RemoveSocket(Socket *s) {
 
 void
 Context::Close() {
+    std::list<Socket *>::iterator s;
+    for (s = sockets_.begin(); s != sockets_.end(); s++) {
+        (*s)->Close();
+    }
     zmq_term(context_);
     context_ = NULL;
     Unref();
@@ -98,6 +102,9 @@ Context::Context () : EventEmitter () {
 }
 
 Context::~Context () {
+    if (context_ != NULL) {
+        Close();
+    }
     assert(context_ == NULL);
 }
 
@@ -145,9 +152,11 @@ Socket::Initialize (v8::Handle<v8::Object> target) {
     NODE_DEFINE_CONSTANT(t, ZMQ_PUB);
     NODE_DEFINE_CONSTANT(t, ZMQ_SUB);
     NODE_DEFINE_CONSTANT(t, ZMQ_REQ);
+    NODE_DEFINE_CONSTANT(t, ZMQ_XREQ);
     NODE_DEFINE_CONSTANT(t, ZMQ_REP);
-    NODE_DEFINE_CONSTANT(t, ZMQ_UPSTREAM);
-    NODE_DEFINE_CONSTANT(t, ZMQ_DOWNSTREAM);
+    NODE_DEFINE_CONSTANT(t, ZMQ_XREP);
+    NODE_DEFINE_CONSTANT(t, ZMQ_PUSH);
+    NODE_DEFINE_CONSTANT(t, ZMQ_PULL);
     NODE_DEFINE_CONSTANT(t, ZMQ_PAIR);
 
     NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
@@ -331,7 +340,7 @@ Socket::Unsubscribe (const Arguments &args) {
 Handle<Value> 
 Socket::GetOptions (Local<String> name, const AccessorInfo& info) {
     Socket *socket = GetSocket(info);
-    
+
     if (name->Equals(v8::String::New("highwaterMark"))) {
       return socket->GetULongSockOpt(ZMQ_HWM);
     } else if (name->Equals(v8::String::New("diskOffloadSize"))) {
@@ -349,7 +358,7 @@ Socket::GetOptions (Local<String> name, const AccessorInfo& info) {
     } else if (name->Equals(v8::String::New("receiveBufferSize"))) {
         return socket->GetULongSockOpt(ZMQ_RCVBUF);
     }
-    
+
     return Undefined(); 
 }
 
@@ -472,6 +481,9 @@ Socket::Socket (Context *context, int type) : EventEmitter () {
 }
 
 Socket::~Socket () {
+    if (socket_ != NULL) {
+        Close();
+    }
     assert(socket_ == NULL);
 }
 

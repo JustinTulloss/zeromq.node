@@ -74,6 +74,14 @@ oh such fun.
  * error - There was some error. The only argument is an exception explaining
    what the error was.
 
+#### Constants
+ All the socket types as described in the [socket docs][zmq-socket] are hung off
+ of the Socket constructor. So, to create a socket of type `ZMQ_REQ`, you would
+ do the following:
+
+     var c = new Context();
+     var s = new Socket(c, Socket.ZMQ_REQ);
+
 Testing
 =======
 
@@ -90,7 +98,7 @@ Licensing
 Licensed under the very permissive [MIT License][mit-license]
 
 [node.js]: http://github.com/ry/node
-[zmq]: http://www.zeromq.org/local--files/area:download/zeromq-2.0.8.tar.gz
+[zmq]: http://www.zeromq.org/local--files/area:download/zeromq-2.0.9.tar.gz
 [zmq-api]: http://api.zeromq.org/
 [zmq-socket]: http://api.zeromq.org/zmq_socket.html
 [zmq-connect]: http://api.zeromq.org/zmq_connect.html
