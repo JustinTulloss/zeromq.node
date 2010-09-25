@@ -43,6 +43,9 @@ do {                                                                      \
             GetOptions, SetOptions);                                      \
 } while (0)
 
+
+// FIXME: Error checking needs to be implemented on all `zmq_` calls.
+
 namespace zmq {
 
 static Persistent<String> receive_symbol;
@@ -54,10 +57,13 @@ typedef struct outgoing_message {
     void (*freeFxn)(void *);
 } outgoing_message;
 
+class Socket;
+
 
 class Context : public EventEmitter {
+friend class Socket;
 public:
-    static void Initialize (v8::Handle<v8::Object> target) {
+    static void Initialize(v8::Handle<v8::Object> target) {
         HandleScope scope;
 
         Local<FunctionTemplate> t = FunctionTemplate::New(New);
@@ -68,10 +74,6 @@ public:
         NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
 
         target->Set(String::NewSymbol("Context"), t->GetFunction());
-    }
-
-    void *getCContext() {
-        return context_;
     }
 
     void Close() {
@@ -109,14 +111,13 @@ protected:
         return Undefined();
     }
 
-    Context(int io_threads) : EventEmitter () {
+    Context(int io_threads) : EventEmitter() {
         context_ = zmq_init(io_threads);
     }
 
     ~Context() {
-        if (context_ != NULL) {
+        if (context_ != NULL)
             Close();
-        }
         assert(context_ == NULL);
     }
 
@@ -126,9 +127,8 @@ private:
 
 
 class Socket : public EventEmitter {
-friend class Context;
 public:
-    static void Initialize (v8::Handle<v8::Object> target) {
+    static void Initialize(v8::Handle<v8::Object> target) {
         HandleScope scope;
 
         Local<FunctionTemplate> t = FunctionTemplate::New(New);
@@ -189,7 +189,7 @@ public:
             return ThrowException(Exception::TypeError(
                 String::New("Value must be an integer")));
         }
-        int64_t value = (int64_t)wrappedValue->ToInteger()->Value(); // WARNING: int cast to long!
+        int64_t value = (int64_t) wrappedValue->ToInteger()->Value(); // WARNING: int cast to long!
         zmq_setsockopt(socket_, option, &value, sizeof(value));
         return Undefined();
     }
@@ -206,7 +206,7 @@ public:
             return ThrowException(Exception::TypeError(
                 String::New("Value must be an integer")));
         }
-        uint64_t value = (uint64_t)wrappedValue->ToInteger()->Value(); // WARNING: int cast to long!
+        uint64_t value = (uint64_t) wrappedValue->ToInteger()->Value(); // WARNING: int cast to long!
         zmq_setsockopt(socket_, option, &value, sizeof(value));
         return Undefined();
     }
@@ -400,13 +400,12 @@ protected:
     }
 
     Socket(Context *context, int type) : EventEmitter () {
-        socket_ = zmq_socket(context->getCContext(), type);
+        socket_ = zmq_socket(context->context_, type);
         events_ = ZMQ_POLLIN;
 
         size_t zmq_fd_size = sizeof(int);
         int fd;
         zmq_getsockopt(socket_, ZMQ_FD, &fd, &zmq_fd_size);
-        // FIXME: error check
 
         ev_init(&watcher_, Socket::Callback);
         ev_io_set(&watcher_, fd, EV_READ);
@@ -428,7 +427,6 @@ private:
         size_t zmq_events_size = sizeof(uint32_t);
         uint32_t zmq_events;
         zmq_getsockopt(s->socket_, ZMQ_EVENTS, &zmq_events, &zmq_events_size);
-        // FIXME: error check
         s->AfterPoll(zmq_events);
     }
 
@@ -440,7 +438,6 @@ private:
         size_t zmq_events_size = sizeof(uint32_t);
         uint32_t zmq_events;
         zmq_getsockopt(socket_, ZMQ_EVENTS, &zmq_events, &zmq_events_size);
-        // FIXME: error check
         if (zmq_events & ZMQ_POLLOUT)
             AfterPoll(ZMQ_POLLOUT);
     }
@@ -553,7 +550,7 @@ private:
     }
 
     static void FreeStringMessage(void *message) {
-        String::Utf8Value *js_msg = (String::Utf8Value *)message;
+        String::Utf8Value *js_msg = (String::Utf8Value *) message;
         delete js_msg;
     }
 
@@ -585,7 +582,7 @@ private:
 }
 
 extern "C" void
-init (Handle<Object> target) {
+init(Handle<Object> target) {
     HandleScope scope;
     zmq::Context::Initialize(target);
     zmq::Socket::Initialize(target);
