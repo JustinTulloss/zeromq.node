@@ -1,4 +1,4 @@
-**This is barely usable. Proceed with caution**
+**This is alpha quality. Proceed with caution**
 =======================
 
 This library allows you to access zeromq from node.js.
@@ -6,14 +6,13 @@ This library allows you to access zeromq from node.js.
 Dependencies
 ============
 
- * node.js. Should work with trunk [on github][node.js]
- * zeromq. Download and build [here][zmq]
+ * [node.js]. Should work with 2.0 or newer.
+ * [zeromq]. Build and install from the master branch. (2.0.9 is inadequate.)
 
 To Build
 ========
 
-     $ node-waf configure
-     $ node-waf
+     $ node-waf configure build
 
 API
 ===
@@ -23,33 +22,23 @@ for in depth detail of the expected behaviors of the system. These methods will
 never return error codes, but may throw an exception if any of the errors
 described in the zeromq documentation occur.
 
-First, include the module.
+First, include the module:
 
     zeromq = require('zeromq');
 
-After that, the following objects are available
+After that, you can create sockets with:
 
-zeromq.Context
---------------
-A context must be created before you can create a socket. Contexts are basically
-logical groupings of sockets. Contexts are thread safe, but who cares? This is
-node. You can read more about contexts [in the zeromq api docs][zmq-api].
-
-### Constructor - `function()`
-The constructor takes no arguments.
-
-### Methods
- * close() - Closes the context.
+    socket = zeromq.createSocket('req');
 
 zeromq.Socket
 -------------
 A socket is where the action happens. You can send and receive things and it is
 oh such fun.
 
-#### Constructor - `function(context, type)`
- * context - A `zeromq.Context` object that this socket is to be associated with.
- * type - The type of socket. See the ZMQ_* constants hung off of `zeromq.Socket`
-   for options. You can read about the different socket types [here][zmq-socket].
+#### Constructor - `function(type)`
+ * type - A string describing the type of socket. You can read about the
+   different socket types [here][zmq-socket]. The name you use here matches the
+   names of the `ZMQ_*` constants, sans the `ZMQ_` prefix.
 
 #### Methods
  * connect(address) - Connect to another socket. `address` should be a string
@@ -70,17 +59,9 @@ oh such fun.
  * close() - Closes the socket
 
 #### Events
- * receive - Data was received. The only argument is the received data.
+ * message - A message was received. The only argument is the message.
  * error - There was some error. The only argument is an exception explaining
    what the error was.
-
-#### Constants
- All the socket types as described in the [socket docs][zmq-socket] are hung off
- of the Socket constructor. So, to create a socket of type `ZMQ_REQ`, you would
- do the following:
-
-     var c = new Context();
-     var s = new Socket(c, Socket.ZMQ_REQ);
 
 Testing
 =======
@@ -97,8 +78,8 @@ Licensing
 
 Licensed under the very permissive [MIT License][mit-license]
 
-[node.js]: http://github.com/ry/node
-[zmq]: http://www.zeromq.org/local--files/area:download/zeromq-2.0.9.tar.gz
+[node.js]: http://nodejs.org/
+[zeromq]: http://github.com/zeromq/zeromq2
 [zmq-api]: http://api.zeromq.org/
 [zmq-socket]: http://api.zeromq.org/zmq_socket.html
 [zmq-connect]: http://api.zeromq.org/zmq_connect.html
