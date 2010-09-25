@@ -1,8 +1,8 @@
 zmq = require('zeromq');
 sys = require('sys');
 
-s = zmq.createSocket(zmq.capi.Socket.ZMQ_REQ);
-s1 = zmq.createSocket(zmq.capi.Socket.ZMQ_REQ);
+s = zmq.createSocket('req');
+s1 = zmq.createSocket('req');
 
 msg = process.argv[2];
 

@@ -1,6 +1,21 @@
 var sys = require('sys');
 var binding = exports.capi = require('./binding');
 
+var namemap = (function() {
+  var s = binding.Socket;
+  var m = {};
+  m.pub  = m.publish   = m.publisher  = s.ZMQ_PUB;
+  m.sub  = m.subscribe = m.subscriber = s.ZMQ_SUB;
+  m.req  = m.request   = m.requester  = s.ZMQ_REQ;
+  m.xreq = m.xrequest  = m.xrequester = s.ZMQ_XREQ;
+  m.rep  = m.reply     = m.replier    = s.ZMQ_REP;
+  m.xrep = m.xreply    = m.xreplier   = s.ZMQ_XREP;
+  m.push = s.ZMQ_PUSH;
+  m.pull = s.ZMQ_PULL;
+  m.pair = s.ZMQ_PAIR;
+  return m;
+})();
+
 var context_ = null;
 var defaultContext = function() {
   if (context_ !== null)
@@ -24,7 +39,13 @@ var defaultContext = function() {
   return context_;
 };
 
-exports.createSocket = function(type) {
+exports.createSocket = function(typename) {
   var ctx = defaultContext();
-  return new binding.Socket(ctx, type);
+  var typecode = typename;
+  if (typeof(typecode) !== 'number') {
+    typecode = namemap[typename];
+    if (!namemap.hasOwnProperty(typename) || typecode === undefined)
+      throw new ("Unknown socket type: " + typename);
+  }
+  return new binding.Socket(ctx, typecode);
 };

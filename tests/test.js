@@ -7,7 +7,7 @@ vows.describe('ZeroMQ')
 .addBatch({
     'A socket': {
         topic: function() {
-            var s = zeromq.createSocket(zeromq.Socket.ZMQ_REQ);
+            var s = zeromq.createSocket('req');
             this.callback(null, s);
         },
         'after successful open': {
