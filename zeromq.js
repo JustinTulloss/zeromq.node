@@ -46,7 +46,7 @@ exports.createSocket = function(typename, options) {
   if (typeof(typecode) !== 'number') {
     typecode = namemap[typename];
     if (!namemap.hasOwnProperty(typename) || typecode === undefined)
-      throw new ("Unknown socket type: " + typename);
+      throw new TypeError("Unknown socket type: " + typename);
   }
 
   var s = new binding.Socket(ctx, typecode);
