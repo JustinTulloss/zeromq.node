@@ -5,24 +5,9 @@ var vows = require('vows'),
 
 vows.describe('ZeroMQ')
 .addBatch({
-    'A context': {
-        topic: function() { this.callback(null, new zeromq.Context())},
-        'has a close method': function(c) {
-            assert.isFunction(c.close);
-        },
-        'can be closed': function(c) {
-            assert.doesNotThrow(function() {
-                c.close();
-            });
-        }
-    }
-})
-.addBatch({
     'A socket': {
         topic: function() {
-            var c = new zeromq.Context();
-            var s = new zeromq.Socket(c, zeromq.Socket.ZMQ_REQ);
-            this.c = c;
+            var s = zeromq.createSocket(zeromq.Socket.ZMQ_REQ);
             this.callback(null, s);
         },
         'after successful open': {
@@ -71,7 +56,6 @@ vows.describe('ZeroMQ')
                             assert.doesNotThrow(function() {
                                 s.close();
                             });
-                            this.c.close();
                         }
                     }
                 }
