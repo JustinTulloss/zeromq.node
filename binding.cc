@@ -83,8 +83,20 @@ public:
 protected:
     static Handle<Value> New(const Arguments& args) {
         HandleScope scope;
+        int io_threads = 1;
+        if (args.Length() == 1) {
+            if (!args[0]->IsNumber()) {
+                return ThrowException(Exception::TypeError(
+                    String::New("io_threads must be an integer")));
+            }
+            io_threads = (int) args[0]->ToInteger()->Value();
+            if (io_threads < 1) {
+                return ThrowException(Exception::RangeError(
+                    String::New("io_threads must be a positive number")));
+            }
+        }
 
-        Context *context = new Context();
+        Context *context = new Context(io_threads);
         context->Wrap(args.This());
 
         return args.This();
@@ -96,8 +108,9 @@ protected:
         context->Close();
         return Undefined();
     }
-    Context() : EventEmitter () {
-        context_ = zmq_init(1);
+
+    Context(int io_threads) : EventEmitter () {
+        context_ = zmq_init(io_threads);
     }
 
     ~Context() {
