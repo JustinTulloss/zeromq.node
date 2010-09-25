@@ -42,7 +42,7 @@ vows.describe('ZeroMQ')
                     topic: function(s) {
                         var self = this;
                         s.on('message', function(data) {
-                            self.callback(null, data);
+                            self.callback(null, data.toString('utf8'));
                         });
                     },
                     'does receive data': function(data) {

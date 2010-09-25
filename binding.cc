@@ -448,17 +448,20 @@ private:
         Local <Value> exception;
 
         if (revents & ZMQ_POLLIN) {
+            zmq_msg_t *z_msg = new zmq_msg_t;
+            zmq_msg_init(z_msg);
 
-            zmq_msg_t z_msg;
-            if (Recv(0, &z_msg)) {
+            if (Recv(0, z_msg)) {
+                zmq_msg_close(z_msg);
+                delete z_msg;
                 Emit(error_symbol, 1, &exception);
             }
-            ssize_t length = zmq_msg_size(&z_msg);
-            Local<Value> argv[] = {
-                String::New((char *) zmq_msg_data(&z_msg), length)
-            };
-            Emit(message_symbol, 1, argv);
-            zmq_msg_close(&z_msg);
+
+            Buffer *buffer = Buffer::New(
+                (char *) zmq_msg_data(z_msg), zmq_msg_size(z_msg),
+                ReleaseReceivedMessage, (void *)z_msg);
+            Local<Value> argv = Local<Value>::New(buffer->handle_);
+            Emit(message_symbol, 1, &argv);
         }
 
         if (revents & ZMQ_POLLOUT && !outgoing_.empty()) {
@@ -503,6 +506,12 @@ private:
         }
 
         return 0;
+    }
+
+    static void ReleaseReceivedMessage(char *data, void *hint) {
+        zmq_msg_t *z_msg = (zmq_msg_t *) hint;
+        zmq_msg_close(z_msg);
+        delete z_msg;
     }
 
     static int EIO_DoBind(eio_req *req) {

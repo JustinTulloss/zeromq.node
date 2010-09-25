@@ -9,7 +9,7 @@ msg = process.argv[2];
 count = 0;
 s.on('message', function(data) {
     count--;
-    sys.puts('received: ' + data);
+    sys.puts('received: ' + data.toString('utf8'));
     if (count == 0) {
         s.close();
     }
@@ -28,7 +28,7 @@ s.send(new Buffer("Buffers are nice cause they can handle arbitrary data"));
 count++;
 
 s1.on('message', function(data) {
-    sys.puts('other socket received: ' + data)
+    sys.puts('other socket received: ' + data.toString('utf8'))
     s1.close();
 });
 
