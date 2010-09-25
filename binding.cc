@@ -48,7 +48,7 @@ do {                                                                      \
 
 namespace zmq {
 
-static Persistent<String> receive_symbol;
+static Persistent<String> message_symbol;
 static Persistent<String> error_symbol;
 static Persistent<String> connect_symbol;
 
@@ -162,7 +162,7 @@ public:
         SET_SOCKET_ACCESSOR("sendBufferSize");
         SET_SOCKET_ACCESSOR("receiveBufferSize");
 
-        receive_symbol = NODE_PSYMBOL("receive");
+        message_symbol = NODE_PSYMBOL("message");
         connect_symbol = NODE_PSYMBOL("connect");
         error_symbol = NODE_PSYMBOL("error");
 
@@ -457,7 +457,7 @@ private:
             Local<Value> argv[] = {
                 String::New((char *) zmq_msg_data(&z_msg), length)
             };
-            Emit(receive_symbol, 1, argv);
+            Emit(message_symbol, 1, argv);
             zmq_msg_close(&z_msg);
         }
 

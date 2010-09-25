@@ -41,7 +41,7 @@ vows.describe('ZeroMQ')
                 'after successful `send`': {
                     topic: function(s) {
                         var self = this;
-                        s.on('receive', function(data) {
+                        s.on('message', function(data) {
                             self.callback(null, data);
                         });
                     },
