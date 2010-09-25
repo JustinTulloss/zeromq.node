@@ -24,6 +24,7 @@
 #define ZEROMQ_NODE
 
 #include <v8.h>
+#include <ev.h>
 #include <node.h>
 #include <node_events.h>
 #include <node_buffer.h>
@@ -76,6 +77,7 @@ protected:
     ~Socket();
 
 private:
+    static void Callback(EV_P_ ev_io *watcher, int revents);
     void QueueOutgoingMessage(Local <Value>);
     int AfterPoll(int);
 
@@ -90,7 +92,7 @@ private:
     static Socket * GetSocket(const AccessorInfo& info);
 
     void *socket_;
-    Context *context_;
+    ev_io watcher_;
     short events_;
     std::list< Persistent <Value> > outgoing_;
 
@@ -103,8 +105,6 @@ class Context : public EventEmitter {
 public:
     static void Initialize (v8::Handle<v8::Object>);
     void *getCContext();
-    void AddSocket(Socket *);
-    void RemoveSocket(Socket *);
     void Close();
 
 protected:
@@ -114,10 +114,7 @@ protected:
     ~Context();
 
 private:
-    static void DoPoll(EV_P_ ev_idle *watcher, int revents);
     void * context_;
-    std::list<Socket *> sockets_;
-    ev_idle zmq_poller_;
 };
 
 }

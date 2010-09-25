@@ -59,26 +59,7 @@ Context::getCContext() {
 }
 
 void
-Context::AddSocket(Socket *s) {
-    sockets_.push_back(s);
-    zmq_poller_.data = this;
-    ev_idle_start(EV_DEFAULT_UC_ &zmq_poller_);
-}
-
-void
-Context::RemoveSocket(Socket *s) {
-    sockets_.remove(s);
-    if (sockets_.empty()) {
-        ev_idle_stop(EV_DEFAULT_UC_ &zmq_poller_);
-    }
-}
-
-void
 Context::Close() {
-    std::list<Socket *>::iterator s;
-    for (s = sockets_.begin(); s != sockets_.end(); s++) {
-        (*s)->Close();
-    }
     zmq_term(context_);
     context_ = NULL;
     Unref();
@@ -104,7 +85,6 @@ Context::Close (const Arguments& args) {
 
 Context::Context () : EventEmitter () {
     context_ = zmq_init(1);
-    ev_idle_init(&zmq_poller_, DoPoll);
 }
 
 Context::~Context () {
@@ -112,37 +92,6 @@ Context::~Context () {
         Close();
     }
     assert(context_ == NULL);
-}
-
-void
-Context::DoPoll(EV_P_ ev_idle *watcher, int revents) {
-    std::list<Socket *>::iterator s;
-    assert(revents == EV_IDLE);
-
-    Context *c = (Context *) watcher->data;
-
-    int i = -1;
-
-    zmq_pollitem_t *pollers = (zmq_pollitem_t *)
-        malloc(c->sockets_.size() * sizeof(zmq_pollitem_t));
-    if (!pollers) return;
-
-    for (s = c->sockets_.begin(); s != c->sockets_.end(); s++) {
-        i++;
-        pollers[i].socket = (*s)->socket_;
-        pollers[i].events = (*s)->events_;
-    }
-
-    zmq_poll(pollers, i + 1, 0); // Return instantly w/timeout 0
-
-    i = -1;
-
-    for (s = c->sockets_.begin(); s != c->sockets_.end(); s++) {
-        i++;
-        (*s)->AfterPoll(pollers[i].revents);
-    }
-
-    free(pollers);
 }
 
 
@@ -284,8 +233,8 @@ Socket::Recv(int flags, zmq_msg_t* z_msg) {
 
 void
 Socket::Close() {
+    ev_io_stop(EV_DEFAULT_UC_ &watcher_);
     zmq_close(socket_);
-    context_->RemoveSocket(this);
     socket_ = NULL;
     Unref();
 }
@@ -481,8 +430,16 @@ Socket::Close (const Arguments &args) {
 Socket::Socket (Context *context, int type) : EventEmitter () {
     socket_ = zmq_socket(context->getCContext(), type);
     events_ = ZMQ_POLLIN;
-    context_ = context;
-    context_->AddSocket(this);
+
+    size_t zmq_fd_size = sizeof(int);
+    int fd;
+    zmq_getsockopt(socket_, ZMQ_FD, &fd, &zmq_fd_size);
+    // FIXME: error check
+
+    ev_init(&watcher_, Socket::Callback);
+    ev_io_set(&watcher_, fd, EV_READ);
+    watcher_.data = this;
+    ev_io_start(EV_DEFAULT_UC_ &watcher_);
 }
 
 Socket::~Socket () {
@@ -493,10 +450,28 @@ Socket::~Socket () {
 }
 
 void
+Socket::Callback(EV_P_ ev_io *w, int ev_revents) {
+    Socket *s = static_cast<Socket*>(w->data);
+
+    size_t zmq_events_size = sizeof(uint32_t);
+    uint32_t zmq_events;
+    zmq_getsockopt(s->socket_, ZMQ_EVENTS, &zmq_events, &zmq_events_size);
+    // FIXME: error check
+    s->AfterPoll(zmq_events);
+}
+
+void
 Socket::QueueOutgoingMessage(Local <Value> message) {
     Persistent<Value> p_message = Persistent<Value>::New(message);
     events_ |= ZMQ_POLLOUT;
     outgoing_.push_back(p_message);
+
+    size_t zmq_events_size = sizeof(uint32_t);
+    uint32_t zmq_events;
+    zmq_getsockopt(socket_, ZMQ_EVENTS, &zmq_events, &zmq_events_size);
+    // FIXME: error check
+    if (zmq_events & ZMQ_POLLOUT)
+        AfterPoll(ZMQ_POLLOUT);
 }
 
 void
