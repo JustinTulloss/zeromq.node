@@ -39,13 +39,22 @@ var defaultContext = function() {
   return context_;
 };
 
-exports.createSocket = function(typename) {
+exports.createSocket = function(typename, options) {
   var ctx = defaultContext();
+
   var typecode = typename;
   if (typeof(typecode) !== 'number') {
     typecode = namemap[typename];
     if (!namemap.hasOwnProperty(typename) || typecode === undefined)
       throw new ("Unknown socket type: " + typename);
   }
-  return new binding.Socket(ctx, typecode);
+
+  var s = new binding.Socket(ctx, typecode);
+
+  if (typeof(options) === 'object') {
+    for (var key in options)
+      s[key] = options[key];
+  }
+
+  return s;
 };
