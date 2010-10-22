@@ -1,4 +1,4 @@
-var sys = require('sys');
+var util = require('util');
 var binding = exports.capi = require('./binding');
 
 var namemap = (function() {
@@ -25,7 +25,7 @@ var defaultContext = function() {
   if (process.env.ZMQ_IO_THREADS) {
     io_threads = parseInt(process.env.ZMQ_IO_THREADS);
     if (!io_threads || io_threads < 1) {
-      sys.error('Invalid number in ZMQ_IO_THREADS, using 1 IO thread.');
+      util.error('Invalid number in ZMQ_IO_THREADS, using 1 IO thread.');
       io_threads = 1;
     }
   }

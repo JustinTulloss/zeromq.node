@@ -1,6 +1,5 @@
 var vows = require('vows'),
     assert = require('assert'),
-    sys = require('sys'),
     zeromq = require('zeromq');
 
 vows.describe('ZeroMQ')

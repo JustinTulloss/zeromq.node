@@ -1,13 +1,13 @@
 zmq = require('zeromq');
-sys = require('sys');
+util = require('util');
 
 s = zmq.createSocket('rep');
 
 s.bind('tcp://127.0.0.1:5554', function(err) {
     if(err) throw new Error(err);
     s.on('message', function(data) {
-        sys.puts("received data: " + data.toString('utf8'));
+        util.puts("received data: " + data.toString('utf8'));
         s.send("Your message was received");
     });
-    sys.puts('Ready to go!');
+    util.puts('Ready to go!');
 });
