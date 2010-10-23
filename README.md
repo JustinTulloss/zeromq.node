@@ -14,9 +14,6 @@ Some bleeding edge dependencies are required:
 At the time of writing, neither have been released. You'll have to build these
 from their github repositories.
 
-NOTE: For now, this also requires a patch to node.js.
-See the [node.js zero-copy branch]. Will hopefully see this merged soon.
-
 To Build
 ========
 
@@ -87,7 +84,6 @@ Licensing
 Licensed under the very permissive [MIT License].
 
 [node.js]: http://github.com/ry/node
-[node.js zero-copy branch]: http://github.com/stephank/node/tree/zero-copy
 [ØMQ]: http://github.com/zeromq/zeromq2
 [ØMQ API]: http://api.zeromq.org/
 [zmq_socket]: http://api.zeromq.org/zmq_socket.html
