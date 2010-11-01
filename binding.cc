@@ -380,14 +380,23 @@ protected:
     }
 
     static Handle<Value> Send(const Arguments &args) {
-        HandleScope scope;
         Socket *socket = GetSocket(args);
-        if (!args.Length() == 1) {
+        int argc = args.Length();
+
+        if (argc == 0) {
             return ThrowException(Exception::TypeError(
-                String::New("Must pass in a string to send")));
+                String::New("Must pass in at least one message part to send")));
         }
 
-        socket->QueueOutgoingMessage(args[0]);
+        for (int i = 0; i < argc; ++i) {
+            Local<Value> arg = args[i];
+            if (!(arg->IsString() || Buffer::HasInstance(arg))) {
+                return ThrowException(Exception::TypeError(
+                    String::New("All message parts must be Strings or Buffers")));
+            }
+        }
+
+        socket->QueueOutgoingMessage(args);
 
         return Undefined();
     }
@@ -431,8 +440,12 @@ private:
         s->AfterPoll(zmq_events);
     }
 
-    void QueueOutgoingMessage(Local <Value> message) {
-        Persistent<Value> p_message = Persistent<Value>::New(message);
+    void QueueOutgoingMessage(const Arguments &args) {
+        int argc = args.Length();
+        Persistent<Array> p_message = Persistent<Array>::New(Array::New(argc));
+        for (int i = 0; i < argc; ++i) {
+            p_message->Set(i, args[i]);
+        }
         events_ |= ZMQ_POLLOUT;
         outgoing_.push_back(p_message);
 
@@ -466,40 +479,46 @@ private:
         }
 
         if (revents & ZMQ_POLLOUT && !outgoing_.empty()) {
-            Local <Value> out = Local<Value>::New(outgoing_.front());
-            outgoing_message *og =
-                (outgoing_message *) malloc(sizeof(outgoing_message));
-            if (!og) {
-                exception = Exception::Error(
-                    String::New("Could not allocate a minute amount of memory"));
-                Emit(error_symbol, 1, &exception);
-                return -1;
-            }
-            int rc = 0;
-            if (out->IsString()) {
-                String::Utf8Value *message = new String::Utf8Value(out);
-                og->data = (void *) message;
-                og->freeFxn = &FreeStringMessage;
-                rc = Send(**message, message->length(), 0, (void *) og);
-            }
-            else if (Buffer::HasInstance(out)) {
-                Persistent<Object> buffer_obj = Persistent<Object>::New(out->ToObject());
-                char *buffer_data = Buffer::Data(buffer_obj);
-                size_t buffer_length = Buffer::Length(buffer_obj);
-                og->handle = buffer_obj;
-                og->freeFxn = &FreeBufferMessage;
-                rc = Send(buffer_data, buffer_length, 0, (void *)og);
-            }
-            else {
-                exception = Exception::Error(
-                    String::New("Can only send messages of type String or Buffer"));
+            Local <Array> parts = Local<Array>::New(outgoing_.front());
+            uint32_t len = parts->Length();
+            for(uint32_t i = 0; i < len; ++i) {
+                Local <Value> out = parts->Get(i);
+                int flags = (i == (len-1)) ? 0 : ZMQ_SNDMORE;
+                outgoing_message *og =
+                    (outgoing_message *) malloc(sizeof(outgoing_message));
+                if (!og) {
+                    exception = Exception::Error(
+                        String::New("Could not allocate a minute amount of memory"));
                     Emit(error_symbol, 1, &exception);
-            }
+                    return -1;
+                }
+                int rc = 0;
+                if (out->IsString()) {
+                    String::Utf8Value *message = new String::Utf8Value(out);
+                    og->data = (void *) message;
+                    og->freeFxn = &FreeStringMessage;
+                    rc = Send(**message, message->length(), flags, (void *) og);
+                }
+                else if (Buffer::HasInstance(out)) {
+                    Persistent<Object> buffer_obj = Persistent<Object>::New(out->ToObject());
+                    char *buffer_data = Buffer::Data(buffer_obj);
+                    size_t buffer_length = Buffer::Length(buffer_obj);
+                    og->handle = buffer_obj;
+                    og->freeFxn = &FreeBufferMessage;
+                    rc = Send(buffer_data, buffer_length, flags, (void *)og);
+                }
+                else {
+                    /* shouldn't happen; we checked the types on the original call */
+                    exception = Exception::Error(
+                        String::New("Can only send messages of type String or Buffer"));
+                        Emit(error_symbol, 1, &exception);
+                }
 
-            if (rc) {
-                exception = Exception::Error(
-                    String::New(ErrorMessage()));
-                Emit(error_symbol, 1, &exception);
+                if (rc) {
+                    exception = Exception::Error(
+                        String::New(ErrorMessage()));
+                    Emit(error_symbol, 1, &exception);
+                }
             }
 
             // TODO: document the consequences of disposing even when there's an
@@ -582,7 +601,7 @@ private:
     void *socket_;
     ev_io watcher_;
     short events_;
-    std::list< Persistent <Value> > outgoing_;
+    std::list< Persistent <Array> > outgoing_;
 
     Persistent<String> bindAddress_;
     Persistent<Function> bindCallback_;

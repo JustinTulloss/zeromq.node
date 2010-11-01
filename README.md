@@ -55,12 +55,14 @@ oh such fun.
    `address` should be a string as described in the [ØMQ API docs][zmq_bind].
    `callback` will be called when binding is complete and takes one argument, 
    a string describing any errors.
- * send(message) - `message` is a string to send across the wire. The message is
-   not sent immediately, but there is no callback indicating when it has been
-   transmitted. Have your server ack or something if you care that much.
+ * send(message, ...) - `message` is a string to send across the wire. The
+   message is not sent immediately, but there is no callback indicating when
+   it has been transmitted. Have your server ack or something if you care that
+   much.
 
    The message must be either a String or a Buffer object, or bad things will
-   happen.
+   happen. If you provide more than one argument to send, then a multipart
+   ØMQ message will be sent.
 
  * close() - Closes the socket
 
