@@ -434,10 +434,15 @@ private:
     static void Callback(EV_P_ ev_io *w, int ev_revents) {
         Socket *s = static_cast<Socket*>(w->data);
 
-        size_t zmq_events_size = sizeof(uint32_t);
-        uint32_t zmq_events;
-        zmq_getsockopt(s->socket_, ZMQ_EVENTS, &zmq_events, &zmq_events_size);
-        s->AfterPoll(zmq_events);
+        s->AfterPoll();
+    }
+
+    uint32_t CurrentEvents() {
+        uint32_t result;
+        size_t result_size = sizeof (result);
+        zmq_getsockopt(socket_, ZMQ_EVENTS, &result, &result_size);
+
+        return result;
     }
 
     void QueueOutgoingMessage(const Arguments &args) {
@@ -449,19 +454,15 @@ private:
         events_ |= ZMQ_POLLOUT;
         outgoing_.push_back(p_message);
 
-        size_t zmq_events_size = sizeof(uint32_t);
-        uint32_t zmq_events;
-        zmq_getsockopt(socket_, ZMQ_EVENTS, &zmq_events, &zmq_events_size);
-        if (zmq_events & ZMQ_POLLOUT)
-            AfterPoll(ZMQ_POLLOUT);
+        AfterPoll();
     }
 
-    int AfterPoll(int revents) {
+    int AfterPoll() {
         HandleScope scope;
 
         Local <Value> exception;
 
-        if (revents & ZMQ_POLLIN) {
+        while (CurrentEvents() & ZMQ_POLLIN) {
             zmq_msg_t *z_msg = new zmq_msg_t;
             zmq_msg_init(z_msg);
 
@@ -478,7 +479,7 @@ private:
             Emit(message_symbol, 1, &argv);
         }
 
-        if (revents & ZMQ_POLLOUT && !outgoing_.empty()) {
+        while ((CurrentEvents() & ZMQ_POLLOUT) && !outgoing_.empty()) {
             Local <Array> parts = Local<Array>::New(outgoing_.front());
             uint32_t len = parts->Length();
             for(uint32_t i = 0; i < len; ++i) {
