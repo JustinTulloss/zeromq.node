@@ -54,7 +54,8 @@ static Persistent<String> connect_symbol;
 
 typedef struct outgoing_message {
     void *data;
-    void (*freeFxn)(void *);
+    Persistent<Object> handle;
+    void (*freeFxn)(outgoing_message *);
 } outgoing_message;
 
 class Socket;
@@ -482,10 +483,12 @@ private:
                 rc = Send(**message, message->length(), 0, (void *) og);
             }
             else if (Buffer::HasInstance(out)) {
-                Buffer *buffer = ObjectWrap::Unwrap<Buffer>(out->ToObject());
-                og->data = (void *) buffer;
+                Persistent<Object> buffer_obj = Persistent<Object>::New(out->ToObject());
+                char *buffer_data = Buffer::Data(buffer_obj);
+                size_t buffer_length = Buffer::Length(buffer_obj);
+                og->handle = buffer_obj;
                 og->freeFxn = &FreeBufferMessage;
-                rc = Send(buffer->data(), buffer->length(), 0, (void *)og);
+                rc = Send(buffer_data, buffer_length, 0, (void *)og);
             }
             else {
                 exception = Exception::Error(
@@ -554,19 +557,18 @@ private:
 
     static void FreeMessage(void *data, void *message) {
         outgoing_message *msg = (outgoing_message *) message;
-        msg->freeFxn(msg->data);
+        msg->freeFxn(msg);
         free(message);
     }
 
-    static void FreeStringMessage(void *message) {
-        String::Utf8Value *js_msg = (String::Utf8Value *) message;
+    static void FreeStringMessage(outgoing_message *message) {
+        String::Utf8Value *js_msg = (String::Utf8Value *) message->data;
         delete js_msg;
     }
 
-    static void FreeBufferMessage(void *message) {
-        Persistent <Buffer> *buffer = (Persistent <Buffer> *) message;
-        buffer->Dispose();
-        delete buffer;
+    static void FreeBufferMessage(outgoing_message *message) {
+        Persistent<Object> buffer_obj = message->handle;
+        buffer_obj.Dispose();
     }
 
     static Socket * GetSocket(const Arguments &args) {
