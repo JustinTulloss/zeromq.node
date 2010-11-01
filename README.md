@@ -11,8 +11,9 @@ Some bleeding edge dependencies are required:
  * [node.js]. Should work with at least 0.3.
  * [ØMQ]. Should work with at least 2.1.
 
-At the time of writing, neither have been released. You'll have to build these
-from their github repositories.
+At the time of writing, ØMQ 2.1 has not been released, so you'll have
+to build it from its github repositories, while node.js 0.3 has been
+released but is still officially "unstable."
 
 To Build
 ========
