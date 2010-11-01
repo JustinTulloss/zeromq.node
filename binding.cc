@@ -380,6 +380,7 @@ protected:
     }
 
     static Handle<Value> Send(const Arguments &args) {
+        HandleScope scope;
         Socket *socket = GetSocket(args);
         int argc = args.Length();
 
@@ -447,12 +448,12 @@ private:
 
     void QueueOutgoingMessage(const Arguments &args) {
         int argc = args.Length();
-        Persistent<Array> p_message = Persistent<Array>::New(Array::New(argc));
+        Local<Array> p_message = Array::New(argc);
         for (int i = 0; i < argc; ++i) {
             p_message->Set(i, args[i]);
         }
         events_ |= ZMQ_POLLOUT;
-        outgoing_.push_back(p_message);
+        outgoing_.push_back(Persistent<Array>::New(p_message));
 
         AfterPoll();
     }
