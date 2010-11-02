@@ -32,6 +32,7 @@
 #include <string.h>
 #include <errno.h>
 #include <list>
+#include <vector>
 #include <unistd.h>
 
 using namespace v8;
@@ -446,6 +447,14 @@ private:
         return result;
     }
 
+    int64_t RcvMore() {
+        int64_t result;
+        size_t result_size = sizeof (result);
+        zmq_getsockopt(socket_, ZMQ_RCVMORE, &result, &result_size);
+
+        return result;
+    }
+
     void QueueOutgoingMessage(const Arguments &args) {
         int argc = args.Length();
         Local<Array> p_message = Array::New(argc);
@@ -464,20 +473,23 @@ private:
         Local <Value> exception;
 
         while (CurrentEvents() & ZMQ_POLLIN) {
-            zmq_msg_t *z_msg = new zmq_msg_t;
-            zmq_msg_init(z_msg);
+            std::vector< Local<Value> > argv;
+            do {
+                zmq_msg_t *z_msg = new zmq_msg_t;
+                zmq_msg_init(z_msg);
 
-            if (Recv(0, z_msg)) {
-                zmq_msg_close(z_msg);
-                delete z_msg;
-                Emit(error_symbol, 1, &exception);
-            }
+                if (Recv(0, z_msg)) {
+                    zmq_msg_close(z_msg);
+                    delete z_msg;
+                    Emit(error_symbol, 1, &exception);
+                }
 
-            Buffer *buffer = Buffer::New(
-                (char *) zmq_msg_data(z_msg), zmq_msg_size(z_msg),
-                ReleaseReceivedMessage, (void *)z_msg);
-            Local<Value> argv = Local<Value>::New(buffer->handle_);
-            Emit(message_symbol, 1, &argv);
+                Buffer *buffer = Buffer::New(
+                    (char *) zmq_msg_data(z_msg), zmq_msg_size(z_msg),
+                    ReleaseReceivedMessage, (void *)z_msg);
+                argv.push_back(Local<Value>::New(buffer->handle_));
+            } while(RcvMore());
+            Emit(message_symbol, argv.size(), &argv[0]);
         }
 
         while ((CurrentEvents() & ZMQ_POLLOUT) && !outgoing_.empty()) {
