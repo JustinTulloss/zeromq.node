@@ -67,7 +67,14 @@ oh such fun.
  * close() - Closes the socket
 
 #### Events
- * message - A message was received. The only argument is the message.
+ * message - A message was received. The arguments are the parts of the
+   message. So, for example, if you have an `xrep` socket with plain `req`
+   sockets on the other end, you can do something like
+
+       socket.on('message', function(envelope, blank, data) {
+         socket.send(envelope, blank, compute_reply_for(data));
+       }
+
  * error - There was some error. The only argument is an exception explaining
    what the error was.
 
