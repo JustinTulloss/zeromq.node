@@ -397,7 +397,13 @@ protected:
             }
         }
 
-        socket->QueueOutgoingMessage(args);
+        Local<Array> p_message = Array::New(argc);
+        for (int i = 0; i < argc; ++i) {
+            p_message->Set(i, args[i]);
+        }
+        socket->events_ |= ZMQ_POLLOUT;
+        socket->outgoing_.push_back(Persistent<Array>::New(p_message));
+        socket->AfterPoll();
 
         return Undefined();
     }
@@ -452,18 +458,6 @@ private:
         zmq_getsockopt(socket_, ZMQ_RCVMORE, &result, &result_size);
 
         return result;
-    }
-
-    void QueueOutgoingMessage(const Arguments &args) {
-        int argc = args.Length();
-        Local<Array> p_message = Array::New(argc);
-        for (int i = 0; i < argc; ++i) {
-            p_message->Set(i, args[i]);
-        }
-        events_ |= ZMQ_POLLOUT;
-        outgoing_.push_back(Persistent<Array>::New(p_message));
-
-        AfterPoll();
     }
 
     int AfterPoll() {
