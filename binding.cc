@@ -33,7 +33,6 @@
 #include <errno.h>
 #include <list>
 #include <vector>
-#include <unistd.h>
 
 using namespace v8;
 using namespace node;
@@ -498,14 +497,7 @@ private:
             for(uint32_t i = 0; i < len; ++i) {
                 Local <Value> out = parts->Get(i);
                 int flags = (i == (len-1)) ? 0 : ZMQ_SNDMORE;
-                outgoing_message *og =
-                    (outgoing_message *) malloc(sizeof(outgoing_message));
-                if (!og) {
-                    exception = Exception::Error(
-                        String::New("Could not allocate a minute amount of memory"));
-                    Emit(error_symbol, 1, &exception);
-                    return -1;
-                }
+                outgoing_message *og = new outgoing_message;
                 int rc = 0;
                 if (out->IsString()) {
                     String::Utf8Value *message = new String::Utf8Value(out);
