@@ -53,9 +53,7 @@ static Persistent<String> error_symbol;
 static Persistent<String> connect_symbol;
 
 typedef struct outgoing_message {
-    void *data;
     Persistent<Object> handle;
-    void (*freeFxn)(outgoing_message *);
 } outgoing_message;
 
 class Socket;
@@ -391,9 +389,9 @@ protected:
 
         for (int i = 0; i < argc; ++i) {
             Local<Value> arg = args[i];
-            if (!(arg->IsString() || Buffer::HasInstance(arg))) {
+            if (!Buffer::HasInstance(arg)) {
                 return ThrowException(Exception::TypeError(
-                    String::New("All message parts must be Strings or Buffers")));
+                    String::New("All message parts must be Buffers")));
             }
         }
 
@@ -492,31 +490,12 @@ private:
                 Local <Value> out = parts->Get(i);
                 int flags = (i == (len-1)) ? 0 : ZMQ_SNDMORE;
                 outgoing_message *og = new outgoing_message;
-                int rc = 0;
-                if (out->IsString()) {
-                    String::Utf8Value *message = new String::Utf8Value(out);
-                    og->data = (void *) message;
-                    og->freeFxn = &FreeStringMessage;
-                    rc = Send(**message, message->length(), flags, (void *) og);
-                }
-                else if (Buffer::HasInstance(out)) {
-                    Persistent<Object> buffer_obj = Persistent<Object>::New(out->ToObject());
-                    char *buffer_data = Buffer::Data(buffer_obj);
-                    size_t buffer_length = Buffer::Length(buffer_obj);
-                    og->handle = buffer_obj;
-                    og->freeFxn = &FreeBufferMessage;
-                    rc = Send(buffer_data, buffer_length, flags, (void *)og);
-                }
-                else {
-                    /* shouldn't happen; we checked the types on the original call */
-                    exception = Exception::Error(
-                        String::New("Can only send messages of type String or Buffer"));
-                        Emit(error_symbol, 1, &exception);
-                }
-
-                if (rc) {
-                    exception = Exception::Error(
-                        String::New(ErrorMessage()));
+                Persistent<Object> buffer_obj = Persistent<Object>::New(out->ToObject());
+                char *buffer_data = Buffer::Data(buffer_obj);
+                size_t buffer_length = Buffer::Length(buffer_obj);
+                og->handle = buffer_obj;
+                if (Send(buffer_data, buffer_length, flags, (void *)og)) {
+                    exception = Exception::Error(String::New(ErrorMessage()));
                     Emit(error_symbol, 1, &exception);
                 }
             }
@@ -576,18 +555,8 @@ private:
 
     static void FreeMessage(void *data, void *message) {
         outgoing_message *msg = (outgoing_message *) message;
-        msg->freeFxn(msg);
-        free(message);
-    }
-
-    static void FreeStringMessage(outgoing_message *message) {
-        String::Utf8Value *js_msg = (String::Utf8Value *) message->data;
-        delete js_msg;
-    }
-
-    static void FreeBufferMessage(outgoing_message *message) {
-        Persistent<Object> buffer_obj = message->handle;
-        buffer_obj.Dispose();
+        msg->handle.Dispose();
+        delete msg;
     }
 
     static Socket * GetSocket(const Arguments &args) {
