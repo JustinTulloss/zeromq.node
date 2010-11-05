@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <list>
 #include <vector>
+#include <stdexcept>
 
 using namespace v8;
 using namespace node;
@@ -48,15 +49,18 @@ do {                                                                      \
 
 namespace zmq {
 
+class Context;
+class Message;
+class Socket;
+
 static Persistent<String> message_symbol;
 static Persistent<String> error_symbol;
 static Persistent<String> connect_symbol;
 
-typedef struct outgoing_message {
-    Persistent<Object> handle;
-} outgoing_message;
 
-class Socket;
+static inline const char* ErrorMessage() {
+    return zmq_strerror(zmq_errno());
+}
 
 
 class Context : public EventEmitter {
@@ -122,6 +126,56 @@ protected:
 
 private:
     void * context_;
+};
+
+
+/*
+ * An object that creates a ØMQ message from the given Buffer Object,
+ * and manages the reference to it using RAII. A persistent V8 handle
+ * for the Buffer object will remain while its data is in use by ØMQ.
+ */
+class OutgoingMessage {
+public:
+    inline OutgoingMessage(Handle<Object> buf) {
+        bufref_ = new BufferReference(buf);
+        if (zmq_msg_init_data(&msg_, Buffer::Data(buf), Buffer::Length(buf),
+                BufferReference::FreeCallback, bufref_) < 0) {
+            delete bufref_;
+            throw std::runtime_error(ErrorMessage());
+        }
+    };
+
+    inline ~OutgoingMessage() {
+        if (zmq_msg_close(&msg_) < 0)
+            throw std::runtime_error(ErrorMessage());
+    };
+
+    inline operator zmq_msg_t*() {
+        return &msg_;
+    }
+
+private:
+    class BufferReference {
+    public:
+        inline BufferReference(Handle<Object> buf) {
+            buf_ = Persistent<Object>::New(buf);
+        }
+
+        inline ~BufferReference() {
+            buf_.Dispose();
+        }
+
+        static void FreeCallback(void* data, void* message) {
+            delete (BufferReference*) message;
+        }
+
+    private:
+        Persistent<Object> buf_;
+    };
+
+private:
+    zmq_msg_t msg_;
+    BufferReference* bufref_;
 };
 
 
@@ -227,22 +281,6 @@ public:
         return Undefined();
     }
 
-    int Send(char *msg, int length, int flags, void* hint) {
-        int rc;
-        zmq_msg_t z_msg;
-        rc = zmq_msg_init_data(&z_msg, msg, length, FreeMessage, hint);
-        if (rc < 0) {
-            return rc;
-        }
-
-        rc = zmq_send(socket_, &z_msg, flags);
-        if (rc < 0) {
-            return rc;
-        }
-
-        return zmq_msg_close(&z_msg);
-    }
-
     int Recv(int flags, zmq_msg_t* z_msg) {
         int rc;
         rc = zmq_msg_init(z_msg);
@@ -257,10 +295,6 @@ public:
         zmq_close(socket_);
         socket_ = NULL;
         Unref();
-    }
-
-    const char * ErrorMessage() {
-        return zmq_strerror(zmq_errno());
     }
 
 protected:
@@ -293,8 +327,7 @@ protected:
 
         String::Utf8Value address(args[0]->ToString());
         if (socket->Connect(*address)) {
-            return ThrowException(Exception::Error(
-                String::New(socket->ErrorMessage())));
+            return ThrowException(Exception::Error(String::New(ErrorMessage())));
         }
         return Undefined();
     }
@@ -486,20 +519,14 @@ private:
         while ((CurrentEvents() & ZMQ_POLLOUT) && !outgoing_.empty()) {
             Local <Array> parts = Local<Array>::New(outgoing_.front());
             uint32_t len = parts->Length();
-            for(uint32_t i = 0; i < len; ++i) {
-                Local <Value> out = parts->Get(i);
+            for (uint32_t i = 0; i < len; ++i) {
+                OutgoingMessage msg(parts->Get(i)->ToObject());
                 int flags = (i == (len-1)) ? 0 : ZMQ_SNDMORE;
-                outgoing_message *og = new outgoing_message;
-                Persistent<Object> buffer_obj = Persistent<Object>::New(out->ToObject());
-                char *buffer_data = Buffer::Data(buffer_obj);
-                size_t buffer_length = Buffer::Length(buffer_obj);
-                og->handle = buffer_obj;
-                if (Send(buffer_data, buffer_length, flags, (void *)og)) {
+                if (zmq_send(socket_, msg, flags) < 0) {
                     exception = Exception::Error(String::New(ErrorMessage()));
                     Emit(error_symbol, 1, &exception);
                 }
             }
-
             // TODO: document the consequences of disposing even when there's an
             // error in transmission
             outgoing_.front().Dispose();
@@ -534,7 +561,7 @@ private:
         Local<Value> argv[1];
 
         if (socket->bindError_) {
-            argv[0] = String::New(socket->ErrorMessage());
+            argv[0] = String::New(ErrorMessage());
         }
         else {
             argv[0] = String::New("");
@@ -551,12 +578,6 @@ private:
         socket->Unref();
 
         return 0;
-    }
-
-    static void FreeMessage(void *data, void *message) {
-        outgoing_message *msg = (outgoing_message *) message;
-        msg->handle.Dispose();
-        delete msg;
     }
 
     static Socket * GetSocket(const Arguments &args) {
