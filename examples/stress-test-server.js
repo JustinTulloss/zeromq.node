@@ -25,7 +25,7 @@ var i = 0;
 
 s.bind('tcp://*:23456', function(err) {
   if (err)
-    throw new Error(err);
+    throw err;
 
   s.on('message', function(envelope, blank, data) {
     var buffer;
