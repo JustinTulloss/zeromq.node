@@ -50,7 +50,8 @@ do {                                                                      \
 namespace zmq {
 
 class Context;
-class Message;
+class OutgoingMessage;
+class IncomingMessage;
 class Socket;
 
 static Persistent<String> message_symbol;
@@ -60,6 +61,10 @@ static Persistent<String> connect_symbol;
 
 static inline const char* ErrorMessage() {
     return zmq_strerror(zmq_errno());
+}
+
+static inline Local<Value> ExceptionFromError() {
+    return Exception::Error(String::New(ErrorMessage()));
 }
 
 
@@ -383,7 +388,7 @@ protected:
 
         String::Utf8Value address(args[0]->ToString());
         if (socket->Connect(*address)) {
-            return ThrowException(Exception::Error(String::New(ErrorMessage())));
+            return ThrowException(ExceptionFromError());
         }
         return Undefined();
     }
@@ -550,14 +555,15 @@ private:
     int AfterPoll() {
         HandleScope scope;
 
-        Local <Value> exception;
 
         while (CurrentEvents() & ZMQ_POLLIN) {
             std::vector< Local<Value> > argv;
             do {
                 IncomingMessage im;
-                if (zmq_recv(socket_, im, 0) < 0)
+                if (zmq_recv(socket_, im, 0) < 0) {
+                    Local<Value> exception = ExceptionFromError();
                     Emit(error_symbol, 1, &exception);
+                }
                 else
                     argv.push_back(im);
             } while(RcvMore());
@@ -565,13 +571,13 @@ private:
         }
 
         while ((CurrentEvents() & ZMQ_POLLOUT) && !outgoing_.empty()) {
-            Local <Array> parts = Local<Array>::New(outgoing_.front());
+            Local<Array> parts = Local<Array>::New(outgoing_.front());
             uint32_t len = parts->Length();
             for (uint32_t i = 0; i < len; ++i) {
                 OutgoingMessage msg(parts->Get(i)->ToObject());
                 int flags = (i == (len-1)) ? 0 : ZMQ_SNDMORE;
                 if (zmq_send(socket_, msg, flags) < 0) {
-                    exception = Exception::Error(String::New(ErrorMessage()));
+                    Local<Value> exception = ExceptionFromError();
                     Emit(error_symbol, 1, &exception);
                 }
             }
@@ -608,17 +614,14 @@ private:
 
         Local<Value> argv[1];
 
-        if (socket->bindError_) {
-            argv[0] = String::New(ErrorMessage());
-        }
-        else {
-            argv[0] = String::New("");
-        }
+        if (socket->bindError_)
+            argv[0] = ExceptionFromError();
+        else
+            argv[0] = Local<Value>::New(Undefined());
         socket->bindCallback_->Call(v8::Context::GetCurrent()->Global(), 1, argv);
 
-        if (try_catch.HasCaught()) {
+        if (try_catch.HasCaught())
             FatalException(try_catch);
-        }
 
         socket->bindAddress_.Dispose();
         socket->bindCallback_.Dispose();
@@ -639,7 +642,7 @@ private:
     void *socket_;
     ev_io watcher_;
     short events_;
-    std::list< Persistent <Array> > outgoing_;
+    std::list< Persistent<Array> > outgoing_;
 
     Persistent<String> bindAddress_;
     Persistent<Function> bindCallback_;
