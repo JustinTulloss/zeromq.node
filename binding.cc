@@ -292,10 +292,6 @@ public:
         target->Set(String::NewSymbol("Socket"), t->GetFunction());
     }
 
-    int Bind(const char *address) {
-        return zmq_bind(socket_, address);
-    }
-
     int Connect(const char *address) {
         return zmq_connect(socket_, address);
     }
@@ -447,25 +443,41 @@ protected:
         }
     }
 
+    struct BindState {
+        BindState(Socket* sock_, Handle<Function> cb_, Handle<String> addr_)
+                : addr(addr_) {
+            sock_obj = Persistent<Object>::New(sock_->handle_);
+            sock = sock_->socket_;
+            cb = Persistent<Function>::New(cb_);
+            error = 0;
+        }
+
+        ~BindState() {
+            sock_obj.Dispose();
+            cb.Dispose();
+        }
+
+        Persistent<Object> sock_obj;
+        void* sock;
+        Persistent<Function> cb;
+        String::Utf8Value addr;
+        int error;
+    };
+    
+
     static Handle<Value> Bind(const Arguments &args) {
         HandleScope scope;
-        Socket *socket = GetSocket(args);
-        Local<Function> cb = Local<Function>::Cast(args[1]);
-        if (!args[0]->IsString()) {
+        if (!args[0]->IsString())
             return ThrowException(Exception::TypeError(
                 String::New("Address must be a string!")));
-        }
-
-        if (args.Length() > 1 && !args[1]->IsFunction()) {
+        Local<String> addr = args[0]->ToString();
+        if (args.Length() > 1 && !args[1]->IsFunction())
             return ThrowException(Exception::TypeError(
                 String::New("Provided callback must be a function")));
-        }
+        Local<Function> cb = Local<Function>::Cast(args[1]);
 
-        socket->bindCallback_ = Persistent<Function>::New(cb);
-        socket->bindAddress_ = Persistent<String>::New(args[0]->ToString());
-        eio_custom(EIO_DoBind, EIO_PRI_DEFAULT, EIO_BindDone, socket);
-
-        socket->Ref(); // Reference ourself until the callback is done
+        BindState* state = new BindState(GetSocket(args), cb, addr);
+        eio_custom(EIO_DoBind, EIO_PRI_DEFAULT, EIO_BindDone, state);
         ev_ref(EV_DEFAULT_UC);
 
         return Undefined();
@@ -597,37 +609,28 @@ private:
     }
 
     static int EIO_DoBind(eio_req *req) {
-        Socket *socket = (Socket *) req->data;
-        String::Utf8Value address(socket->bindAddress_);
-        socket->bindError_ = socket->Bind(*address);
+        BindState* state = (BindState*) req->data;
+        if (zmq_bind(state->sock, *state->addr) < 0)
+            state->error = zmq_errno();
         return 0;
     }
 
     static int EIO_BindDone(eio_req *req) {
+        BindState* state = (BindState*) req->data;
         HandleScope scope;
 
-        ev_unref(EV_DEFAULT_UC);
-
-        Socket *socket = (Socket *) req->data;
-
         TryCatch try_catch;
-
         Local<Value> argv[1];
-
-        if (socket->bindError_)
-            argv[0] = ExceptionFromError();
+        if (state->error)
+            argv[0] = Exception::Error(String::New(zmq_strerror(state->error)));
         else
             argv[0] = Local<Value>::New(Undefined());
-        socket->bindCallback_->Call(v8::Context::GetCurrent()->Global(), 1, argv);
-
+        state->cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
         if (try_catch.HasCaught())
             FatalException(try_catch);
 
-        socket->bindAddress_.Dispose();
-        socket->bindCallback_.Dispose();
-
-        socket->Unref();
-
+        delete state;
+        ev_unref(EV_DEFAULT_UC);
         return 0;
     }
 
@@ -643,10 +646,6 @@ private:
     ev_io watcher_;
     short events_;
     std::list< Persistent<Array> > outgoing_;
-
-    Persistent<String> bindAddress_;
-    Persistent<Function> bindCallback_;
-    int bindError_;
 };
 
 
