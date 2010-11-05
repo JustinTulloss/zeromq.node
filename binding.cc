@@ -463,7 +463,6 @@ protected:
         String::Utf8Value addr;
         int error;
     };
-    
 
     static Handle<Value> Bind(const Arguments &args) {
         HandleScope scope;
@@ -505,7 +504,6 @@ protected:
         for (int i = 0; i < argc; ++i) {
             p_message->Set(i, args[i]);
         }
-        socket->events_ |= ZMQ_POLLOUT;
         socket->outgoing_.push_back(Persistent<Array>::New(p_message));
         socket->AfterPoll();
 
@@ -522,7 +520,6 @@ protected:
 
     Socket(Context *context, int type) : EventEmitter () {
         socket_ = zmq_socket(context->context_, type);
-        events_ = ZMQ_POLLIN;
 
         size_t zmq_fd_size = sizeof(int);
         int fd;
@@ -602,12 +599,6 @@ private:
         return 0;
     }
 
-    static void ReleaseReceivedMessage(char *data, void *hint) {
-        zmq_msg_t *z_msg = (zmq_msg_t *) hint;
-        zmq_msg_close(z_msg);
-        delete z_msg;
-    }
-
     static int EIO_DoBind(eio_req *req) {
         BindState* state = (BindState*) req->data;
         if (zmq_bind(state->sock, *state->addr) < 0)
@@ -644,7 +635,6 @@ private:
 
     void *socket_;
     ev_io watcher_;
-    short events_;
     std::list< Persistent<Array> > outgoing_;
 };
 
