@@ -555,7 +555,6 @@ private:
     int AfterPoll() {
         HandleScope scope;
 
-
         while (CurrentEvents() & ZMQ_POLLIN) {
             std::vector< Local<Value> > argv;
             do {
@@ -567,7 +566,8 @@ private:
                 else
                     argv.push_back(im);
             } while(RcvMore());
-            Emit(message_symbol, argv.size(), &argv[0]);
+            if (argv.size())
+              Emit(message_symbol, argv.size(), &argv[0]);
         }
 
         while ((CurrentEvents() & ZMQ_POLLOUT) && !outgoing_.empty()) {
