@@ -179,6 +179,71 @@ private:
 };
 
 
+/*
+ * An object that creates an empty ØMQ message, which can be used for
+ * zmq_recv. After the receive call, a Buffer object wrapping the ØMQ
+ * message can be requested. The reference for the ØMQ message will
+ * remain while the data is in use by the Buffer.
+ */
+class IncomingMessage {
+public:
+    inline IncomingMessage() {
+        msgref_ = new MessageReference();
+    };
+
+    inline ~IncomingMessage() {
+        if (buf_.IsEmpty())
+            delete msgref_;
+        else
+            buf_.Dispose();
+    };
+
+    inline operator zmq_msg_t*() {
+        return *msgref_;
+    }
+
+    inline operator Local<Value>() {
+        if (buf_.IsEmpty()) {
+            Buffer* buf_obj = Buffer::New(
+              (char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_),
+              FreeCallback, msgref_);
+            buf_ = Persistent<Object>::New(buf_obj->handle_);
+        }
+        return Local<Value>::New(buf_);
+    }
+
+private:
+    static void FreeCallback(char* data, void* message) {
+        delete (MessageReference*) message;
+    }
+
+private:
+    class MessageReference {
+    public:
+        inline MessageReference() {
+            if (zmq_msg_init(&msg_) < 0)
+                throw std::runtime_error(ErrorMessage());
+        }
+
+        inline ~MessageReference() {
+            if (zmq_msg_close(&msg_) < 0)
+                throw std::runtime_error(ErrorMessage());
+        }
+
+        inline operator zmq_msg_t*() {
+            return &msg_;
+        }
+
+    private:
+        zmq_msg_t msg_;
+    };
+
+private:
+    Persistent<Object> buf_;
+    MessageReference* msgref_;
+};
+
+
 class Socket : public EventEmitter {
 public:
     static void Initialize(v8::Handle<v8::Object> target) {
@@ -279,15 +344,6 @@ public:
         String::Utf8Value value(wrappedValue->ToString());
         zmq_setsockopt(socket_, option, *value, value.length());
         return Undefined();
-    }
-
-    int Recv(int flags, zmq_msg_t* z_msg) {
-        int rc;
-        rc = zmq_msg_init(z_msg);
-        if (rc < 0) {
-            return rc;
-        }
-        return zmq_recv(socket_, z_msg, flags);
     }
 
     void Close() {
@@ -499,19 +555,11 @@ private:
         while (CurrentEvents() & ZMQ_POLLIN) {
             std::vector< Local<Value> > argv;
             do {
-                zmq_msg_t *z_msg = new zmq_msg_t;
-                zmq_msg_init(z_msg);
-
-                if (Recv(0, z_msg)) {
-                    zmq_msg_close(z_msg);
-                    delete z_msg;
+                IncomingMessage im;
+                if (zmq_recv(socket_, im, 0) < 0)
                     Emit(error_symbol, 1, &exception);
-                }
-
-                Buffer *buffer = Buffer::New(
-                    (char *) zmq_msg_data(z_msg), zmq_msg_size(z_msg),
-                    ReleaseReceivedMessage, (void *)z_msg);
-                argv.push_back(Local<Value>::New(buffer->handle_));
+                else
+                    argv.push_back(im);
             } while(RcvMore());
             Emit(message_symbol, argv.size(), &argv[0]);
         }
