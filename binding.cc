@@ -93,6 +93,7 @@ private:
     void Close();
     static Handle<Value> Close(const Arguments &args);
 
+    Persistent<Object> context_;
     void *socket_;
 };
 
@@ -175,7 +176,6 @@ void Context::Close() {
         if (zmq_term(context_) < 0)
             throw std::runtime_error(ErrorMessage());
         context_ = NULL;
-        Unref();
     }
 }
 
@@ -234,6 +234,7 @@ Handle<Value> Socket::New(const Arguments &args) {
 }
 
 Socket::Socket(Context *context, int type) : ObjectWrap() {
+    context_ = Persistent<Object>::New(context->handle_);
     socket_ = zmq_socket(context->context_, type);
 }
 
@@ -615,7 +616,7 @@ void Socket::Close() {
         if (zmq_close(socket_) < 0)
             throw std::runtime_error(ErrorMessage());
         socket_ = NULL;
-        Unref();
+        context_.Dispose();
     }
 }
 
