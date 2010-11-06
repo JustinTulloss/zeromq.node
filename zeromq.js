@@ -10,8 +10,8 @@ var namemap = (function() {
   m.xreq = m.xrequest  = m.xrequester = Socket.ZMQ_XREQ;
   m.rep  = m.reply     = m.replier    = Socket.ZMQ_REP;
   m.xrep = m.xreply    = m.xreplier   = Socket.ZMQ_XREP;
-  m.push = Socket.ZMQ_PUSH;
-  m.pull = Socket.ZMQ_PULL;
+  m.push = m.pusher    = Socket.ZMQ_PUSH;
+  m.pull = m.puller    = Socket.ZMQ_PULL;
   m.pair = Socket.ZMQ_PAIR;
   return m;
 })();
