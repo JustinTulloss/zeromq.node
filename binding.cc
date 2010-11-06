@@ -38,6 +38,10 @@ using namespace node;
 namespace zmq {
 
 
+#define STATE_READY  0
+#define STATE_BUSY   1
+#define STATE_CLOSED 2
+
 class Socket;
 
 class Context : ObjectWrap {
@@ -58,7 +62,6 @@ private:
     void* context_;
 };
 
-
 class Socket : ObjectWrap {
 public:
     static void Initialize(v8::Handle<v8::Object> target);
@@ -69,6 +72,8 @@ private:
     static Handle<Value> New(const Arguments &args);
     Socket(Context *context, int type);
     static Socket* GetSocket(const Arguments &args);
+
+    static Handle<Value> GetState(Local<String> p, const AccessorInfo& info);
 
     template<typename T>
     Handle<Value> GetSockOpt(int option);
@@ -95,6 +100,7 @@ private:
 
     Persistent<Object> context_;
     void *socket_;
+    uint8_t state_;
 };
 
 static void Initialize(Handle<Object> target);
@@ -196,6 +202,8 @@ void Socket::Initialize(v8::Handle<v8::Object> target) {
 
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
     t->InstanceTemplate()->SetInternalFieldCount(1);
+    t->InstanceTemplate()->SetAccessor(
+        String::NewSymbol("state"), GetState, NULL);
 
     NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
     NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
@@ -236,10 +244,30 @@ Handle<Value> Socket::New(const Arguments &args) {
 Socket::Socket(Context *context, int type) : ObjectWrap() {
     context_ = Persistent<Object>::New(context->handle_);
     socket_ = zmq_socket(context->context_, type);
+    state_ = STATE_READY;
 }
 
 Socket* Socket::GetSocket(const Arguments &args) {
     return ObjectWrap::Unwrap<Socket>(args.This());
+}
+
+/*
+ * This macro makes a call to GetSocket and checks the socket state. These two
+ * things go hand in hand everywhere in our code.
+ */
+#define GET_SOCKET(args)                              \
+    Socket* socket = GetSocket(args);                 \
+    if (socket->state_ == STATE_CLOSED)               \
+        return ThrowException(Exception::TypeError(   \
+            String::New("Socket is closed")));        \
+    if (socket->state_ == STATE_BUSY)                 \
+        return ThrowException(Exception::TypeError(   \
+            String::New("Socket is busy")));
+
+
+Handle<Value> Socket::GetState(Local<String> p, const AccessorInfo& info) {
+    Socket* socket = ObjectWrap::Unwrap<Socket>(info.Holder());
+    return Integer::New(socket->state_);
 }
 
 
@@ -285,7 +313,6 @@ Socket::SetSockOpt<char*>(int option, Handle<Value> wrappedValue) {
 }
 
 Handle<Value> Socket::GetSockOpt(const Arguments &args) {
-    Socket *socket = GetSocket(args);
     if (args.Length() != 1)
         return ThrowException(Exception::Error(
             String::New("Must pass an option")));
@@ -293,6 +320,8 @@ Handle<Value> Socket::GetSockOpt(const Arguments &args) {
         return ThrowException(Exception::TypeError(
             String::New("Option must be an integer")));
     int64_t option = args[0]->ToInteger()->Value();
+
+    GET_SOCKET(args);
 
     // FIXME: How to handle ZMQ_FD on Windows?
     switch (option) {
@@ -328,7 +357,6 @@ Handle<Value> Socket::GetSockOpt(const Arguments &args) {
 }
 
 Handle<Value> Socket::SetSockOpt(const Arguments &args) {
-    Socket *socket = GetSocket(args);
     if (args.Length() != 2)
         return ThrowException(Exception::Error(
             String::New("Must pass an option and a value")));
@@ -336,6 +364,8 @@ Handle<Value> Socket::SetSockOpt(const Arguments &args) {
         return ThrowException(Exception::TypeError(
             String::New("Option must be an integer")));
     int64_t option = args[0]->ToInteger()->Value();
+
+    GET_SOCKET(args);
 
     switch (option) {
     case ZMQ_HWM:
@@ -401,9 +431,12 @@ Handle<Value> Socket::Bind(const Arguments &args) {
             String::New("Provided callback must be a function")));
     Local<Function> cb = Local<Function>::Cast(args[1]);
 
-    BindState* state = new BindState(GetSocket(args), cb, addr);
+    GET_SOCKET(args);
+
+    BindState* state = new BindState(socket, cb, addr);
     eio_custom(EIO_DoBind, EIO_PRI_DEFAULT, EIO_BindDone, state);
     ev_ref(EV_DEFAULT_UC);
+    socket->state_ = STATE_BUSY;
 
     return Undefined();
 }
@@ -426,10 +459,13 @@ int Socket::EIO_BindDone(eio_req *req) {
     else
         argv[0] = Local<Value>::New(Undefined());
     state->cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
+
+    ObjectWrap::Unwrap<Socket>(state->sock_obj)->state_ = STATE_READY;
+    delete state;
+
     if (try_catch.HasCaught())
         FatalException(try_catch);
 
-    delete state;
     ev_unref(EV_DEFAULT_UC);
     return 0;
 }
@@ -437,11 +473,12 @@ int Socket::EIO_BindDone(eio_req *req) {
 
 Handle<Value> Socket::Connect(const Arguments &args) {
     HandleScope scope;
-    Socket *socket = GetSocket(args);
     if (!args[0]->IsString()) {
         return ThrowException(Exception::TypeError(
             String::New("Address must be a string!")));
     }
+
+    GET_SOCKET(args);
 
     String::Utf8Value address(args[0]->ToString());
     if (zmq_connect(socket->socket_, *address))
@@ -528,7 +565,8 @@ Handle<Value> Socket::Recv(const Arguments &args) {
         return ThrowException(Exception::TypeError(
             String::New("Only one argument at most was expected")));
 
-    Socket *socket = GetSocket(args);
+    GET_SOCKET(args);
+
     IncomingMessage msg;
     if (zmq_recv(socket->socket_, msg, flags) < 0)
         return ThrowException(ExceptionFromError());
@@ -603,7 +641,8 @@ Handle<Value> Socket::Send(const Arguments &args) {
         flags = args[1]->ToInteger()->Value();
     }
 
-    Socket *socket = GetSocket(args);
+    GET_SOCKET(args);
+
     OutgoingMessage msg(args[0]->ToObject());
     if (zmq_send(socket->socket_, msg, flags) < 0)
         return ThrowException(ExceptionFromError());
@@ -616,13 +655,18 @@ void Socket::Close() {
         if (zmq_close(socket_) < 0)
             throw std::runtime_error(ErrorMessage());
         socket_ = NULL;
+        state_ = STATE_CLOSED;
         context_.Dispose();
     }
 }
 
 Handle<Value> Socket::Close(const Arguments &args) {
     HandleScope scope;
-    GetSocket(args)->Close();
+
+    GET_SOCKET(args);
+
+    socket->Close();
+
     return Undefined();
 }
 
@@ -669,6 +713,10 @@ static void Initialize(Handle<Object> target) {
 
     NODE_DEFINE_CONSTANT(target, ZMQ_SNDMORE);
     NODE_DEFINE_CONSTANT(target, ZMQ_NOBLOCK);
+
+    NODE_DEFINE_CONSTANT(target, STATE_READY);
+    NODE_DEFINE_CONSTANT(target, STATE_BUSY);
+    NODE_DEFINE_CONSTANT(target, STATE_CLOSED);
 
     Context::Initialize(target);
     Socket::Initialize(target);

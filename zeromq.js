@@ -141,7 +141,10 @@ Socket.prototype._flush = function() {
       do {
         emitArgs.push(this.zmq.recv());
       } while (this._receiveMore);
+
       this.emit.apply(this, emitArgs);
+      if (this.zmq.state != zmq.STATE_READY)
+        return;
     }
 
     while (this._outgoing.length && (this._ioevents & zmq.ZMQ_POLLOUT)) {
