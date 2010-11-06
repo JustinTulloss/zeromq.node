@@ -93,7 +93,12 @@ sockProp('diskOffloadSize',   zmq.ZMQ_SWAP);
 
 // `bind` and `connect` map directly to our binding.
 Socket.prototype.bind = function(addr, cb) {
-  this.zmq.bind(addr, cb);
+  var self = this;
+  self._watcher.stop();
+  self.zmq.bind(addr, function(err) {
+    self._watcher.start();
+    cb(err);
+  });
 };
 Socket.prototype.connect = function(addr) {
   this.zmq.connect(addr);
