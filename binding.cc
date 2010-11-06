@@ -452,17 +452,18 @@ int Socket::EIO_BindDone(eio_req *req) {
     BindState* state = (BindState*) req->data;
     HandleScope scope;
 
-    TryCatch try_catch;
     Local<Value> argv[1];
     if (state->error)
         argv[0] = Exception::Error(String::New(zmq_strerror(state->error)));
     else
         argv[0] = Local<Value>::New(Undefined());
-    state->cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
+    Local<Function> cb = Local<Function>::New(state->cb);
 
     ObjectWrap::Unwrap<Socket>(state->sock_obj)->state_ = STATE_READY;
     delete state;
 
+    TryCatch try_catch;
+    cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
     if (try_catch.HasCaught())
         FatalException(try_catch);
 
