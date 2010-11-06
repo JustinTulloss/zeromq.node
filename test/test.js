@@ -2,63 +2,59 @@ var vows = require('vows'),
     assert = require('assert'),
     zeromq = require('zeromq');
 
-vows.describe('ZeroMQ')
-.addBatch({
-    'A socket': {
-        topic: function() {
-            var s = zeromq.createSocket('req');
-            this.callback(null, s);
+var suite = vows.describe('ZeroMQ');
+suite.options.error = false;
+suite.addBatch({
+  'A reply socket': {
+    topic: function() {
+      return zeromq.createSocket('reply');
+    },
+    'can set the high water mark': function(rep) {
+      rep.highWaterMark = 10;
+      assert.equal(rep.highWaterMark, 10);
+    },
+    'after a successful open': {
+      topic: function(rep) {
+        rep.bind('inproc://1-1', this.callback);
+      },
+      'can be bound to an inproc address': function(bindErr) {
+        assert.ifError(bindErr);
+      },
+      'and a request socket': {
+        topic: function(bindErr, rep) {
+          return zeromq.createSocket('request');
         },
-        'after successful open': {
-            topic: function(s) {
-                this.callback(null, s);
+        'can connect to the reply socket': function(req) {
+          req.connect('inproc://1-1');
+        },
+        'after a successful connect': {
+          topic: function(req, bindErr, rep) {
+            rep.on('message', this.callback);
+            req.send('foo');
+          },
+          'can send a request': function(reqMsg) {
+            assert.equal(reqMsg, 'foo');
+          },
+          'after a successful request': {
+            topic: function(reqMsg, req, bindErr, rep) {
+              req.on('message', this.callback);
+              rep.send('bar');
             },
-            'can connect': function(s) {
-                assert.doesNotThrow(function() {
-                    s.connect('tcp://127.0.0.1:5554');
-                });
+            'can send a reply': function(repMsg) {
+              assert.equal(repMsg, 'bar');
             },
-            'dies on bad host': function(s) {
-                //TODO: this just hangs, need to fix that behavior
-                //assert.throws(function() {s.connect('tcp://127.0.0.1:8398'); });
-            },
-            'after successful connect': {
-                topic: function(s) {
-                    this.callback(null, s);
-                },
-                'can send': function(s) {
-                    assert.doesNotThrow(function() {
-                        s.send("hey there!");
-                    });
-                },
-                'can set highwater mark': function(s) {
-                    assert.doesNotThrow(function() {
-                        s.highWaterMark = 10;
-                    });
-                    assert.equal(s.highWaterMark, 10);
-                },
-                'after successful `send`': {
-                    topic: function(s) {
-                        var self = this;
-                        s.on('message', function(data) {
-                            self.callback(null, data.toString('utf8'));
-                        });
-                    },
-                    'does receive data': function(data) {
-                        assert.isString(data);
-                    },
-                    'after receive': {
-                        topic: function(data, s) {
-                            this.callback(null, s);
-                        },
-                        'can be closed': function(s) {
-                            assert.doesNotThrow(function() {
-                                s.close();
-                            });
-                        }
-                    }
-                }
+            'after a successful reply': {
+              topic: function(repMsg, reqMsg, req, bindErr, rep) {
+                req.close();
+                rep.close();
+                this.callback(null);
+              },
+              'can close both sockets': function() {}
             }
+          }
         }
+      }
     }
-}).export(module);
+  }
+});
+suite.export(module);
