@@ -1,4 +1,5 @@
 var util = require('util');
+var IOWatcher = process.binding('io_watcher').IOWatcher;
 var binding = exports.capi = require('./binding');
 var Socket = binding.Socket;
 
@@ -49,16 +50,19 @@ exports.createSocket = function(typename, options) {
       throw new TypeError("Unknown socket type: " + typename);
   }
 
-  var s = new binding.Socket(ctx, typecode);
-  s._outgoing = [];
-  s.on('events', function() { s._flush(); });
+  var sock = new binding.Socket(ctx, typecode);
+  sock._outgoing = [];
+  sock.watcher = new IOWatcher();
+  sock.watcher.callback = function() { sock._flush(); };
+  sock.watcher.set(sock.fd, true, false);
+  sock.watcher.start();
 
   if (typeof(options) === 'object') {
     for (var key in options)
-      s[key] = options[key];
+      sock[key] = options[key];
   }
 
-  return s;
+  return sock;
 };
 
 var sockProp = function(name, option) {
@@ -69,6 +73,7 @@ var sockProp = function(name, option) {
     return this.setsockopt(option, value);
   });
 };
+sockProp('fd',                Socket.ZMQ_FD);
 sockProp('highwaterMark',     Socket.ZMQ_HWM);
 sockProp('diskOffloadSize',   Socket.ZMQ_SWAP);
 sockProp('identity',          Socket.ZMQ_IDENTITY);
@@ -116,4 +121,10 @@ Socket.prototype._flush = function() {
   catch (e) {
     this.emit('error', e);
   }
+};
+
+Socket.prototype.close = function() {
+  this.watcher.stop();
+  this.watcher = undefined;
+  this._close();
 };

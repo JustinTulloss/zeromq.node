@@ -74,8 +74,6 @@ private:
     Socket(Context *context, int type);
     static Socket* GetSocket(const Arguments &args);
 
-    static void Callback(EV_P_ ev_io *w, int ev_revents);
-
     template<typename T>
     Handle<Value> GetSockOpt(int option);
     template<typename T>
@@ -100,7 +98,6 @@ private:
     static Handle<Value> Close(const Arguments &args);
 
     void *socket_;
-    ev_io watcher_;
 };
 
 
@@ -195,9 +192,6 @@ Handle<Value> Context::Close(const Arguments& args) {
  * Socket methods.
  */
 
-static Persistent<String> events_symbol;
-
-
 void Socket::Initialize(v8::Handle<v8::Object> target) {
     HandleScope scope;
 
@@ -248,9 +242,7 @@ void Socket::Initialize(v8::Handle<v8::Object> target) {
     NODE_SET_PROTOTYPE_METHOD(t, "setsockopt", SetSockOpt);
     NODE_SET_PROTOTYPE_METHOD(t, "_recv", Recv);
     NODE_SET_PROTOTYPE_METHOD(t, "_send", Send);
-    NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-
-    events_symbol = NODE_PSYMBOL("events");
+    NODE_SET_PROTOTYPE_METHOD(t, "_close", Close);
 
     target->Set(String::NewSymbol("Socket"), t->GetFunction());
 }
@@ -280,27 +272,12 @@ Handle<Value> Socket::New(const Arguments &args) {
     return args.This();
 }
 
-Socket::Socket(Context *context, int type) : EventEmitter () {
+Socket::Socket(Context *context, int type) : EventEmitter() {
     socket_ = zmq_socket(context->context_, type);
-
-    size_t zmq_fd_size = sizeof(int);
-    int fd;
-    zmq_getsockopt(socket_, ZMQ_FD, &fd, &zmq_fd_size);
-
-    ev_init(&watcher_, Socket::Callback);
-    ev_io_set(&watcher_, fd, EV_READ);
-    watcher_.data = this;
-    ev_io_start(EV_DEFAULT_UC_ &watcher_);
 }
 
 Socket* Socket::GetSocket(const Arguments &args) {
     return ObjectWrap::Unwrap<Socket>(args.This());
-}
-
-
-void Socket::Callback(EV_P_ ev_io *w, int ev_revents) {
-    Socket *socket = static_cast<Socket*>(w->data);
-    socket->Emit(events_symbol, 0, NULL);
 }
 
 
@@ -674,7 +651,6 @@ Handle<Value> Socket::Send(const Arguments &args) {
 
 void Socket::Close() {
     if (socket_) {
-        ev_io_stop(EV_DEFAULT_UC_ &watcher_);
         zmq_close(socket_);
         socket_ = NULL;
         Unref();
