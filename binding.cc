@@ -38,12 +38,6 @@
 using namespace v8;
 using namespace node;
 
-#define SET_SOCKET_ACCESSOR(name)                                         \
-do {                                                                      \
-    t->PrototypeTemplate()->SetAccessor(String::New(name),                \
-            GetOptions, SetOptions);                                      \
-} while (0)
-
 
 // FIXME: Error checking needs to be implemented on all `zmq_` calls.
 
@@ -269,25 +263,35 @@ public:
         NODE_DEFINE_CONSTANT(t, ZMQ_PULL);
         NODE_DEFINE_CONSTANT(t, ZMQ_PAIR);
 
+        NODE_DEFINE_CONSTANT(t, ZMQ_HWM);
+        NODE_DEFINE_CONSTANT(t, ZMQ_SWAP);
+        NODE_DEFINE_CONSTANT(t, ZMQ_AFFINITY);
+        NODE_DEFINE_CONSTANT(t, ZMQ_IDENTITY);
+        NODE_DEFINE_CONSTANT(t, ZMQ_SUBSCRIBE);
+        NODE_DEFINE_CONSTANT(t, ZMQ_UNSUBSCRIBE);
+        NODE_DEFINE_CONSTANT(t, ZMQ_RATE);
+        NODE_DEFINE_CONSTANT(t, ZMQ_RECOVERY_IVL);
+        NODE_DEFINE_CONSTANT(t, ZMQ_MCAST_LOOP);
+        NODE_DEFINE_CONSTANT(t, ZMQ_SNDBUF);
+        NODE_DEFINE_CONSTANT(t, ZMQ_RCVBUF);
+        NODE_DEFINE_CONSTANT(t, ZMQ_RCVMORE);
+        NODE_DEFINE_CONSTANT(t, ZMQ_FD);
+        NODE_DEFINE_CONSTANT(t, ZMQ_EVENTS);
+        NODE_DEFINE_CONSTANT(t, ZMQ_TYPE);
+        NODE_DEFINE_CONSTANT(t, ZMQ_LINGER);
+        NODE_DEFINE_CONSTANT(t, ZMQ_RECONNECT_IVL);
+        NODE_DEFINE_CONSTANT(t, ZMQ_BACKLOG);
+
         NODE_DEFINE_CONSTANT(t, ZMQ_POLLIN);
         NODE_DEFINE_CONSTANT(t, ZMQ_POLLOUT);
         NODE_DEFINE_CONSTANT(t, ZMQ_POLLERR);
 
         NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
         NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
-        NODE_SET_PROTOTYPE_METHOD(t, "subscribe", Subscribe);
-        NODE_SET_PROTOTYPE_METHOD(t, "unsubscribe", Unsubscribe);
+        NODE_SET_PROTOTYPE_METHOD(t, "getsockopt", GetSockOpt);
+        NODE_SET_PROTOTYPE_METHOD(t, "setsockopt", SetSockOpt);
         NODE_SET_PROTOTYPE_METHOD(t, "send", Send);
         NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-
-        SET_SOCKET_ACCESSOR("highwaterMark");
-        SET_SOCKET_ACCESSOR("diskOffloadSize");
-        SET_SOCKET_ACCESSOR("identity");
-        SET_SOCKET_ACCESSOR("multicastDataRate");
-        SET_SOCKET_ACCESSOR("recoveryIVL");
-        SET_SOCKET_ACCESSOR("multicastLoop");
-        SET_SOCKET_ACCESSOR("sendBufferSize");
-        SET_SOCKET_ACCESSOR("receiveBufferSize");
 
         message_symbol = NODE_PSYMBOL("message");
         connect_symbol = NODE_PSYMBOL("connect");
@@ -300,45 +304,62 @@ public:
         return zmq_connect(socket_, address);
     }
 
-    Handle<Value> GetLongSockOpt(int option) {
+    Handle<Value> GetInt64SockOpt(int option) {
         int64_t value = 0;
         size_t len = sizeof(value);
         zmq_getsockopt(socket_, option, &value, &len);
-        return v8::Integer::New(value); // WARNING: long cast to int!
+        return v8::Integer::New(value);
     }
 
-    Handle<Value> SetLongSockOpt(int option, Local<Value> wrappedValue) {
+    Handle<Value> SetInt64SockOpt(int option, Handle<Value> wrappedValue) {
         if (!wrappedValue->IsNumber()) {
             return ThrowException(Exception::TypeError(
                 String::New("Value must be an integer")));
         }
-        int64_t value = (int64_t) wrappedValue->ToInteger()->Value(); // WARNING: int cast to long!
+        int64_t value = (int64_t) wrappedValue->ToInteger()->Value();
         zmq_setsockopt(socket_, option, &value, sizeof(value));
         return Undefined();
     }
 
-    Handle<Value> GetULongSockOpt(int option) {
+    Handle<Value> GetUInt64SockOpt(int option) {
         uint64_t value = 0;
         size_t len = sizeof(value);
         zmq_getsockopt(socket_, option, &value, &len);
-        return v8::Integer::New(value); // WARNING: long cast to int!
+        return v8::Integer::New(value);
     }
 
-    Handle<Value> SetULongSockOpt(int option, Local<Value> wrappedValue) {
+    Handle<Value> SetUInt64SockOpt(int option, Handle<Value> wrappedValue) {
         if (!wrappedValue->IsNumber()) {
             return ThrowException(Exception::TypeError(
                 String::New("Value must be an integer")));
         }
-        uint64_t value = (uint64_t) wrappedValue->ToInteger()->Value(); // WARNING: int cast to long!
+        uint64_t value = (uint64_t) wrappedValue->ToInteger()->Value();
         zmq_setsockopt(socket_, option, &value, sizeof(value));
         return Undefined();
     }
 
-    Handle<Value> GetUIntSockOpt(int option) {
+    Handle<Value> GetUInt32SockOpt(int option) {
         uint32_t value = 0;
         size_t len = sizeof(value);
         zmq_getsockopt(socket_, option, &value, &len);
         return v8::Integer::New(value);
+    }
+
+    Handle<Value> GetIntSockOpt(int option) {
+        int value = 0;
+        size_t len = sizeof(value);
+        zmq_getsockopt(socket_, option, &value, &len);
+        return v8::Integer::New(value);
+    }
+
+    Handle<Value> SetIntSockOpt(int option, Handle<Value> wrappedValue) {
+        if (!wrappedValue->IsNumber()) {
+            return ThrowException(Exception::TypeError(
+                String::New("Value must be an integer")));
+        }
+        int value = (int) wrappedValue->ToInteger()->Value();
+        zmq_setsockopt(socket_, option, &value, sizeof(value));
+        return Undefined();
     }
 
     Handle<Value> GetBytesSockOpt(int option) {
@@ -348,7 +369,7 @@ public:
         return v8::String::New(value);
     }
 
-    Handle<Value> SetBytesSockOpt(int option, Local<Value> wrappedValue) {
+    Handle<Value> SetBytesSockOpt(int option, Handle<Value> wrappedValue) {
         if (!wrappedValue->IsString()) {
             return ThrowException(Exception::TypeError(
                 String::New("Value must be a string!")));
@@ -400,61 +421,87 @@ protected:
         return Undefined();
     }
 
-    static Handle<Value> Subscribe(const Arguments &args) {
-        return GetSocket(args)->SetBytesSockOpt(ZMQ_SUBSCRIBE, args[0]);
-    }
+    static Handle<Value> GetSockOpt(const Arguments &args) {
+        Socket *socket = GetSocket(args);
+        if (args.Length() != 1)
+            return ThrowException(Exception::Error(
+                String::New("Must pass an option")));
+        if (!args[0]->IsNumber())
+            return ThrowException(Exception::TypeError(
+                String::New("Option must be an integer")));
+        int64_t option = args[0]->ToInteger()->Value();
 
-    static Handle<Value> Unsubscribe(const Arguments &args) {
-        return GetSocket(args)->SetBytesSockOpt(ZMQ_UNSUBSCRIBE, args[0]);
-    }
-
-    static Handle<Value> GetOptions(Local<String> name, const AccessorInfo& info) {
-        Socket *socket = GetSocket(info);
-
-        if (name->Equals(v8::String::New("highwaterMark"))) {
-            return socket->GetULongSockOpt(ZMQ_HWM);
-        } else if (name->Equals(v8::String::New("diskOffloadSize"))) {
-            return socket->GetLongSockOpt(ZMQ_SWAP);
-        } else if (name->Equals(v8::String::New("identity"))) {
-            return socket->GetBytesSockOpt(ZMQ_IDENTITY);
-        } else if (name->Equals(v8::String::New("multicastDataRate"))) {
-            return socket->GetLongSockOpt(ZMQ_RATE);
-        } else if (name->Equals(v8::String::New("recoveryIVL"))) {
-            return socket->GetLongSockOpt(ZMQ_RECOVERY_IVL);
-        } else if (name->Equals(v8::String::New("multicastLoop"))) {
-            return socket->GetLongSockOpt(ZMQ_MCAST_LOOP);
-        } else if (name->Equals(v8::String::New("sendBufferSize"))) {
-            return socket->GetULongSockOpt(ZMQ_SNDBUF);
-        } else if (name->Equals(v8::String::New("receiveBufferSize"))) {
-            return socket->GetULongSockOpt(ZMQ_RCVBUF);
-        } else if (name->Equals(v8::String::New("receiveMoreParts"))) {
-            return socket->GetULongSockOpt(ZMQ_RCVMORE);
-        } else if (name->Equals(v8::String::New("currentEvents"))) {
-            return socket->GetUIntSockOpt(ZMQ_EVENTS);
+        // FIXME: How to handle ZMQ_FD on Windows?
+        switch (option) {
+        case ZMQ_HWM:
+        case ZMQ_AFFINITY:
+        case ZMQ_SNDBUF:
+        case ZMQ_RCVBUF:
+        case ZMQ_RCVMORE:
+            return socket->GetUInt64SockOpt(option);
+        case ZMQ_SWAP:
+        case ZMQ_RATE:
+        case ZMQ_RECOVERY_IVL:
+        case ZMQ_MCAST_LOOP:
+            return socket->GetInt64SockOpt(option);
+        case ZMQ_IDENTITY:
+            return socket->GetBytesSockOpt(option);
+        case ZMQ_EVENTS:
+            return socket->GetUInt32SockOpt(option);
+        case ZMQ_FD:
+        case ZMQ_TYPE:
+        case ZMQ_LINGER:
+        case ZMQ_RECONNECT_IVL:
+        case ZMQ_BACKLOG:
+            return socket->GetIntSockOpt(option);
+        case ZMQ_SUBSCRIBE:
+        case ZMQ_UNSUBSCRIBE:
+            return ThrowException(Exception::TypeError(
+                String::New("Socket option cannot be read")));
+        default:
+            return ThrowException(Exception::TypeError(
+                String::New("Unknown socket option")));
         }
-
-        return Undefined();
     }
 
-    static void SetOptions(Local<String> name, Local<Value> value, const AccessorInfo& info) {
-        Socket *socket = GetSocket(info);
+    static Handle<Value> SetSockOpt(const Arguments &args) {
+        Socket *socket = GetSocket(args);
+        if (args.Length() != 2)
+            return ThrowException(Exception::Error(
+                String::New("Must pass an option and a value")));
+        if (!args[0]->IsNumber())
+            return ThrowException(Exception::TypeError(
+                String::New("Option must be an integer")));
+        int64_t option = args[0]->ToInteger()->Value();
 
-        if (name->Equals(v8::String::New("highwaterMark"))) {
-            socket->SetULongSockOpt(ZMQ_HWM, value);
-        } else if (name->Equals(v8::String::New("diskOffloadSize"))) {
-            socket->SetLongSockOpt(ZMQ_SWAP, value);
-        } else if (name->Equals(v8::String::New("identity"))) {
-            socket->SetBytesSockOpt(ZMQ_IDENTITY, value);
-        } else if (name->Equals(v8::String::New("multicastDataRate"))) {
-            socket->SetLongSockOpt(ZMQ_RATE, value);
-        } else if (name->Equals(v8::String::New("recoveryIVL"))) {
-            socket->SetLongSockOpt(ZMQ_RECOVERY_IVL, value);
-        } else if (name->Equals(v8::String::New("multicastLoop"))) {
-            socket->SetLongSockOpt(ZMQ_MCAST_LOOP, value);
-        } else if (name->Equals(v8::String::New("sendBufferSize"))) {
-            socket->SetULongSockOpt(ZMQ_SNDBUF, value);
-        } else if (name->Equals(v8::String::New("receiveBufferSize"))) {
-            socket->SetULongSockOpt(ZMQ_RCVBUF, value);
+        switch (option) {
+        case ZMQ_HWM:
+        case ZMQ_AFFINITY:
+        case ZMQ_SNDBUF:
+        case ZMQ_RCVBUF:
+            return socket->SetUInt64SockOpt(option, args[1]);
+        case ZMQ_SWAP:
+        case ZMQ_RATE:
+        case ZMQ_RECOVERY_IVL:
+        case ZMQ_MCAST_LOOP:
+            return socket->SetInt64SockOpt(option, args[1]);
+        case ZMQ_IDENTITY:
+        case ZMQ_SUBSCRIBE:
+        case ZMQ_UNSUBSCRIBE:
+            return socket->SetBytesSockOpt(option, args[1]);
+        case ZMQ_LINGER:
+        case ZMQ_RECONNECT_IVL:
+        case ZMQ_BACKLOG:
+            return socket->SetIntSockOpt(option, args[1]);
+        case ZMQ_RCVMORE:
+        case ZMQ_EVENTS:
+        case ZMQ_FD:
+        case ZMQ_TYPE:
+            return ThrowException(Exception::TypeError(
+                String::New("Socket option cannot be written")));
+        default:
+            return ThrowException(Exception::TypeError(
+                String::New("Unknown socket option")));
         }
     }
 
@@ -642,10 +689,6 @@ private:
 
     static Socket * GetSocket(const Arguments &args) {
         return ObjectWrap::Unwrap<Socket>(args.This());
-    }
-
-    static Socket * GetSocket(const AccessorInfo &info) {
-        return ObjectWrap::Unwrap<Socket>(info.This());
     }
 
     void *socket_;

@@ -1,18 +1,18 @@
 var util = require('util');
 var binding = exports.capi = require('./binding');
+var Socket = binding.Socket;
 
 var namemap = (function() {
-  var s = binding.Socket;
   var m = {};
-  m.pub  = m.publish   = m.publisher  = s.ZMQ_PUB;
-  m.sub  = m.subscribe = m.subscriber = s.ZMQ_SUB;
-  m.req  = m.request   = m.requester  = s.ZMQ_REQ;
-  m.xreq = m.xrequest  = m.xrequester = s.ZMQ_XREQ;
-  m.rep  = m.reply     = m.replier    = s.ZMQ_REP;
-  m.xrep = m.xreply    = m.xreplier   = s.ZMQ_XREP;
-  m.push = s.ZMQ_PUSH;
-  m.pull = s.ZMQ_PULL;
-  m.pair = s.ZMQ_PAIR;
+  m.pub  = m.publish   = m.publisher  = Socket.ZMQ_PUB;
+  m.sub  = m.subscribe = m.subscriber = Socket.ZMQ_SUB;
+  m.req  = m.request   = m.requester  = Socket.ZMQ_REQ;
+  m.xreq = m.xrequest  = m.xrequester = Socket.ZMQ_XREQ;
+  m.rep  = m.reply     = m.replier    = Socket.ZMQ_REP;
+  m.xrep = m.xreply    = m.xreplier   = Socket.ZMQ_XREP;
+  m.push = Socket.ZMQ_PUSH;
+  m.pull = Socket.ZMQ_PULL;
+  m.pair = Socket.ZMQ_PAIR;
   return m;
 })();
 
@@ -58,3 +58,22 @@ exports.createSocket = function(typename, options) {
 
   return s;
 };
+
+var sockProp = function(name, option) {
+  Socket.prototype.__defineGetter__(name, function() {
+    return this.getsockopt(option);
+  });
+  Socket.prototype.__defineSetter__(name, function(value) {
+    return this.setsockopt(option, value);
+  });
+};
+sockProp('highwaterMark',     Socket.ZMQ_HWM);
+sockProp('diskOffloadSize',   Socket.ZMQ_SWAP);
+sockProp('identity',          Socket.ZMQ_IDENTITY);
+sockProp('multicastDataRate', Socket.ZMQ_RATE);
+sockProp('recoveryIVL',       Socket.ZMQ_RECOVERY_IVL);
+sockProp('multicastLoop',     Socket.ZMQ_MCAST_LOOP);
+sockProp('sendBufferSize',    Socket.ZMQ_SNDBUF);
+sockProp('receiveBufferSize', Socket.ZMQ_RCVBUF);
+sockProp('receiveMoreParts',  Socket.ZMQ_RCVMORE);
+sockProp('currentEvents',     Socket.ZMQ_EVENTS);
