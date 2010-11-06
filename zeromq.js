@@ -50,6 +50,8 @@ exports.createSocket = function(typename, options) {
   }
 
   var s = new binding.Socket(ctx, typecode);
+  s._outgoing = [];
+  s.on('events', function() { s._flush(); });
 
   if (typeof(options) === 'object') {
     for (var key in options)
@@ -77,3 +79,41 @@ sockProp('sendBufferSize',    Socket.ZMQ_SNDBUF);
 sockProp('receiveBufferSize', Socket.ZMQ_RCVBUF);
 sockProp('receiveMoreParts',  Socket.ZMQ_RCVMORE);
 sockProp('currentEvents',     Socket.ZMQ_EVENTS);
+
+Socket.prototype.send = function() {
+  var i, length = arguments.length,
+      parts = new Array(length);
+  for (i = 0; i < length; i++) {
+    var part = arguments[i];
+    if (typeof(part) === 'string')
+      part = new Buffer(part, 'utf-8');
+    var flags = 0;
+    if (i !== length-1)
+      flags |= Socket.ZMQ_SNDMORE;
+    parts[i] = [part, flags];
+  }
+  this._outgoing = this._outgoing.concat(parts);
+  this._flush();
+};
+
+Socket.prototype._flush = function() {
+  try {
+
+    while (this.currentEvents & Socket.ZMQ_POLLIN) {
+      var emitArgs = ['message'];
+      do {
+        emitArgs.push(this._recv());
+      } while (this.receiveMoreParts);
+      this.emit.apply(this, emitArgs);
+    }
+
+    while (this._outgoing.length && (this.currentEvents & Socket.ZMQ_POLLOUT)) {
+      var sendArgs = this._outgoing.shift();
+      this._send.apply(this, sendArgs);
+    }
+
+  }
+  catch (e) {
+    this.emit('error', e);
+  }
+};

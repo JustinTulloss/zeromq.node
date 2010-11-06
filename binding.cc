@@ -31,8 +31,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <list>
-#include <vector>
 #include <stdexcept>
 
 using namespace v8;
@@ -48,9 +46,7 @@ class OutgoingMessage;
 class IncomingMessage;
 class Socket;
 
-static Persistent<String> message_symbol;
-static Persistent<String> error_symbol;
-static Persistent<String> connect_symbol;
+static Persistent<String> events_symbol;
 
 
 static inline const char* ErrorMessage() {
@@ -201,7 +197,7 @@ public:
         return *msgref_;
     }
 
-    inline operator Local<Value>() {
+    inline Local<Value> GetBuffer() {
         if (buf_.IsEmpty()) {
             Buffer* buf_obj = Buffer::New(
               (char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_),
@@ -286,16 +282,18 @@ public:
         NODE_DEFINE_CONSTANT(t, ZMQ_POLLOUT);
         NODE_DEFINE_CONSTANT(t, ZMQ_POLLERR);
 
+        NODE_DEFINE_CONSTANT(t, ZMQ_SNDMORE);
+        NODE_DEFINE_CONSTANT(t, ZMQ_NOBLOCK);
+
         NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
         NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
         NODE_SET_PROTOTYPE_METHOD(t, "getsockopt", GetSockOpt);
         NODE_SET_PROTOTYPE_METHOD(t, "setsockopt", SetSockOpt);
-        NODE_SET_PROTOTYPE_METHOD(t, "send", Send);
+        NODE_SET_PROTOTYPE_METHOD(t, "_recv", Recv);
+        NODE_SET_PROTOTYPE_METHOD(t, "_send", Send);
         NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
 
-        message_symbol = NODE_PSYMBOL("message");
-        connect_symbol = NODE_PSYMBOL("connect");
-        error_symbol = NODE_PSYMBOL("error");
+        events_symbol = NODE_PSYMBOL("events");
 
         target->Set(String::NewSymbol("Socket"), t->GetFunction());
     }
@@ -544,31 +542,50 @@ protected:
         return Undefined();
     }
 
+    static Handle<Value> Recv(const Arguments &args) {
+        HandleScope scope;
+
+        int flags = 0;
+        int argc = args.Length();
+        if (argc == 1) {
+            if (!args[0]->IsNumber())
+                return ThrowException(Exception::TypeError(
+                    String::New("Argument should be an integer")));
+            flags = args[0]->ToInteger()->Value();
+        }
+        else if (argc != 0)
+            return ThrowException(Exception::TypeError(
+                String::New("Only one argument at most was expected")));
+
+        Socket *socket = GetSocket(args);
+        IncomingMessage msg;
+        if (zmq_recv(socket->socket_, msg, flags) < 0)
+            return ThrowException(ExceptionFromError());
+        return scope.Close(msg.GetBuffer());
+    }
+
     static Handle<Value> Send(const Arguments &args) {
         HandleScope scope;
-        Socket *socket = GetSocket(args);
+
         int argc = args.Length();
-
-        if (argc == 0) {
+        if (argc != 1 && argc != 2)
             return ThrowException(Exception::TypeError(
-                String::New("Must pass in at least one message part to send")));
-        }
-
-        for (int i = 0; i < argc; ++i) {
-            Local<Value> arg = args[i];
-            if (!Buffer::HasInstance(arg)) {
+                String::New("Must pass a Buffer and optionally flags")));
+        if (!Buffer::HasInstance(args[0]))
+              return ThrowException(Exception::TypeError(
+                  String::New("First argument should be a Buffer")));
+        int flags = 0;
+        if (argc == 2) {
+            if (!args[1]->IsNumber())
                 return ThrowException(Exception::TypeError(
-                    String::New("All message parts must be Buffers")));
-            }
+                    String::New("Second argument should be an integer")));
+            flags = args[1]->ToInteger()->Value();
         }
 
-        Local<Array> p_message = Array::New(argc);
-        for (int i = 0; i < argc; ++i) {
-            p_message->Set(i, args[i]);
-        }
-        socket->outgoing_.push_back(Persistent<Array>::New(p_message));
-        socket->AfterPoll();
-
+        Socket *socket = GetSocket(args);
+        OutgoingMessage msg(args[0]->ToObject());
+        if (zmq_send(socket->socket_, msg, flags) < 0)
+            return ThrowException(ExceptionFromError());
         return Undefined();
     }
 
@@ -602,9 +619,8 @@ protected:
 
 private:
     static void Callback(EV_P_ ev_io *w, int ev_revents) {
-        Socket *s = static_cast<Socket*>(w->data);
-
-        s->AfterPoll();
+        Socket *socket = static_cast<Socket*>(w->data);
+        socket->Emit(events_symbol, 0, NULL);
     }
 
     uint32_t CurrentEvents() {
@@ -621,44 +637,6 @@ private:
         zmq_getsockopt(socket_, ZMQ_RCVMORE, &result, &result_size);
 
         return result;
-    }
-
-    int AfterPoll() {
-        HandleScope scope;
-
-        while (CurrentEvents() & ZMQ_POLLIN) {
-            std::vector< Local<Value> > argv;
-            do {
-                IncomingMessage im;
-                if (zmq_recv(socket_, im, 0) < 0) {
-                    Local<Value> exception = ExceptionFromError();
-                    Emit(error_symbol, 1, &exception);
-                }
-                else
-                    argv.push_back(im);
-            } while(RcvMore());
-            if (argv.size())
-              Emit(message_symbol, argv.size(), &argv[0]);
-        }
-
-        while ((CurrentEvents() & ZMQ_POLLOUT) && !outgoing_.empty()) {
-            Local<Array> parts = Local<Array>::New(outgoing_.front());
-            uint32_t len = parts->Length();
-            for (uint32_t i = 0; i < len; ++i) {
-                OutgoingMessage msg(parts->Get(i)->ToObject());
-                int flags = (i == (len-1)) ? 0 : ZMQ_SNDMORE;
-                if (zmq_send(socket_, msg, flags) < 0) {
-                    Local<Value> exception = ExceptionFromError();
-                    Emit(error_symbol, 1, &exception);
-                }
-            }
-            // TODO: document the consequences of disposing even when there's an
-            // error in transmission
-            outgoing_.front().Dispose();
-            outgoing_.pop_front();
-        }
-
-        return 0;
     }
 
     static int EIO_DoBind(eio_req *req) {
@@ -693,7 +671,6 @@ private:
 
     void *socket_;
     ev_io watcher_;
-    std::list< Persistent<Array> > outgoing_;
 };
 
 
