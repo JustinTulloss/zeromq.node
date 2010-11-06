@@ -23,7 +23,6 @@
 #include <v8.h>
 #include <ev.h>
 #include <node.h>
-#include <node_events.h>
 #include <node_buffer.h>
 #include <zmq.h>
 #include <assert.h>
@@ -44,7 +43,7 @@ namespace zmq {
 
 class Socket;
 
-class Context : public EventEmitter {
+class Context : ObjectWrap {
 friend class Socket;
 public:
     static void Initialize(v8::Handle<v8::Object> target);
@@ -63,7 +62,7 @@ private:
 };
 
 
-class Socket : public EventEmitter {
+class Socket : ObjectWrap {
 public:
     static void Initialize(v8::Handle<v8::Object> target);
 
@@ -127,8 +126,6 @@ void Context::Initialize(v8::Handle<v8::Object> target) {
     HandleScope scope;
 
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
-
-    t->Inherit(EventEmitter::constructor_template);
     t->InstanceTemplate()->SetInternalFieldCount(1);
 
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
@@ -163,7 +160,7 @@ Handle<Value> Context::New(const Arguments& args) {
     return args.This();
 }
 
-Context::Context(int io_threads) : EventEmitter() {
+Context::Context(int io_threads) : ObjectWrap() {
     context_ = zmq_init(io_threads);
 }
 
@@ -196,8 +193,6 @@ void Socket::Initialize(v8::Handle<v8::Object> target) {
     HandleScope scope;
 
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
-
-    t->Inherit(EventEmitter::constructor_template);
     t->InstanceTemplate()->SetInternalFieldCount(1);
 
     NODE_DEFINE_CONSTANT(t, ZMQ_PUB);
@@ -240,9 +235,9 @@ void Socket::Initialize(v8::Handle<v8::Object> target) {
     NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
     NODE_SET_PROTOTYPE_METHOD(t, "getsockopt", GetSockOpt);
     NODE_SET_PROTOTYPE_METHOD(t, "setsockopt", SetSockOpt);
-    NODE_SET_PROTOTYPE_METHOD(t, "_recv", Recv);
-    NODE_SET_PROTOTYPE_METHOD(t, "_send", Send);
-    NODE_SET_PROTOTYPE_METHOD(t, "_close", Close);
+    NODE_SET_PROTOTYPE_METHOD(t, "recv", Recv);
+    NODE_SET_PROTOTYPE_METHOD(t, "send", Send);
+    NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
 
     target->Set(String::NewSymbol("Socket"), t->GetFunction());
 }
@@ -272,7 +267,7 @@ Handle<Value> Socket::New(const Arguments &args) {
     return args.This();
 }
 
-Socket::Socket(Context *context, int type) : EventEmitter() {
+Socket::Socket(Context *context, int type) : ObjectWrap() {
     socket_ = zmq_socket(context->context_, type);
 }
 

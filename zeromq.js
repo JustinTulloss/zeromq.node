@@ -1,19 +1,20 @@
 var util = require('util');
+var EventEmitter = require('events').EventEmitter;
 var IOWatcher = process.binding('io_watcher').IOWatcher;
 var binding = exports.capi = require('./binding');
-var Socket = binding.Socket;
+var zmq = binding.Socket;
 
 var namemap = (function() {
   var m = {};
-  m.pub  = m.publish   = m.publisher  = Socket.ZMQ_PUB;
-  m.sub  = m.subscribe = m.subscriber = Socket.ZMQ_SUB;
-  m.req  = m.request   = m.requester  = Socket.ZMQ_REQ;
-  m.xreq = m.xrequest  = m.xrequester = Socket.ZMQ_XREQ;
-  m.rep  = m.reply     = m.replier    = Socket.ZMQ_REP;
-  m.xrep = m.xreply    = m.xreplier   = Socket.ZMQ_XREP;
-  m.push = m.pusher    = Socket.ZMQ_PUSH;
-  m.pull = m.puller    = Socket.ZMQ_PULL;
-  m.pair = Socket.ZMQ_PAIR;
+  m.pub  = m.publish   = m.publisher  = zmq.ZMQ_PUB;
+  m.sub  = m.subscribe = m.subscriber = zmq.ZMQ_SUB;
+  m.req  = m.request   = m.requester  = zmq.ZMQ_REQ;
+  m.xreq = m.xrequest  = m.xrequester = zmq.ZMQ_XREQ;
+  m.rep  = m.reply     = m.replier    = zmq.ZMQ_REP;
+  m.xrep = m.xreply    = m.xreplier   = zmq.ZMQ_XREP;
+  m.push = m.pusher    = zmq.ZMQ_PUSH;
+  m.pull = m.puller    = zmq.ZMQ_PULL;
+  m.pair = zmq.ZMQ_PAIR;
   return m;
 })();
 
@@ -40,9 +41,7 @@ var defaultContext = function() {
   return context_;
 };
 
-exports.createSocket = function(typename, options) {
-  var ctx = defaultContext();
-
+var Socket = function(typename) {
   var typecode = typename;
   if (typeof(typecode) !== 'number') {
     typecode = namemap[typename];
@@ -50,47 +49,50 @@ exports.createSocket = function(typename, options) {
       throw new TypeError("Unknown socket type: " + typename);
   }
 
-  var sock = new binding.Socket(ctx, typecode);
-  sock.type = typename;
-  sock._outgoing = [];
-  sock.watcher = new IOWatcher();
-  sock.watcher.callback = function() { sock._flush(); };
-  sock.watcher.set(sock._fd, true, false);
-  sock.watcher.start();
-
-  if (typeof(options) === 'object') {
-    for (var key in options)
-      sock[key] = options[key];
-  }
-
-  return sock;
+  var self = this;
+  self.zmq = new zmq(defaultContext(), typecode);
+  self.type = typename;
+  self._outgoing = [];
+  self._watcher = new IOWatcher();
+  self._watcher.callback = function() { self._flush(); };
+  self._watcher.set(self._fd, true, false);
+  self._watcher.start();
 };
+util.inherits(Socket, EventEmitter);
 
 var sockProp = function(name, option) {
   Socket.prototype.__defineGetter__(name, function() {
-    return this.getsockopt(option);
+    return this.zmq.getsockopt(option);
   });
   Socket.prototype.__defineSetter__(name, function(value) {
-    return this.setsockopt(option, value);
+    return this.zmq.setsockopt(option, value);
   });
 };
-sockProp('_fd',               Socket.ZMQ_FD);
-sockProp('_ioevents',         Socket.ZMQ_EVENTS);
-sockProp('_receiveMore',      Socket.ZMQ_RCVMORE);
-sockProp('_subscribe',        Socket.ZMQ_SUBSCRIBE);
-sockProp('_unsubscribe',      Socket.ZMQ_UNSUBSCRIBE);
-sockProp('ioThreadAffinity',  Socket.ZMQ_AFFINITY);
-sockProp('backlog',           Socket.ZMQ_BACKLOG);
-sockProp('highWaterMark',     Socket.ZMQ_HWM);
-sockProp('identity',          Socket.ZMQ_IDENTITY);
-sockProp('lingerPeriod',      Socket.ZMQ_LINGER);
-sockProp('multicastLoop',     Socket.ZMQ_MCAST_LOOP);
-sockProp('multicastDataRate', Socket.ZMQ_RATE);
-sockProp('receiveBufferSize', Socket.ZMQ_RCVBUF);
-sockProp('reconnectInterval', Socket.ZMQ_RECONNECT_IVL);
-sockProp('multicastRecovery', Socket.ZMQ_RECOVERY_IVL);
-sockProp('sendBufferSize',    Socket.ZMQ_SNDBUF);
-sockProp('diskOffloadSize',   Socket.ZMQ_SWAP);
+sockProp('_fd',               zmq.ZMQ_FD);
+sockProp('_ioevents',         zmq.ZMQ_EVENTS);
+sockProp('_receiveMore',      zmq.ZMQ_RCVMORE);
+sockProp('_subscribe',        zmq.ZMQ_SUBSCRIBE);
+sockProp('_unsubscribe',      zmq.ZMQ_UNSUBSCRIBE);
+sockProp('ioThreadAffinity',  zmq.ZMQ_AFFINITY);
+sockProp('backlog',           zmq.ZMQ_BACKLOG);
+sockProp('highWaterMark',     zmq.ZMQ_HWM);
+sockProp('identity',          zmq.ZMQ_IDENTITY);
+sockProp('lingerPeriod',      zmq.ZMQ_LINGER);
+sockProp('multicastLoop',     zmq.ZMQ_MCAST_LOOP);
+sockProp('multicastDataRate', zmq.ZMQ_RATE);
+sockProp('receiveBufferSize', zmq.ZMQ_RCVBUF);
+sockProp('reconnectInterval', zmq.ZMQ_RECONNECT_IVL);
+sockProp('multicastRecovery', zmq.ZMQ_RECOVERY_IVL);
+sockProp('sendBufferSize',    zmq.ZMQ_SNDBUF);
+sockProp('diskOffloadSize',   zmq.ZMQ_SWAP);
+
+Socket.prototype.bind = function(addr, cb) {
+  this.zmq.bind(addr, cb);
+};
+
+Socket.prototype.connect = function(addr) {
+  this.zmq.connect(addr);
+};
 
 Socket.prototype.subscribe = function(filter) {
   this._subscribe = filter;
@@ -109,7 +111,7 @@ Socket.prototype.send = function() {
       part = new Buffer(part, 'utf-8');
     var flags = 0;
     if (i !== length-1)
-      flags |= Socket.ZMQ_SNDMORE;
+      flags |= zmq.ZMQ_SNDMORE;
     parts[i] = [part, flags];
   }
   this._outgoing = this._outgoing.concat(parts);
@@ -118,17 +120,17 @@ Socket.prototype.send = function() {
 
 Socket.prototype._flush = function() {
   try {
-    while (this._ioevents & Socket.ZMQ_POLLIN) {
+    while (this._ioevents & zmq.ZMQ_POLLIN) {
       var emitArgs = ['message'];
       do {
-        emitArgs.push(this._recv());
+        emitArgs.push(this.zmq.recv());
       } while (this._receiveMore);
       this.emit.apply(this, emitArgs);
     }
 
-    while (this._outgoing.length && (this._ioevents & Socket.ZMQ_POLLOUT)) {
+    while (this._outgoing.length && (this._ioevents & zmq.ZMQ_POLLOUT)) {
       var sendArgs = this._outgoing.shift();
-      this._send.apply(this, sendArgs);
+      this.zmq.send.apply(this.zmq, sendArgs);
     }
 
   }
@@ -138,7 +140,17 @@ Socket.prototype._flush = function() {
 };
 
 Socket.prototype.close = function() {
-  this.watcher.stop();
-  this.watcher = undefined;
-  this._close();
+  this._watcher.stop();
+  this._watcher = undefined;
+  this.zmq.close();
+};
+
+exports.createSocket = function(typename, options) {
+  var sock = new Socket(typename);
+
+  if (typeof(options) === 'object')
+    for (var key in options)
+      sock[key] = options[key];
+
+  return sock;
 };
