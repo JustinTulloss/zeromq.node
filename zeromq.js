@@ -1,8 +1,7 @@
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var IOWatcher = process.binding('io_watcher').IOWatcher;
-var binding = exports.capi = require('./binding');
-var zmq = binding.Socket;
+var zmq = exports.capi = require('./binding');
 
 var namemap = (function() {
   var m = {};
@@ -32,7 +31,7 @@ var defaultContext = function() {
     }
   }
 
-  context_ = new binding.Context(io_threads);
+  context_ = new zmq.Context(io_threads);
   process.on('exit', function() {
     context_.close();
     context_ = null;
@@ -50,7 +49,7 @@ var Socket = function(typename) {
   }
 
   var self = this;
-  self.zmq = new zmq(defaultContext(), typecode);
+  self.zmq = new zmq.Socket(defaultContext(), typecode);
   self.type = typename;
   self._outgoing = [];
   self._watcher = new IOWatcher();
