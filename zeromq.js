@@ -136,20 +136,28 @@ Socket.prototype.send = function() {
 // the watcher noticing the signaller fd is readable.
 Socket.prototype._flush = function() {
   try {
-    while (this._ioevents & zmq.ZMQ_POLLIN) {
-      var emitArgs = ['message'];
-      do {
-        emitArgs.push(this._zmq.recv());
-      } while (this._receiveMore);
+    while (true) {
+      var flags = this._ioevents;
+      if (this._outgoing.length == 0)
+        flags &= ~zmq.ZMQ_POLLOUT;
+      if (!flags)
+        break;
 
-      this.emit.apply(this, emitArgs);
-      if (this._zmq.state != zmq.STATE_READY)
-        return;
-    }
+      if (flags & zmq.ZMQ_POLLIN) {
+        var emitArgs = ['message'];
+        do {
+          emitArgs.push(this._zmq.recv());
+        } while (this._receiveMore);
 
-    while (this._outgoing.length && (this._ioevents & zmq.ZMQ_POLLOUT)) {
-      var sendArgs = this._outgoing.shift();
-      this._zmq.send.apply(this._zmq, sendArgs);
+        this.emit.apply(this, emitArgs);
+        if (this._zmq.state != zmq.STATE_READY)
+          return;
+      }
+
+      if (flags & zmq.ZMQ_POLLOUT) {
+        var sendArgs = this._outgoing.shift();
+        this._zmq.send.apply(this._zmq, sendArgs);
+      }
     }
   }
   catch (e) {
