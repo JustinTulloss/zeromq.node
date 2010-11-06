@@ -3,6 +3,7 @@ var EventEmitter = require('events').EventEmitter;
 var IOWatcher = process.binding('io_watcher').IOWatcher;
 var zmq = exports.capi = require('./binding');
 
+// A map of convenient names to the ZMQ constants for socket types.
 var namemap = (function() {
   var m = {};
   m.pub  = m.publish   = m.publisher  = zmq.ZMQ_PUB;
@@ -17,6 +18,8 @@ var namemap = (function() {
   return m;
 })();
 
+// Context management happens here. We lazily initialize a default context,
+// and use that everywhere. Also cleans up on exit.
 var context_ = null;
 var defaultContext = function() {
   if (context_ !== null)
@@ -40,6 +43,8 @@ var defaultContext = function() {
   return context_;
 };
 
+// The socket type returned by `createSocket`. Wraps the low-level ZMQ binding
+// with all the conveniences.
 var Socket = function(typename) {
   var typecode = typename;
   if (typeof(typecode) !== 'number') {
@@ -59,6 +64,7 @@ var Socket = function(typename) {
 };
 util.inherits(Socket, EventEmitter);
 
+// Define property accessors for all socket options.
 var sockProp = function(name, option) {
   Socket.prototype.__defineGetter__(name, function() {
     return this.zmq.getsockopt(option);
@@ -85,22 +91,25 @@ sockProp('multicastRecovery', zmq.ZMQ_RECOVERY_IVL);
 sockProp('sendBufferSize',    zmq.ZMQ_SNDBUF);
 sockProp('diskOffloadSize',   zmq.ZMQ_SWAP);
 
+// `bind` and `connect` map directly to our binding.
 Socket.prototype.bind = function(addr, cb) {
   this.zmq.bind(addr, cb);
 };
-
 Socket.prototype.connect = function(addr) {
   this.zmq.connect(addr);
 };
 
+// `subscribe` and `unsubcribe` are exposed as methods.
+// The binding expects a setsockopt call for these, though.
 Socket.prototype.subscribe = function(filter) {
   this._subscribe = filter;
 };
-
 Socket.prototype.unsubscribe = function(filter) {
   this._unsubscribe = filter;
 };
 
+// Queue a message. Each arguments is a multipart message part.
+// It is assumed that strings should be send in UTF-8 encoding.
 Socket.prototype.send = function() {
   var i, length = arguments.length,
       parts = new Array(length);
@@ -117,6 +126,9 @@ Socket.prototype.send = function() {
   this._flush();
 };
 
+// The workhorse that does actual send and receive operations.
+// This helper is called from `send` above, and in response to
+// the watcher noticing the signaller fd is readable.
 Socket.prototype._flush = function() {
   try {
     while (this._ioevents & zmq.ZMQ_POLLIN) {
@@ -138,12 +150,14 @@ Socket.prototype._flush = function() {
   }
 };
 
+// Clean up the socket.
 Socket.prototype.close = function() {
   this._watcher.stop();
   this._watcher = undefined;
   this.zmq.close();
 };
 
+// The main function of the library.
 exports.createSocket = function(typename, options) {
   var sock = new Socket(typename);
 
