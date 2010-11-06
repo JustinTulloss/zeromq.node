@@ -35,10 +35,7 @@
 using namespace v8;
 using namespace node;
 
-// FIXME: Error checking needs to be implemented on all `zmq_` calls.
-
 namespace zmq {
-
 
 
 class Socket;
@@ -164,6 +161,8 @@ Handle<Value> Context::New(const Arguments& args) {
 
 Context::Context(int io_threads) : ObjectWrap() {
     context_ = zmq_init(io_threads);
+    if (!context_)
+        throw std::runtime_error(ErrorMessage());
 }
 
 Context* Context::GetContext(const Arguments &args) {
@@ -173,7 +172,8 @@ Context* Context::GetContext(const Arguments &args) {
 
 void Context::Close() {
     if (context_ != NULL) {
-        zmq_term(context_);
+        if (zmq_term(context_) < 0)
+            throw std::runtime_error(ErrorMessage());
         context_ = NULL;
         Unref();
     }
@@ -612,7 +612,8 @@ Handle<Value> Socket::Send(const Arguments &args) {
 
 void Socket::Close() {
     if (socket_) {
-        zmq_close(socket_);
+        if (zmq_close(socket_) < 0)
+            throw std::runtime_error(ErrorMessage());
         socket_ = NULL;
         Unref();
     }
