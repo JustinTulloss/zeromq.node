@@ -51,10 +51,11 @@ exports.createSocket = function(typename, options) {
   }
 
   var sock = new binding.Socket(ctx, typecode);
+  sock.type = typename;
   sock._outgoing = [];
   sock.watcher = new IOWatcher();
   sock.watcher.callback = function() { sock._flush(); };
-  sock.watcher.set(sock.fd, true, false);
+  sock.watcher.set(sock._fd, true, false);
   sock.watcher.start();
 
   if (typeof(options) === 'object') {
@@ -73,17 +74,31 @@ var sockProp = function(name, option) {
     return this.setsockopt(option, value);
   });
 };
-sockProp('fd',                Socket.ZMQ_FD);
-sockProp('highwaterMark',     Socket.ZMQ_HWM);
-sockProp('diskOffloadSize',   Socket.ZMQ_SWAP);
+sockProp('_fd',               Socket.ZMQ_FD);
+sockProp('_ioevents',         Socket.ZMQ_EVENTS);
+sockProp('_receiveMore',      Socket.ZMQ_RCVMORE);
+sockProp('_subscribe',        Socket.ZMQ_SUBSCRIBE);
+sockProp('_unsubscribe',      Socket.ZMQ_UNSUBSCRIBE);
+sockProp('ioThreadAffinity',  Socket.ZMQ_AFFINITY);
+sockProp('backlog',           Socket.ZMQ_BACKLOG);
+sockProp('highWaterMark',     Socket.ZMQ_HWM);
 sockProp('identity',          Socket.ZMQ_IDENTITY);
-sockProp('multicastDataRate', Socket.ZMQ_RATE);
-sockProp('recoveryIVL',       Socket.ZMQ_RECOVERY_IVL);
+sockProp('lingerPeriod',      Socket.ZMQ_LINGER);
 sockProp('multicastLoop',     Socket.ZMQ_MCAST_LOOP);
-sockProp('sendBufferSize',    Socket.ZMQ_SNDBUF);
+sockProp('multicastDataRate', Socket.ZMQ_RATE);
 sockProp('receiveBufferSize', Socket.ZMQ_RCVBUF);
-sockProp('receiveMoreParts',  Socket.ZMQ_RCVMORE);
-sockProp('currentEvents',     Socket.ZMQ_EVENTS);
+sockProp('reconnectInterval', Socket.ZMQ_RECONNECT_IVL);
+sockProp('multicastRecovery', Socket.ZMQ_RECOVERY_IVL);
+sockProp('sendBufferSize',    Socket.ZMQ_SNDBUF);
+sockProp('diskOffloadSize',   Socket.ZMQ_SWAP);
+
+Socket.prototype.subscribe = function(filter) {
+  this._subscribe = filter;
+};
+
+Socket.prototype.unsubscribe = function(filter) {
+  this._unsubscribe = filter;
+};
 
 Socket.prototype.send = function() {
   var i, length = arguments.length,
@@ -103,16 +118,15 @@ Socket.prototype.send = function() {
 
 Socket.prototype._flush = function() {
   try {
-
-    while (this.currentEvents & Socket.ZMQ_POLLIN) {
+    while (this._ioevents & Socket.ZMQ_POLLIN) {
       var emitArgs = ['message'];
       do {
         emitArgs.push(this._recv());
-      } while (this.receiveMoreParts);
+      } while (this._receiveMore);
       this.emit.apply(this, emitArgs);
     }
 
-    while (this._outgoing.length && (this.currentEvents & Socket.ZMQ_POLLOUT)) {
+    while (this._outgoing.length && (this._ioevents & Socket.ZMQ_POLLOUT)) {
       var sendArgs = this._outgoing.shift();
       this._send.apply(this, sendArgs);
     }

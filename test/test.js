@@ -33,9 +33,9 @@ vows.describe('ZeroMQ')
                 },
                 'can set highwater mark': function(s) {
                     assert.doesNotThrow(function() {
-                        s.highwaterMark = 10;
+                        s.highWaterMark = 10;
                     });
-                    assert.equal(s.highwaterMark, 10);
+                    assert.equal(s.highWaterMark, 10);
                 },
                 'after successful `send`': {
                     topic: function(s) {
