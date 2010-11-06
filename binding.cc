@@ -269,6 +269,10 @@ public:
         NODE_DEFINE_CONSTANT(t, ZMQ_PULL);
         NODE_DEFINE_CONSTANT(t, ZMQ_PAIR);
 
+        NODE_DEFINE_CONSTANT(t, ZMQ_POLLIN);
+        NODE_DEFINE_CONSTANT(t, ZMQ_POLLOUT);
+        NODE_DEFINE_CONSTANT(t, ZMQ_POLLERR);
+
         NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
         NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
         NODE_SET_PROTOTYPE_METHOD(t, "subscribe", Subscribe);
@@ -328,6 +332,13 @@ public:
         uint64_t value = (uint64_t) wrappedValue->ToInteger()->Value(); // WARNING: int cast to long!
         zmq_setsockopt(socket_, option, &value, sizeof(value));
         return Undefined();
+    }
+
+    Handle<Value> GetUIntSockOpt(int option) {
+        uint32_t value = 0;
+        size_t len = sizeof(value);
+        zmq_getsockopt(socket_, option, &value, &len);
+        return v8::Integer::New(value);
     }
 
     Handle<Value> GetBytesSockOpt(int option) {
@@ -401,9 +412,9 @@ protected:
         Socket *socket = GetSocket(info);
 
         if (name->Equals(v8::String::New("highwaterMark"))) {
-          return socket->GetULongSockOpt(ZMQ_HWM);
+            return socket->GetULongSockOpt(ZMQ_HWM);
         } else if (name->Equals(v8::String::New("diskOffloadSize"))) {
-          return socket->GetLongSockOpt(ZMQ_SWAP);
+            return socket->GetLongSockOpt(ZMQ_SWAP);
         } else if (name->Equals(v8::String::New("identity"))) {
             return socket->GetBytesSockOpt(ZMQ_IDENTITY);
         } else if (name->Equals(v8::String::New("multicastDataRate"))) {
@@ -416,6 +427,10 @@ protected:
             return socket->GetULongSockOpt(ZMQ_SNDBUF);
         } else if (name->Equals(v8::String::New("receiveBufferSize"))) {
             return socket->GetULongSockOpt(ZMQ_RCVBUF);
+        } else if (name->Equals(v8::String::New("receiveMoreParts"))) {
+            return socket->GetULongSockOpt(ZMQ_RCVMORE);
+        } else if (name->Equals(v8::String::New("currentEvents"))) {
+            return socket->GetUIntSockOpt(ZMQ_EVENTS);
         }
 
         return Undefined();
@@ -425,9 +440,9 @@ protected:
         Socket *socket = GetSocket(info);
 
         if (name->Equals(v8::String::New("highwaterMark"))) {
-          socket->SetULongSockOpt(ZMQ_HWM, value);
+            socket->SetULongSockOpt(ZMQ_HWM, value);
         } else if (name->Equals(v8::String::New("diskOffloadSize"))) {
-          socket->SetLongSockOpt(ZMQ_SWAP, value);
+            socket->SetLongSockOpt(ZMQ_SWAP, value);
         } else if (name->Equals(v8::String::New("identity"))) {
             socket->SetBytesSockOpt(ZMQ_IDENTITY, value);
         } else if (name->Equals(v8::String::New("multicastDataRate"))) {
