@@ -54,8 +54,8 @@ var Socket = function(typename) {
   }
 
   var self = this;
-  self.zmq = new zmq.Socket(defaultContext(), typecode);
   self.type = typename;
+  self._zmq = new zmq.Socket(defaultContext(), typecode);
   self._outgoing = [];
   self._watcher = new IOWatcher();
   self._watcher.callback = function() { self._flush(); };
@@ -67,10 +67,10 @@ util.inherits(Socket, EventEmitter);
 // Define property accessors for all socket options.
 var sockProp = function(name, option) {
   Socket.prototype.__defineGetter__(name, function() {
-    return this.zmq.getsockopt(option);
+    return this._zmq.getsockopt(option);
   });
   Socket.prototype.__defineSetter__(name, function(value) {
-    return this.zmq.setsockopt(option, value);
+    return this._zmq.setsockopt(option, value);
   });
 };
 sockProp('_fd',               zmq.ZMQ_FD);
@@ -95,13 +95,13 @@ sockProp('diskOffloadSize',   zmq.ZMQ_SWAP);
 Socket.prototype.bind = function(addr, cb) {
   var self = this;
   self._watcher.stop();
-  self.zmq.bind(addr, function(err) {
+  self._zmq.bind(addr, function(err) {
     self._watcher.start();
     cb(err);
   });
 };
 Socket.prototype.connect = function(addr) {
-  this.zmq.connect(addr);
+  this._zmq.connect(addr);
 };
 
 // `subscribe` and `unsubcribe` are exposed as methods.
@@ -139,19 +139,18 @@ Socket.prototype._flush = function() {
     while (this._ioevents & zmq.ZMQ_POLLIN) {
       var emitArgs = ['message'];
       do {
-        emitArgs.push(this.zmq.recv());
+        emitArgs.push(this._zmq.recv());
       } while (this._receiveMore);
 
       this.emit.apply(this, emitArgs);
-      if (this.zmq.state != zmq.STATE_READY)
+      if (this._zmq.state != zmq.STATE_READY)
         return;
     }
 
     while (this._outgoing.length && (this._ioevents & zmq.ZMQ_POLLOUT)) {
       var sendArgs = this._outgoing.shift();
-      this.zmq.send.apply(this.zmq, sendArgs);
+      this._zmq.send.apply(this._zmq, sendArgs);
     }
-
   }
   catch (e) {
     this.emit('error', e);
@@ -162,7 +161,7 @@ Socket.prototype._flush = function() {
 Socket.prototype.close = function() {
   this._watcher.stop();
   this._watcher = undefined;
-  this.zmq.close();
+  this._zmq.close();
 };
 
 // The main function of the library.
