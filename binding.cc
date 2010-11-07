@@ -23,7 +23,6 @@
 #include <v8.h>
 #include <ev.h>
 #include <node.h>
-#include <node_events.h>
 #include <node_buffer.h>
 #include <zmq.h>
 #include <assert.h>
@@ -31,603 +30,706 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <list>
-#include <vector>
-#include <unistd.h>
+#include <stdexcept>
 
 using namespace v8;
 using namespace node;
 
-#define SET_SOCKET_ACCESSOR(name)                                         \
-do {                                                                      \
-    t->PrototypeTemplate()->SetAccessor(String::New(name),                \
-            GetOptions, SetOptions);                                      \
-} while (0)
-
-
-// FIXME: Error checking needs to be implemented on all `zmq_` calls.
-
 namespace zmq {
 
-static Persistent<String> message_symbol;
-static Persistent<String> error_symbol;
-static Persistent<String> connect_symbol;
 
-typedef struct outgoing_message {
-    void *data;
-    Persistent<Object> handle;
-    void (*freeFxn)(outgoing_message *);
-} outgoing_message;
+#define STATE_READY  0
+#define STATE_BUSY   1
+#define STATE_CLOSED 2
 
 class Socket;
 
-
-class Context : public EventEmitter {
+class Context : ObjectWrap {
 friend class Socket;
 public:
-    static void Initialize(v8::Handle<v8::Object> target) {
-        HandleScope scope;
+    static void Initialize(v8::Handle<v8::Object> target);
 
-        Local<FunctionTemplate> t = FunctionTemplate::New(New);
-
-        t->Inherit(EventEmitter::constructor_template);
-        t->InstanceTemplate()->SetInternalFieldCount(1);
-
-        NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-
-        target->Set(String::NewSymbol("Context"), t->GetFunction());
-    }
-
-    void Close() {
-        zmq_term(context_);
-        context_ = NULL;
-        Unref();
-    }
-
-protected:
-    static Handle<Value> New(const Arguments& args) {
-        HandleScope scope;
-        int io_threads = 1;
-        if (args.Length() == 1) {
-            if (!args[0]->IsNumber()) {
-                return ThrowException(Exception::TypeError(
-                    String::New("io_threads must be an integer")));
-            }
-            io_threads = (int) args[0]->ToInteger()->Value();
-            if (io_threads < 1) {
-                return ThrowException(Exception::RangeError(
-                    String::New("io_threads must be a positive number")));
-            }
-        }
-
-        Context *context = new Context(io_threads);
-        context->Wrap(args.This());
-
-        return args.This();
-    }
-
-    static Handle<Value> Close(const Arguments& args) {
-        zmq::Context *context = ObjectWrap::Unwrap<Context>(args.This());
-        HandleScope scope;
-        context->Close();
-        return Undefined();
-    }
-
-    Context(int io_threads) : EventEmitter() {
-        context_ = zmq_init(io_threads);
-    }
-
-    ~Context() {
-        if (context_ != NULL)
-            Close();
-        assert(context_ == NULL);
-    }
+    virtual ~Context();
 
 private:
-    void * context_;
+    static Handle<Value> New(const Arguments& args);
+    Context(int io_threads);
+    static Context* GetContext(const Arguments &args);
+
+    void Close();
+    static Handle<Value> Close(const Arguments& args);
+
+    void* context_;
 };
 
-
-class Socket : public EventEmitter {
+class Socket : ObjectWrap {
 public:
-    static void Initialize(v8::Handle<v8::Object> target) {
-        HandleScope scope;
+    static void Initialize(v8::Handle<v8::Object> target);
 
-        Local<FunctionTemplate> t = FunctionTemplate::New(New);
-
-        t->Inherit(EventEmitter::constructor_template);
-        t->InstanceTemplate()->SetInternalFieldCount(1);
-
-        NODE_DEFINE_CONSTANT(t, ZMQ_PUB);
-        NODE_DEFINE_CONSTANT(t, ZMQ_SUB);
-        NODE_DEFINE_CONSTANT(t, ZMQ_REQ);
-        NODE_DEFINE_CONSTANT(t, ZMQ_XREQ);
-        NODE_DEFINE_CONSTANT(t, ZMQ_REP);
-        NODE_DEFINE_CONSTANT(t, ZMQ_XREP);
-        NODE_DEFINE_CONSTANT(t, ZMQ_PUSH);
-        NODE_DEFINE_CONSTANT(t, ZMQ_PULL);
-        NODE_DEFINE_CONSTANT(t, ZMQ_PAIR);
-
-        NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
-        NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
-        NODE_SET_PROTOTYPE_METHOD(t, "subscribe", Subscribe);
-        NODE_SET_PROTOTYPE_METHOD(t, "unsubscribe", Unsubscribe);
-        NODE_SET_PROTOTYPE_METHOD(t, "send", Send);
-        NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-
-        SET_SOCKET_ACCESSOR("highwaterMark");
-        SET_SOCKET_ACCESSOR("diskOffloadSize");
-        SET_SOCKET_ACCESSOR("identity");
-        SET_SOCKET_ACCESSOR("multicastDataRate");
-        SET_SOCKET_ACCESSOR("recoveryIVL");
-        SET_SOCKET_ACCESSOR("multicastLoop");
-        SET_SOCKET_ACCESSOR("sendBufferSize");
-        SET_SOCKET_ACCESSOR("receiveBufferSize");
-
-        message_symbol = NODE_PSYMBOL("message");
-        connect_symbol = NODE_PSYMBOL("connect");
-        error_symbol = NODE_PSYMBOL("error");
-
-        target->Set(String::NewSymbol("Socket"), t->GetFunction());
-    }
-
-    int Bind(const char *address) {
-        return zmq_bind(socket_, address);
-    }
-
-    int Connect(const char *address) {
-        return zmq_connect(socket_, address);
-    }
-
-    Handle<Value> GetLongSockOpt(int option) {
-        int64_t value = 0;
-        size_t len = sizeof(value);
-        zmq_getsockopt(socket_, option, &value, &len);
-        return v8::Integer::New(value); // WARNING: long cast to int!
-    }
-
-    Handle<Value> SetLongSockOpt(int option, Local<Value> wrappedValue) {
-        if (!wrappedValue->IsNumber()) {
-            return ThrowException(Exception::TypeError(
-                String::New("Value must be an integer")));
-        }
-        int64_t value = (int64_t) wrappedValue->ToInteger()->Value(); // WARNING: int cast to long!
-        zmq_setsockopt(socket_, option, &value, sizeof(value));
-        return Undefined();
-    }
-
-    Handle<Value> GetULongSockOpt(int option) {
-        uint64_t value = 0;
-        size_t len = sizeof(value);
-        zmq_getsockopt(socket_, option, &value, &len);
-        return v8::Integer::New(value); // WARNING: long cast to int!
-    }
-
-    Handle<Value> SetULongSockOpt(int option, Local<Value> wrappedValue) {
-        if (!wrappedValue->IsNumber()) {
-            return ThrowException(Exception::TypeError(
-                String::New("Value must be an integer")));
-        }
-        uint64_t value = (uint64_t) wrappedValue->ToInteger()->Value(); // WARNING: int cast to long!
-        zmq_setsockopt(socket_, option, &value, sizeof(value));
-        return Undefined();
-    }
-
-    Handle<Value> GetBytesSockOpt(int option) {
-        char value[1024] = {0};
-        size_t len = 1023;
-        zmq_getsockopt(socket_, option, value, &len);
-        return v8::String::New(value);
-    }
-
-    Handle<Value> SetBytesSockOpt(int option, Local<Value> wrappedValue) {
-        if (!wrappedValue->IsString()) {
-            return ThrowException(Exception::TypeError(
-                String::New("Value must be a string!")));
-        }
-        String::Utf8Value value(wrappedValue->ToString());
-        zmq_setsockopt(socket_, option, *value, value.length());
-        return Undefined();
-    }
-
-    int Send(char *msg, int length, int flags, void* hint) {
-        int rc;
-        zmq_msg_t z_msg;
-        rc = zmq_msg_init_data(&z_msg, msg, length, FreeMessage, hint);
-        if (rc < 0) {
-            return rc;
-        }
-
-        rc = zmq_send(socket_, &z_msg, flags);
-        if (rc < 0) {
-            return rc;
-        }
-
-        return zmq_msg_close(&z_msg);
-    }
-
-    int Recv(int flags, zmq_msg_t* z_msg) {
-        int rc;
-        rc = zmq_msg_init(z_msg);
-        if (rc < 0) {
-            return rc;
-        }
-        return zmq_recv(socket_, z_msg, flags);
-    }
-
-    void Close() {
-        ev_io_stop(EV_DEFAULT_UC_ &watcher_);
-        zmq_close(socket_);
-        socket_ = NULL;
-        Unref();
-    }
-
-    const char * ErrorMessage() {
-        return zmq_strerror(zmq_errno());
-    }
-
-protected:
-    static Handle<Value> New(const Arguments &args) {
-        HandleScope scope;
-        if (args.Length() != 2) {
-            return ThrowException(Exception::Error(
-                String::New("Must pass a context and a type to constructor")));
-        }
-        Context *context = ObjectWrap::Unwrap<Context>(args[0]->ToObject());
-        if (!args[1]->IsNumber()) {
-            return ThrowException(Exception::TypeError(
-                String::New("Type must be an integer")));
-        }
-        int type = (int) args[1]->ToInteger()->Value();
-
-        Socket *socket = new Socket(context, type);
-        socket->Wrap(args.This());
-
-        return args.This();
-    }
-
-    static Handle<Value> Connect(const Arguments &args) {
-        HandleScope scope;
-        Socket *socket = GetSocket(args);
-        if (!args[0]->IsString()) {
-            return ThrowException(Exception::TypeError(
-                String::New("Address must be a string!")));
-        }
-
-        String::Utf8Value address(args[0]->ToString());
-        if (socket->Connect(*address)) {
-            return ThrowException(Exception::Error(
-                String::New(socket->ErrorMessage())));
-        }
-        return Undefined();
-    }
-
-    static Handle<Value> Subscribe(const Arguments &args) {
-        return GetSocket(args)->SetBytesSockOpt(ZMQ_SUBSCRIBE, args[0]);
-    }
-
-    static Handle<Value> Unsubscribe(const Arguments &args) {
-        return GetSocket(args)->SetBytesSockOpt(ZMQ_UNSUBSCRIBE, args[0]);
-    }
-
-    static Handle<Value> GetOptions(Local<String> name, const AccessorInfo& info) {
-        Socket *socket = GetSocket(info);
-
-        if (name->Equals(v8::String::New("highwaterMark"))) {
-          return socket->GetULongSockOpt(ZMQ_HWM);
-        } else if (name->Equals(v8::String::New("diskOffloadSize"))) {
-          return socket->GetLongSockOpt(ZMQ_SWAP);
-        } else if (name->Equals(v8::String::New("identity"))) {
-            return socket->GetBytesSockOpt(ZMQ_IDENTITY);
-        } else if (name->Equals(v8::String::New("multicastDataRate"))) {
-            return socket->GetLongSockOpt(ZMQ_RATE);
-        } else if (name->Equals(v8::String::New("recoveryIVL"))) {
-            return socket->GetLongSockOpt(ZMQ_RECOVERY_IVL);
-        } else if (name->Equals(v8::String::New("multicastLoop"))) {
-            return socket->GetLongSockOpt(ZMQ_MCAST_LOOP);
-        } else if (name->Equals(v8::String::New("sendBufferSize"))) {
-            return socket->GetULongSockOpt(ZMQ_SNDBUF);
-        } else if (name->Equals(v8::String::New("receiveBufferSize"))) {
-            return socket->GetULongSockOpt(ZMQ_RCVBUF);
-        }
-
-        return Undefined();
-    }
-
-    static void SetOptions(Local<String> name, Local<Value> value, const AccessorInfo& info) {
-        Socket *socket = GetSocket(info);
-
-        if (name->Equals(v8::String::New("highwaterMark"))) {
-          socket->SetULongSockOpt(ZMQ_HWM, value);
-        } else if (name->Equals(v8::String::New("diskOffloadSize"))) {
-          socket->SetLongSockOpt(ZMQ_SWAP, value);
-        } else if (name->Equals(v8::String::New("identity"))) {
-            socket->SetBytesSockOpt(ZMQ_IDENTITY, value);
-        } else if (name->Equals(v8::String::New("multicastDataRate"))) {
-            socket->SetLongSockOpt(ZMQ_RATE, value);
-        } else if (name->Equals(v8::String::New("recoveryIVL"))) {
-            socket->SetLongSockOpt(ZMQ_RECOVERY_IVL, value);
-        } else if (name->Equals(v8::String::New("multicastLoop"))) {
-            socket->SetLongSockOpt(ZMQ_MCAST_LOOP, value);
-        } else if (name->Equals(v8::String::New("sendBufferSize"))) {
-            socket->SetULongSockOpt(ZMQ_SNDBUF, value);
-        } else if (name->Equals(v8::String::New("receiveBufferSize"))) {
-            socket->SetULongSockOpt(ZMQ_RCVBUF, value);
-        }
-    }
-
-    static Handle<Value> Bind(const Arguments &args) {
-        HandleScope scope;
-        Socket *socket = GetSocket(args);
-        Local<Function> cb = Local<Function>::Cast(args[1]);
-        if (!args[0]->IsString()) {
-            return ThrowException(Exception::TypeError(
-                String::New("Address must be a string!")));
-        }
-
-        if (args.Length() > 1 && !args[1]->IsFunction()) {
-            return ThrowException(Exception::TypeError(
-                String::New("Provided callback must be a function")));
-        }
-
-        socket->bindCallback_ = Persistent<Function>::New(cb);
-        socket->bindAddress_ = Persistent<String>::New(args[0]->ToString());
-        eio_custom(EIO_DoBind, EIO_PRI_DEFAULT, EIO_BindDone, socket);
-
-        socket->Ref(); // Reference ourself until the callback is done
-        ev_ref(EV_DEFAULT_UC);
-
-        return Undefined();
-    }
-
-    static Handle<Value> Send(const Arguments &args) {
-        HandleScope scope;
-        Socket *socket = GetSocket(args);
-        int argc = args.Length();
-
-        if (argc == 0) {
-            return ThrowException(Exception::TypeError(
-                String::New("Must pass in at least one message part to send")));
-        }
-
-        for (int i = 0; i < argc; ++i) {
-            Local<Value> arg = args[i];
-            if (!(arg->IsString() || Buffer::HasInstance(arg))) {
-                return ThrowException(Exception::TypeError(
-                    String::New("All message parts must be Strings or Buffers")));
-            }
-        }
-
-        socket->QueueOutgoingMessage(args);
-
-        return Undefined();
-    }
-
-    static Handle<Value> Close(const Arguments &args) {
-        HandleScope scope;
-
-        Socket *socket = GetSocket(args);
-        socket->Close();
-        return Undefined();
-    }
-
-    Socket(Context *context, int type) : EventEmitter () {
-        socket_ = zmq_socket(context->context_, type);
-        events_ = ZMQ_POLLIN;
-
-        size_t zmq_fd_size = sizeof(int);
-        int fd;
-        zmq_getsockopt(socket_, ZMQ_FD, &fd, &zmq_fd_size);
-
-        ev_init(&watcher_, Socket::Callback);
-        ev_io_set(&watcher_, fd, EV_READ);
-        watcher_.data = this;
-        ev_io_start(EV_DEFAULT_UC_ &watcher_);
-    }
-
-    ~Socket() {
-        if (socket_ != NULL) {
-            Close();
-        }
-        assert(socket_ == NULL);
-    }
+    virtual ~Socket();
 
 private:
-    static void Callback(EV_P_ ev_io *w, int ev_revents) {
-        Socket *s = static_cast<Socket*>(w->data);
+    static Handle<Value> New(const Arguments &args);
+    Socket(Context *context, int type);
+    static Socket* GetSocket(const Arguments &args);
 
-        s->AfterPoll();
-    }
+    static Handle<Value> GetState(Local<String> p, const AccessorInfo& info);
 
-    uint32_t CurrentEvents() {
-        uint32_t result;
-        size_t result_size = sizeof (result);
-        zmq_getsockopt(socket_, ZMQ_EVENTS, &result, &result_size);
+    template<typename T>
+    Handle<Value> GetSockOpt(int option);
+    template<typename T>
+    Handle<Value> SetSockOpt(int option, Handle<Value> wrappedValue);
+    static Handle<Value> GetSockOpt(const Arguments &args);
+    static Handle<Value> SetSockOpt(const Arguments &args);
 
-        return result;
-    }
+    struct BindState;
+    static Handle<Value> Bind(const Arguments &args);
+    static int EIO_DoBind(eio_req *req);
+    static int EIO_BindDone(eio_req *req);
 
-    int64_t RcvMore() {
-        int64_t result;
-        size_t result_size = sizeof (result);
-        zmq_getsockopt(socket_, ZMQ_RCVMORE, &result, &result_size);
+    static Handle<Value> Connect(const Arguments &args);
 
-        return result;
-    }
+    class IncomingMessage;
+    static Handle<Value> Recv(const Arguments &args);
 
-    void QueueOutgoingMessage(const Arguments &args) {
-        int argc = args.Length();
-        Local<Array> p_message = Array::New(argc);
-        for (int i = 0; i < argc; ++i) {
-            p_message->Set(i, args[i]);
-        }
-        events_ |= ZMQ_POLLOUT;
-        outgoing_.push_back(Persistent<Array>::New(p_message));
+    class OutgoingMessage;
+    static Handle<Value> Send(const Arguments &args);
 
-        AfterPoll();
-    }
+    void Close();
+    static Handle<Value> Close(const Arguments &args);
 
-    int AfterPoll() {
-        HandleScope scope;
-
-        Local <Value> exception;
-
-        while (CurrentEvents() & ZMQ_POLLIN) {
-            std::vector< Local<Value> > argv;
-            do {
-                zmq_msg_t *z_msg = new zmq_msg_t;
-                zmq_msg_init(z_msg);
-
-                if (Recv(0, z_msg)) {
-                    zmq_msg_close(z_msg);
-                    delete z_msg;
-                    Emit(error_symbol, 1, &exception);
-                }
-
-                Buffer *buffer = Buffer::New(
-                    (char *) zmq_msg_data(z_msg), zmq_msg_size(z_msg),
-                    ReleaseReceivedMessage, (void *)z_msg);
-                argv.push_back(Local<Value>::New(buffer->handle_));
-            } while(RcvMore());
-            Emit(message_symbol, argv.size(), &argv[0]);
-        }
-
-        while ((CurrentEvents() & ZMQ_POLLOUT) && !outgoing_.empty()) {
-            Local <Array> parts = Local<Array>::New(outgoing_.front());
-            uint32_t len = parts->Length();
-            for(uint32_t i = 0; i < len; ++i) {
-                Local <Value> out = parts->Get(i);
-                int flags = (i == (len-1)) ? 0 : ZMQ_SNDMORE;
-                outgoing_message *og =
-                    (outgoing_message *) malloc(sizeof(outgoing_message));
-                if (!og) {
-                    exception = Exception::Error(
-                        String::New("Could not allocate a minute amount of memory"));
-                    Emit(error_symbol, 1, &exception);
-                    return -1;
-                }
-                int rc = 0;
-                if (out->IsString()) {
-                    String::Utf8Value *message = new String::Utf8Value(out);
-                    og->data = (void *) message;
-                    og->freeFxn = &FreeStringMessage;
-                    rc = Send(**message, message->length(), flags, (void *) og);
-                }
-                else if (Buffer::HasInstance(out)) {
-                    Persistent<Object> buffer_obj = Persistent<Object>::New(out->ToObject());
-                    char *buffer_data = Buffer::Data(buffer_obj);
-                    size_t buffer_length = Buffer::Length(buffer_obj);
-                    og->handle = buffer_obj;
-                    og->freeFxn = &FreeBufferMessage;
-                    rc = Send(buffer_data, buffer_length, flags, (void *)og);
-                }
-                else {
-                    /* shouldn't happen; we checked the types on the original call */
-                    exception = Exception::Error(
-                        String::New("Can only send messages of type String or Buffer"));
-                        Emit(error_symbol, 1, &exception);
-                }
-
-                if (rc) {
-                    exception = Exception::Error(
-                        String::New(ErrorMessage()));
-                    Emit(error_symbol, 1, &exception);
-                }
-            }
-
-            // TODO: document the consequences of disposing even when there's an
-            // error in transmission
-            outgoing_.front().Dispose();
-            outgoing_.pop_front();
-        }
-
-        return 0;
-    }
-
-    static void ReleaseReceivedMessage(char *data, void *hint) {
-        zmq_msg_t *z_msg = (zmq_msg_t *) hint;
-        zmq_msg_close(z_msg);
-        delete z_msg;
-    }
-
-    static int EIO_DoBind(eio_req *req) {
-        Socket *socket = (Socket *) req->data;
-        String::Utf8Value address(socket->bindAddress_);
-        socket->bindError_ = socket->Bind(*address);
-        return 0;
-    }
-
-    static int EIO_BindDone(eio_req *req) {
-        HandleScope scope;
-
-        ev_unref(EV_DEFAULT_UC);
-
-        Socket *socket = (Socket *) req->data;
-
-        TryCatch try_catch;
-
-        Local<Value> argv[1];
-
-        if (socket->bindError_) {
-            argv[0] = String::New(socket->ErrorMessage());
-        }
-        else {
-            argv[0] = String::New("");
-        }
-        socket->bindCallback_->Call(v8::Context::GetCurrent()->Global(), 1, argv);
-
-        if (try_catch.HasCaught()) {
-            FatalException(try_catch);
-        }
-
-        socket->bindAddress_.Dispose();
-        socket->bindCallback_.Dispose();
-
-        socket->Unref();
-
-        return 0;
-    }
-
-    static void FreeMessage(void *data, void *message) {
-        outgoing_message *msg = (outgoing_message *) message;
-        msg->freeFxn(msg);
-        free(message);
-    }
-
-    static void FreeStringMessage(outgoing_message *message) {
-        String::Utf8Value *js_msg = (String::Utf8Value *) message->data;
-        delete js_msg;
-    }
-
-    static void FreeBufferMessage(outgoing_message *message) {
-        Persistent<Object> buffer_obj = message->handle;
-        buffer_obj.Dispose();
-    }
-
-    static Socket * GetSocket(const Arguments &args) {
-        return ObjectWrap::Unwrap<Socket>(args.This());
-    }
-
-    static Socket * GetSocket(const AccessorInfo &info) {
-        return ObjectWrap::Unwrap<Socket>(info.This());
-    }
-
+    Persistent<Object> context_;
     void *socket_;
-    ev_io watcher_;
-    short events_;
-    std::list< Persistent <Array> > outgoing_;
-
-    Persistent<String> bindAddress_;
-    Persistent<Function> bindCallback_;
-    int bindError_;
+    uint8_t state_;
 };
 
+static void Initialize(Handle<Object> target);
 
+
+
+// --- I m p l e m e n t a t i o n ---
+
+
+/*
+ * Helpers for dealing with ØMQ errors.
+ */
+
+static inline const char* ErrorMessage() {
+    return zmq_strerror(zmq_errno());
 }
 
+static inline Local<Value> ExceptionFromError() {
+    return Exception::Error(String::New(ErrorMessage()));
+}
+
+
+
+/*
+ * Context methods.
+ */
+
+void Context::Initialize(v8::Handle<v8::Object> target) {
+    HandleScope scope;
+
+    Local<FunctionTemplate> t = FunctionTemplate::New(New);
+    t->InstanceTemplate()->SetInternalFieldCount(1);
+
+    NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
+
+    target->Set(String::NewSymbol("Context"), t->GetFunction());
+}
+
+
+Context::~Context() {
+    Close();
+}
+
+
+Handle<Value> Context::New(const Arguments& args) {
+    HandleScope scope;
+    int io_threads = 1;
+    if (args.Length() == 1) {
+        if (!args[0]->IsNumber()) {
+            return ThrowException(Exception::TypeError(
+                String::New("io_threads must be an integer")));
+        }
+        io_threads = (int) args[0]->ToInteger()->Value();
+        if (io_threads < 1) {
+            return ThrowException(Exception::RangeError(
+                String::New("io_threads must be a positive number")));
+        }
+    }
+
+    Context *context = new Context(io_threads);
+    context->Wrap(args.This());
+
+    return args.This();
+}
+
+Context::Context(int io_threads) : ObjectWrap() {
+    context_ = zmq_init(io_threads);
+    if (!context_)
+        throw std::runtime_error(ErrorMessage());
+}
+
+Context* Context::GetContext(const Arguments &args) {
+    return ObjectWrap::Unwrap<Context>(args.This());
+}
+
+
+void Context::Close() {
+    if (context_ != NULL) {
+        if (zmq_term(context_) < 0)
+            throw std::runtime_error(ErrorMessage());
+        context_ = NULL;
+    }
+}
+
+Handle<Value> Context::Close(const Arguments& args) {
+    HandleScope scope;
+    GetContext(args)->Close();
+    return Undefined();
+}
+
+
+
+/*
+ * Socket methods.
+ */
+
+void Socket::Initialize(v8::Handle<v8::Object> target) {
+    HandleScope scope;
+
+    Local<FunctionTemplate> t = FunctionTemplate::New(New);
+    t->InstanceTemplate()->SetInternalFieldCount(1);
+    t->InstanceTemplate()->SetAccessor(
+        String::NewSymbol("state"), GetState, NULL);
+
+    NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
+    NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
+    NODE_SET_PROTOTYPE_METHOD(t, "getsockopt", GetSockOpt);
+    NODE_SET_PROTOTYPE_METHOD(t, "setsockopt", SetSockOpt);
+    NODE_SET_PROTOTYPE_METHOD(t, "recv", Recv);
+    NODE_SET_PROTOTYPE_METHOD(t, "send", Send);
+    NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
+
+    target->Set(String::NewSymbol("Socket"), t->GetFunction());
+}
+
+
+Socket::~Socket() {
+    Close();
+}
+
+
+Handle<Value> Socket::New(const Arguments &args) {
+    HandleScope scope;
+    if (args.Length() != 2) {
+        return ThrowException(Exception::Error(
+            String::New("Must pass a context and a type to constructor")));
+    }
+    Context *context = ObjectWrap::Unwrap<Context>(args[0]->ToObject());
+    if (!args[1]->IsNumber()) {
+        return ThrowException(Exception::TypeError(
+            String::New("Type must be an integer")));
+    }
+    int type = (int) args[1]->ToInteger()->Value();
+
+    Socket *socket = new Socket(context, type);
+    socket->Wrap(args.This());
+
+    return args.This();
+}
+
+Socket::Socket(Context *context, int type) : ObjectWrap() {
+    context_ = Persistent<Object>::New(context->handle_);
+    socket_ = zmq_socket(context->context_, type);
+    state_ = STATE_READY;
+}
+
+Socket* Socket::GetSocket(const Arguments &args) {
+    return ObjectWrap::Unwrap<Socket>(args.This());
+}
+
+/*
+ * This macro makes a call to GetSocket and checks the socket state. These two
+ * things go hand in hand everywhere in our code.
+ */
+#define GET_SOCKET(args)                              \
+    Socket* socket = GetSocket(args);                 \
+    if (socket->state_ == STATE_CLOSED)               \
+        return ThrowException(Exception::TypeError(   \
+            String::New("Socket is closed")));        \
+    if (socket->state_ == STATE_BUSY)                 \
+        return ThrowException(Exception::TypeError(   \
+            String::New("Socket is busy")));
+
+
+Handle<Value> Socket::GetState(Local<String> p, const AccessorInfo& info) {
+    Socket* socket = ObjectWrap::Unwrap<Socket>(info.Holder());
+    return Integer::New(socket->state_);
+}
+
+
+template<typename T>
+Handle<Value> Socket::GetSockOpt(int option) {
+    T value = 0;
+    size_t len = sizeof(T);
+    if (zmq_getsockopt(socket_, option, &value, &len) < 0)
+        return ThrowException(ExceptionFromError());
+    return Integer::New(value);
+}
+
+template<typename T>
+Handle<Value> Socket::SetSockOpt(int option, Handle<Value> wrappedValue) {
+    if (!wrappedValue->IsNumber())
+        return ThrowException(Exception::TypeError(
+            String::New("Value must be an integer")));
+    T value = (T) wrappedValue->ToInteger()->Value();
+    if (zmq_setsockopt(socket_, option, &value, sizeof(T)) < 0)
+        return ThrowException(ExceptionFromError());
+    return Undefined();
+}
+
+template<> Handle<Value>
+Socket::GetSockOpt<char*>(int option) {
+    char value[1024];
+    size_t len = sizeof(value) - 1;
+    if (zmq_getsockopt(socket_, option, value, &len) < 0)
+        return ThrowException(ExceptionFromError());
+    value[len] = '\0';
+    return v8::String::New(value);
+}
+
+template<> Handle<Value>
+Socket::SetSockOpt<char*>(int option, Handle<Value> wrappedValue) {
+    if (!wrappedValue->IsString())
+        return ThrowException(Exception::TypeError(
+            String::New("Value must be a string")));
+    String::Utf8Value value(wrappedValue->ToString());
+    if (zmq_setsockopt(socket_, option, *value, value.length()) < 0)
+        return ThrowException(ExceptionFromError());
+    return Undefined();
+}
+
+Handle<Value> Socket::GetSockOpt(const Arguments &args) {
+    if (args.Length() != 1)
+        return ThrowException(Exception::Error(
+            String::New("Must pass an option")));
+    if (!args[0]->IsNumber())
+        return ThrowException(Exception::TypeError(
+            String::New("Option must be an integer")));
+    int64_t option = args[0]->ToInteger()->Value();
+
+    GET_SOCKET(args);
+
+    // FIXME: How to handle ZMQ_FD on Windows?
+    switch (option) {
+    case ZMQ_HWM:
+    case ZMQ_AFFINITY:
+    case ZMQ_SNDBUF:
+    case ZMQ_RCVBUF:
+    case ZMQ_RCVMORE:
+        return socket->GetSockOpt<uint64_t>(option);
+    case ZMQ_SWAP:
+    case ZMQ_RATE:
+    case ZMQ_RECOVERY_IVL:
+    case ZMQ_MCAST_LOOP:
+        return socket->GetSockOpt<int64_t>(option);
+    case ZMQ_IDENTITY:
+        return socket->GetSockOpt<char*>(option);
+    case ZMQ_EVENTS:
+        return socket->GetSockOpt<uint32_t>(option);
+    case ZMQ_FD:
+    case ZMQ_TYPE:
+    case ZMQ_LINGER:
+    case ZMQ_RECONNECT_IVL:
+    case ZMQ_BACKLOG:
+        return socket->GetSockOpt<int>(option);
+    case ZMQ_SUBSCRIBE:
+    case ZMQ_UNSUBSCRIBE:
+        return ThrowException(Exception::TypeError(
+            String::New("Socket option cannot be read")));
+    default:
+        return ThrowException(Exception::TypeError(
+            String::New("Unknown socket option")));
+    }
+}
+
+Handle<Value> Socket::SetSockOpt(const Arguments &args) {
+    if (args.Length() != 2)
+        return ThrowException(Exception::Error(
+            String::New("Must pass an option and a value")));
+    if (!args[0]->IsNumber())
+        return ThrowException(Exception::TypeError(
+            String::New("Option must be an integer")));
+    int64_t option = args[0]->ToInteger()->Value();
+
+    GET_SOCKET(args);
+
+    switch (option) {
+    case ZMQ_HWM:
+    case ZMQ_AFFINITY:
+    case ZMQ_SNDBUF:
+    case ZMQ_RCVBUF:
+        return socket->SetSockOpt<uint64_t>(option, args[1]);
+    case ZMQ_SWAP:
+    case ZMQ_RATE:
+    case ZMQ_RECOVERY_IVL:
+    case ZMQ_MCAST_LOOP:
+        return socket->SetSockOpt<int64_t>(option, args[1]);
+    case ZMQ_IDENTITY:
+    case ZMQ_SUBSCRIBE:
+    case ZMQ_UNSUBSCRIBE:
+        return socket->SetSockOpt<char*>(option, args[1]);
+    case ZMQ_LINGER:
+    case ZMQ_RECONNECT_IVL:
+    case ZMQ_BACKLOG:
+        return socket->SetSockOpt<int>(option, args[1]);
+    case ZMQ_RCVMORE:
+    case ZMQ_EVENTS:
+    case ZMQ_FD:
+    case ZMQ_TYPE:
+        return ThrowException(Exception::TypeError(
+            String::New("Socket option cannot be written")));
+    default:
+        return ThrowException(Exception::TypeError(
+            String::New("Unknown socket option")));
+    }
+}
+
+
+struct Socket::BindState {
+    BindState(Socket* sock_, Handle<Function> cb_, Handle<String> addr_)
+            : addr(addr_) {
+        sock_obj = Persistent<Object>::New(sock_->handle_);
+        sock = sock_->socket_;
+        cb = Persistent<Function>::New(cb_);
+        error = 0;
+    }
+
+    ~BindState() {
+        sock_obj.Dispose();
+        cb.Dispose();
+    }
+
+    Persistent<Object> sock_obj;
+    void* sock;
+    Persistent<Function> cb;
+    String::Utf8Value addr;
+    int error;
+};
+
+Handle<Value> Socket::Bind(const Arguments &args) {
+    HandleScope scope;
+    if (!args[0]->IsString())
+        return ThrowException(Exception::TypeError(
+            String::New("Address must be a string!")));
+    Local<String> addr = args[0]->ToString();
+    if (args.Length() > 1 && !args[1]->IsFunction())
+        return ThrowException(Exception::TypeError(
+            String::New("Provided callback must be a function")));
+    Local<Function> cb = Local<Function>::Cast(args[1]);
+
+    GET_SOCKET(args);
+
+    BindState* state = new BindState(socket, cb, addr);
+    eio_custom(EIO_DoBind, EIO_PRI_DEFAULT, EIO_BindDone, state);
+    ev_ref(EV_DEFAULT_UC);
+    socket->state_ = STATE_BUSY;
+
+    return Undefined();
+}
+
+int Socket::EIO_DoBind(eio_req *req) {
+    BindState* state = (BindState*) req->data;
+    if (zmq_bind(state->sock, *state->addr) < 0)
+        state->error = zmq_errno();
+    return 0;
+}
+
+int Socket::EIO_BindDone(eio_req *req) {
+    BindState* state = (BindState*) req->data;
+    HandleScope scope;
+
+    Local<Value> argv[1];
+    if (state->error)
+        argv[0] = Exception::Error(String::New(zmq_strerror(state->error)));
+    else
+        argv[0] = Local<Value>::New(Undefined());
+    Local<Function> cb = Local<Function>::New(state->cb);
+
+    ObjectWrap::Unwrap<Socket>(state->sock_obj)->state_ = STATE_READY;
+    delete state;
+
+    TryCatch try_catch;
+    cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
+    if (try_catch.HasCaught())
+        FatalException(try_catch);
+
+    ev_unref(EV_DEFAULT_UC);
+    return 0;
+}
+
+
+Handle<Value> Socket::Connect(const Arguments &args) {
+    HandleScope scope;
+    if (!args[0]->IsString()) {
+        return ThrowException(Exception::TypeError(
+            String::New("Address must be a string!")));
+    }
+
+    GET_SOCKET(args);
+
+    String::Utf8Value address(args[0]->ToString());
+    if (zmq_connect(socket->socket_, *address))
+        return ThrowException(ExceptionFromError());
+    return Undefined();
+}
+
+
+/*
+ * An object that creates an empty ØMQ message, which can be used for
+ * zmq_recv. After the receive call, a Buffer object wrapping the ØMQ
+ * message can be requested. The reference for the ØMQ message will
+ * remain while the data is in use by the Buffer.
+ */
+
+class Socket::IncomingMessage {
+public:
+    inline IncomingMessage() {
+        msgref_ = new MessageReference();
+    };
+
+    inline ~IncomingMessage() {
+        if (buf_.IsEmpty())
+            delete msgref_;
+        else
+            buf_.Dispose();
+    };
+
+    inline operator zmq_msg_t*() {
+        return *msgref_;
+    }
+
+    inline Local<Value> GetBuffer() {
+        if (buf_.IsEmpty()) {
+            Buffer* buf_obj = Buffer::New(
+              (char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_),
+              FreeCallback, msgref_);
+            buf_ = Persistent<Object>::New(buf_obj->handle_);
+        }
+        return Local<Value>::New(buf_);
+    }
+
+private:
+    static void FreeCallback(char* data, void* message) {
+        delete (MessageReference*) message;
+    }
+
+    class MessageReference {
+    public:
+        inline MessageReference() {
+            if (zmq_msg_init(&msg_) < 0)
+                throw std::runtime_error(ErrorMessage());
+        }
+
+        inline ~MessageReference() {
+            if (zmq_msg_close(&msg_) < 0)
+                throw std::runtime_error(ErrorMessage());
+        }
+
+        inline operator zmq_msg_t*() {
+            return &msg_;
+        }
+
+    private:
+        zmq_msg_t msg_;
+    };
+
+    Persistent<Object> buf_;
+    MessageReference* msgref_;
+};
+
+Handle<Value> Socket::Recv(const Arguments &args) {
+    HandleScope scope;
+
+    int flags = 0;
+    int argc = args.Length();
+    if (argc == 1) {
+        if (!args[0]->IsNumber())
+            return ThrowException(Exception::TypeError(
+                String::New("Argument should be an integer")));
+        flags = args[0]->ToInteger()->Value();
+    }
+    else if (argc != 0)
+        return ThrowException(Exception::TypeError(
+            String::New("Only one argument at most was expected")));
+
+    GET_SOCKET(args);
+
+    IncomingMessage msg;
+    if (zmq_recv(socket->socket_, msg, flags) < 0)
+        return ThrowException(ExceptionFromError());
+    return scope.Close(msg.GetBuffer());
+}
+
+
+/*
+ * An object that creates a ØMQ message from the given Buffer Object,
+ * and manages the reference to it using RAII. A persistent V8 handle
+ * for the Buffer object will remain while its data is in use by ØMQ.
+ */
+
+class Socket::OutgoingMessage {
+public:
+    inline OutgoingMessage(Handle<Object> buf) {
+        bufref_ = new BufferReference(buf);
+        if (zmq_msg_init_data(&msg_, Buffer::Data(buf), Buffer::Length(buf),
+                BufferReference::FreeCallback, bufref_) < 0) {
+            delete bufref_;
+            throw std::runtime_error(ErrorMessage());
+        }
+    };
+
+    inline ~OutgoingMessage() {
+        if (zmq_msg_close(&msg_) < 0)
+            throw std::runtime_error(ErrorMessage());
+    };
+
+    inline operator zmq_msg_t*() {
+        return &msg_;
+    }
+
+private:
+    class BufferReference {
+    public:
+        inline BufferReference(Handle<Object> buf) {
+            buf_ = Persistent<Object>::New(buf);
+        }
+
+        inline ~BufferReference() {
+            buf_.Dispose();
+        }
+
+        static void FreeCallback(void* data, void* message) {
+            delete (BufferReference*) message;
+        }
+
+    private:
+        Persistent<Object> buf_;
+    };
+
+    zmq_msg_t msg_;
+    BufferReference* bufref_;
+};
+
+Handle<Value> Socket::Send(const Arguments &args) {
+    HandleScope scope;
+
+    int argc = args.Length();
+    if (argc != 1 && argc != 2)
+        return ThrowException(Exception::TypeError(
+            String::New("Must pass a Buffer and optionally flags")));
+    if (!Buffer::HasInstance(args[0]))
+          return ThrowException(Exception::TypeError(
+              String::New("First argument should be a Buffer")));
+    int flags = 0;
+    if (argc == 2) {
+        if (!args[1]->IsNumber())
+            return ThrowException(Exception::TypeError(
+                String::New("Second argument should be an integer")));
+        flags = args[1]->ToInteger()->Value();
+    }
+
+    GET_SOCKET(args);
+
+    OutgoingMessage msg(args[0]->ToObject());
+    if (zmq_send(socket->socket_, msg, flags) < 0)
+        return ThrowException(ExceptionFromError());
+    return Undefined();
+}
+
+
+void Socket::Close() {
+    if (socket_) {
+        if (zmq_close(socket_) < 0)
+            throw std::runtime_error(ErrorMessage());
+        socket_ = NULL;
+        state_ = STATE_CLOSED;
+        context_.Dispose();
+    }
+}
+
+Handle<Value> Socket::Close(const Arguments &args) {
+    HandleScope scope;
+
+    GET_SOCKET(args);
+
+    socket->Close();
+
+    return Undefined();
+}
+
+
+/*
+ * Module functions.
+ */
+
+static void Initialize(Handle<Object> target) {
+    HandleScope scope;
+
+    NODE_DEFINE_CONSTANT(target, ZMQ_PUB);
+    NODE_DEFINE_CONSTANT(target, ZMQ_SUB);
+    NODE_DEFINE_CONSTANT(target, ZMQ_REQ);
+    NODE_DEFINE_CONSTANT(target, ZMQ_XREQ);
+    NODE_DEFINE_CONSTANT(target, ZMQ_REP);
+    NODE_DEFINE_CONSTANT(target, ZMQ_XREP);
+    NODE_DEFINE_CONSTANT(target, ZMQ_PUSH);
+    NODE_DEFINE_CONSTANT(target, ZMQ_PULL);
+    NODE_DEFINE_CONSTANT(target, ZMQ_PAIR);
+
+    NODE_DEFINE_CONSTANT(target, ZMQ_HWM);
+    NODE_DEFINE_CONSTANT(target, ZMQ_SWAP);
+    NODE_DEFINE_CONSTANT(target, ZMQ_AFFINITY);
+    NODE_DEFINE_CONSTANT(target, ZMQ_IDENTITY);
+    NODE_DEFINE_CONSTANT(target, ZMQ_SUBSCRIBE);
+    NODE_DEFINE_CONSTANT(target, ZMQ_UNSUBSCRIBE);
+    NODE_DEFINE_CONSTANT(target, ZMQ_RATE);
+    NODE_DEFINE_CONSTANT(target, ZMQ_RECOVERY_IVL);
+    NODE_DEFINE_CONSTANT(target, ZMQ_MCAST_LOOP);
+    NODE_DEFINE_CONSTANT(target, ZMQ_SNDBUF);
+    NODE_DEFINE_CONSTANT(target, ZMQ_RCVBUF);
+    NODE_DEFINE_CONSTANT(target, ZMQ_RCVMORE);
+    NODE_DEFINE_CONSTANT(target, ZMQ_FD);
+    NODE_DEFINE_CONSTANT(target, ZMQ_EVENTS);
+    NODE_DEFINE_CONSTANT(target, ZMQ_TYPE);
+    NODE_DEFINE_CONSTANT(target, ZMQ_LINGER);
+    NODE_DEFINE_CONSTANT(target, ZMQ_RECONNECT_IVL);
+    NODE_DEFINE_CONSTANT(target, ZMQ_BACKLOG);
+
+    NODE_DEFINE_CONSTANT(target, ZMQ_POLLIN);
+    NODE_DEFINE_CONSTANT(target, ZMQ_POLLOUT);
+    NODE_DEFINE_CONSTANT(target, ZMQ_POLLERR);
+
+    NODE_DEFINE_CONSTANT(target, ZMQ_SNDMORE);
+    NODE_DEFINE_CONSTANT(target, ZMQ_NOBLOCK);
+
+    NODE_DEFINE_CONSTANT(target, STATE_READY);
+    NODE_DEFINE_CONSTANT(target, STATE_BUSY);
+    NODE_DEFINE_CONSTANT(target, STATE_CLOSED);
+
+    Context::Initialize(target);
+    Socket::Initialize(target);
+}
+
+
+} // namespace zmq
+
+
+
+// --- E n t r y - p o i n t ---
 extern "C" void
 init(Handle<Object> target) {
-    HandleScope scope;
-    zmq::Context::Initialize(target);
-    zmq::Socket::Initialize(target);
+    zmq::Initialize(target);
 }
