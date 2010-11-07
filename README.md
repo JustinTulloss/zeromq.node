@@ -1,24 +1,22 @@
 **This is alpha quality. Proceed with caution**
-=======================
+===============================================
 
 This library gives you experimental bindings to ØMQ from node.js.
 
-Dependencies
-============
+To Install
+==========
 
-Some bleeding edge dependencies are required:
+First, get ØMQ 2.1 (which as of this writing has not been released)
 
- * [node.js]. Should work with at least 0.3.
- * [ØMQ]. Should work with at least 2.1.
+    $ git clone https://github.com/zeromq/zeromq2
+    $ cd zeromq2
+    $ ./configure && make && make install
 
-At the time of writing, ØMQ 2.1 has not been released, so you'll have
-to build it from its github repositories, while node.js 0.3 has been
-released but is still officially "unstable."
+The use [npm] to install zeromq.node
 
-To Build
-========
+    $ npm install zeromq
 
-     $ node-waf configure build
+`npm` will yell at you if you don't have node 0.3.0 as that is required.
 
 API
 ===
@@ -37,7 +35,7 @@ After that, you can create sockets with:
     socket = zeromq.createSocket('req');
 
 Using ØMQ sockets
--------------
+-----------------
 A socket is where the action happens. You can send and receive things and it is
 oh such fun.
 
@@ -78,6 +76,12 @@ oh such fun.
  * error - There was some error. The only argument is an exception explaining
    what the error was.
 
+
+To Build
+========
+
+     $ node-waf configure build
+
 Testing
 =======
 
@@ -94,6 +98,7 @@ Licensing
 Licensed under the very permissive [MIT License].
 
 [node.js]: http://github.com/ry/node
+[npm]: https://github.com/isaacs/npm
 [ØMQ]: http://github.com/zeromq/zeromq2
 [ØMQ API]: http://api.zeromq.org/
 [zmq_socket]: http://api.zeromq.org/zmq_socket.html
