@@ -8,8 +8,9 @@ To Install
 
 First, get ØMQ 2.1 (which as of this writing has not been released):
 
-    $ git clone https://github.com/zeromq/zeromq2
+    $ git clone https://github.com/zeromq/zeromq2.git
     $ cd zeromq2
+    $ ./autogen.sh
     $ ./configure && make && make install
 
 Then use [npm] to install zeromq.node:
