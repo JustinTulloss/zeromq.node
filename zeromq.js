@@ -1,7 +1,8 @@
+/*globals require exports process Buffer */
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var IOWatcher = process.binding('io_watcher').IOWatcher;
-var zmq = exports.capi = require('./binding');
+var zmq = require('./binding');
 
 // A map of convenient names to the ZMQ constants for socket types.
 var namemap = (function() {
@@ -22,12 +23,13 @@ var namemap = (function() {
 // and use that everywhere. Also cleans up on exit.
 var context_ = null;
 var defaultContext = function() {
-  if (context_ !== null)
+  if (context_ !== null) {
     return context_;
+  }
 
   var io_threads = 1;
   if (process.env.ZMQ_IO_THREADS) {
-    io_threads = parseInt(process.env.ZMQ_IO_THREADS);
+    io_threads = parseInt(process.env.ZMQ_IO_THREADS, 10);
     if (!io_threads || io_threads < 1) {
       util.error('Invalid number in ZMQ_IO_THREADS, using 1 IO thread.');
       io_threads = 1;
@@ -49,8 +51,9 @@ var Socket = function(typename) {
   var typecode = typename;
   if (typeof(typecode) !== 'number') {
     typecode = namemap[typename];
-    if (!namemap.hasOwnProperty(typename) || typecode === undefined)
+    if (!namemap.hasOwnProperty(typename) || typecode === undefined) {
       throw new TypeError("Unknown socket type: " + typename);
+    }
   }
 
   var self = this;
@@ -117,15 +120,17 @@ Socket.prototype.unsubscribe = function(filter) {
 // It is assumed that strings should be send in UTF-8 encoding.
 Socket.prototype.send = function() {
   var i, length = arguments.length,
-      parts = new Array(length);
+      parts = [];
   for (i = 0; i < length; i++) {
     var part = arguments[i];
-    if (typeof(part) === 'string')
+    if (typeof(part) === 'string') {
       part = new Buffer(part, 'utf-8');
+    }
     var flags = 0;
-    if (i !== length-1)
+    if (i !== length-1) {
       flags |= zmq.ZMQ_SNDMORE;
-    parts[i] = [part, flags];
+    }
+    parts.push([part, flags]);
   }
   this._outgoing = this._outgoing.concat(parts);
   this._flush();
@@ -138,10 +143,12 @@ Socket.prototype._flush = function() {
   try {
     while (true) {
       var flags = this._ioevents;
-      if (this._outgoing.length == 0)
+      if (this._outgoing.length === 0) {
         flags &= ~zmq.ZMQ_POLLOUT;
-      if (!flags)
+      }
+      if (!flags) {
         break;
+      }
 
       if (flags & zmq.ZMQ_POLLIN) {
         var emitArgs = ['message'];
@@ -150,8 +157,9 @@ Socket.prototype._flush = function() {
         } while (this._receiveMore);
 
         this.emit.apply(this, emitArgs);
-        if (this._zmq.state != zmq.STATE_READY)
+        if (this._zmq.state != zmq.STATE_READY) {
           return;
+        }
       }
 
       if (flags & zmq.ZMQ_POLLOUT) {
@@ -176,9 +184,13 @@ Socket.prototype.close = function() {
 exports.createSocket = function(typename, options) {
   var sock = new Socket(typename);
 
-  if (typeof(options) === 'object')
-    for (var key in options)
-      sock[key] = options[key];
+  if (typeof(options) === 'object') {
+    for (var key in options) {
+      if (options.hasOwnProperty(key)) {
+        sock[key] = options[key];
+      }
+    }
+  }
 
   return sock;
 };
