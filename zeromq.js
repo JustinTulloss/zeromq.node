@@ -123,7 +123,9 @@ Socket.prototype.send = function() {
       parts = [];
   for (i = 0; i < length; i++) {
     var part = arguments[i];
-    if (typeof(part) === 'string') {
+    // We only send Buffers, but if you give us a type that can
+    // easily be converted, we'll do that for you.
+    if (!(part instanceof Buffer)) {
       part = new Buffer(part, 'utf-8');
     }
     var flags = 0;
