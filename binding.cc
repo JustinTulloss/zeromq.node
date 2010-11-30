@@ -410,7 +410,9 @@ struct Socket::BindState {
 
     ~BindState() {
         sock_obj.Dispose();
+        sock_obj.Clear();
         cb.Dispose();
+        cb.Clear();
     }
 
     Persistent<Object> sock_obj;
@@ -502,10 +504,13 @@ public:
     };
 
     inline ~IncomingMessage() {
-        if (buf_.IsEmpty())
+        if (buf_.IsEmpty() && msgref_) {
             delete msgref_;
-        else
+            msgref_ = NULL;
+        } else {
             buf_.Dispose();
+            buf_.Clear();
+        }
     };
 
     inline operator zmq_msg_t*() {
@@ -570,7 +575,7 @@ Handle<Value> Socket::Recv(const Arguments &args) {
 
     IncomingMessage msg;
     if (zmq_recv(socket->socket_, msg, flags) < 0)
-        return ThrowException(ExceptionFromError());
+        return ThrowException(ExceptionFromError());        
     return scope.Close(msg.GetBuffer());
 }
 
@@ -605,18 +610,36 @@ private:
     class BufferReference {
     public:
         inline BufferReference(Handle<Object> buf) {
+            // Keep the handle alive until zmq is done with the buffer
+            noLongerNeeded_ = false;
             buf_ = Persistent<Object>::New(buf);
+            buf_.MakeWeak(this, &WeakCheck);
         }
 
         inline ~BufferReference() {
             buf_.Dispose();
+            buf_.Clear();
         }
 
+        // Called by zmq when the message has been sent.
+        // NOTE: May be called from a worker thread. Do not modify V8/Node.
         static void FreeCallback(void* data, void* message) {
-            delete (BufferReference*) message;
+            // Raise a flag indicating that we're done with the buffer
+            ((BufferReference*)message)->noLongerNeeded_ = true;
+        }
+        
+        // Called when V8 would like to GC buf_
+        static void WeakCheck(v8::Persistent<v8::Value> obj, void* data) {
+            if (((BufferReference*)data)->noLongerNeeded_) {
+                delete (BufferReference*)data;
+            } else {
+                // Still in use, revive, prevent GC
+                obj.MakeWeak(data, &WeakCheck);
+            }
         }
 
     private:
+        bool noLongerNeeded_;
         Persistent<Object> buf_;
     };
 
@@ -624,6 +647,10 @@ private:
     BufferReference* bufref_;
 };
 
+// WARNING: the buffer passed here will be kept alive
+// until zmq_send completes, possibly on another thread.
+// Do not modify or reuse any buffer passed to send.
+// This is bad, but allows us to send without copying.
 Handle<Value> Socket::Send(const Arguments &args) {
     HandleScope scope;
 
@@ -658,6 +685,7 @@ void Socket::Close() {
         socket_ = NULL;
         state_ = STATE_CLOSED;
         context_.Dispose();
+        context_.Clear();
     }
 }
 
