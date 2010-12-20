@@ -6,12 +6,7 @@ This library gives you experimental bindings to ØMQ from node.js.
 To Install
 ==========
 
-First, get ØMQ 2.1 (which as of this writing has not been released):
-
-    $ git clone https://github.com/zeromq/zeromq2.git
-    $ cd zeromq2
-    $ ./autogen.sh
-    $ ./configure && make && make install
+First, get [ØMQ 2.1] (which as of this writing is still in beta).
 
 Then use [npm] to install zeromq.node:
 
@@ -103,7 +98,7 @@ Licensed under the very permissive [MIT License].
 
 [node.js]: http://github.com/ry/node
 [npm]: https://github.com/isaacs/npm
-[ØMQ]: http://github.com/zeromq/zeromq2
+[ØMQ 2.1]: http://www.zeromq.org/intro:get-the-software
 [ØMQ API]: http://api.zeromq.org/
 [zmq_socket]: http://api.zeromq.org/zmq_socket.html
 [zmq_connect]: http://api.zeromq.org/zmq_connect.html
