@@ -20,8 +20,8 @@ function sock1Message(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
     assert.equal(arg8, "to");
     assert.equal(arg9, "you");
 
-    console.log("got message on sock1: ", arg1 ? arg1.toString() : "", arg2 ? arg2.toString() : "",
-                arg3 ? arg3.toString() : "");
+    //console.log("got message on sock1: ", arg1 ? arg1.toString() : "", arg2 ? arg2.toString() : "",
+    //            arg3 ? arg3.toString() : "");
     //sock1.send('message back');
 }
 
@@ -38,8 +38,8 @@ function sock2Message(arg1, arg2, arg3)
     assert.equal(arg1.toString(), "Sock1");
     assert.equal(arg2.toString(), "message");
 
-    console.log("got message on sock2: ", arg1 ? arg1.toString() : "", arg2 ? arg2.toString() : "",
-                arg3 ? arg3.toString() : "");
+    //console.log("got message on sock2: ", arg1 ? arg1.toString() : "", arg2 ? arg2.toString() : "",
+    //            arg3 ? arg3.toString() : "");
     sock2.send(arg1, arg2, 'this', 'is', 'a', 'long', 'message', 'back', 'to', 'you');
     //console.log("got message on sock2: ", arg1, arg2, arg3);
     //sock2.send(arg1, 'hi', 'back');
@@ -60,12 +60,23 @@ sock2.on('error', sock2Error);
 
 var msg = 0;
 
+var intervalId;
+
 function onTick()
 {
     for (var i = 0;  i < 1000;  ++i) {
         sock1.send('message', "" + msg);
         ++msg;
     }
+
+    console.log("done " + msg + " messages");
+
+    if (msg > 1000000) {
+        clearInterval(intervalId);
+        sock1.close();
+        sock2.close();
+    }
+
 }
 
 function onBindDone()
@@ -73,7 +84,7 @@ function onBindDone()
     sock1.connect(uri);
 
     //sock1.send('hello', 'world');
-    var intervalId = setInterval(onTick, 1);
+    intervalId = setInterval(onTick, 1);
 }
 
 sock2.bind(uri, onBindDone);
