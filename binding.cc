@@ -86,6 +86,7 @@ private:
     static Handle<Value> Bind(const Arguments &args);
     static int EIO_DoBind(eio_req *req);
     static int EIO_BindDone(eio_req *req);
+    static Handle<Value> BindSync(const Arguments &args);
 
     static Handle<Value> Connect(const Arguments &args);
 
@@ -206,6 +207,7 @@ void Socket::Initialize(v8::Handle<v8::Object> target) {
         String::NewSymbol("state"), GetState, NULL);
 
     NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
+    NODE_SET_PROTOTYPE_METHOD(t, "bindSync", BindSync);
     NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
     NODE_SET_PROTOTYPE_METHOD(t, "getsockopt", GetSockOpt);
     NODE_SET_PROTOTYPE_METHOD(t, "setsockopt", SetSockOpt);
@@ -473,6 +475,24 @@ int Socket::EIO_BindDone(eio_req *req) {
     return 0;
 }
 
+Handle<Value> Socket::BindSync(const Arguments &args) {
+    HandleScope scope;
+    if (!args[0]->IsString())
+        return ThrowException(Exception::TypeError(
+            String::New("Address must be a string!")));
+    String::Utf8Value addr(args[0]->ToString());
+
+    GET_SOCKET(args);
+
+    socket->state_ = STATE_BUSY;
+
+    if (zmq_bind(socket, *addr) < 0)
+        return ThrowException(ExceptionFromError());
+
+    socket->state_ = STATE_READY;
+
+    return Undefined();
+}
 
 Handle<Value> Socket::Connect(const Arguments &args) {
     HandleScope scope;
@@ -527,6 +547,8 @@ public:
             Buffer* buf_obj = Buffer::New(
               (char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_),
               FreeCallback, msgref_);
+            if (!buf_obj)
+                return Local<Value>();
             buf_ = Persistent<Object>::New(buf_obj->handle_);
         }
         return Local<Value>::New(buf_);

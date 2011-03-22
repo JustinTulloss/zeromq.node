@@ -3,6 +3,7 @@ var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var IOWatcher = process.binding('io_watcher').IOWatcher;
 var zmq = require('./binding');
+var sys = require('sys');
 
 // A map of convenient names to the ZMQ constants for socket types.
 var namemap = (function() {
@@ -64,6 +65,7 @@ var Socket = function(typename) {
   self._watcher.callback = function() { self._flush(); };
   self._watcher.set(self._fd, true, false);
   self._watcher.start();
+  self._inFlush = false;
 };
 util.inherits(Socket, EventEmitter);
 
@@ -103,6 +105,17 @@ Socket.prototype.bind = function(addr, cb) {
     cb(err);
   });
 };
+Socket.prototype.bindSync = function(addr) {
+  var self = this;
+  self._watcher.stop();
+  try {
+      self._zmq.bindSync(addr);
+  } catch (e) {
+      self._watcher.start();
+      throw e;
+  }
+  self._watcher.start();
+};
 Socket.prototype.connect = function(addr) {
   this._zmq.connect(addr);
 };
@@ -137,42 +150,78 @@ Socket.prototype.send = function() {
   this._outgoing = this._outgoing.concat(parts);
   this._flush();
 };
+Socket.prototype.currentSendBacklog = function() {
+    return this._outgoing.length;
+};
 
 // The workhorse that does actual send and receive operations.
 // This helper is called from `send` above, and in response to
 // the watcher noticing the signaller fd is readable.
 Socket.prototype._flush = function() {
-  try {
-    while (true) {
-      var flags = this._ioevents;
-      if (this._outgoing.length === 0) {
-        flags &= ~zmq.ZMQ_POLLOUT;
-      }
-      if (!flags) {
-        break;
-      }
 
-      if (flags & zmq.ZMQ_POLLIN) {
-        var emitArgs = ['message'];
-        do {
-          emitArgs.push(this._zmq.recv());
-        } while (this._receiveMore);
+    // Don't allow recursive flush invocation as it can lead to stack
+    // exhaustion and write starvation
+    if (this._inFlush === true) return;
 
-        this.emit.apply(this, emitArgs);
-        if (this._zmq.state != zmq.STATE_READY) {
-          return;
+    this._inFlush = true;
+
+    //console.log("flushing with ", this._outgoing.length, " entries");
+
+    try {
+
+        while (true) {
+            var flags = this._ioevents;
+            //console.log("flags = ", flags, "outgoing = ", this._outgoing.length);
+            if (this._outgoing.length === 0) {
+                flags &= ~zmq.ZMQ_POLLOUT;
+            }
+            if (!flags) {
+                break;
+            }
+
+            if (flags & zmq.ZMQ_POLLIN) {
+                var emitArgs = ['message'];
+                do {
+                    emitArgs.push(this._zmq.recv());
+                } while (this._receiveMore);
+
+                //console.log("received ", emitArgs.length, " messages");
+
+                this.emit.apply(this, emitArgs);
+                if (this._zmq.state != zmq.STATE_READY) {
+                    console.log("state not ready");
+                    return;
+                }
+            }
+
+            // We send as much as possible in one burst so that we don't
+            // starve sends if we receive more than one message for each
+            // one sent.
+            //while (flags & zmq.ZMQ_POLLOUT)
+            while ((flags & zmq.ZMQ_POLLOUT) && (this._outgoing.length !== 0))
+            {
+                var sendArgs = this._outgoing.shift();
+                //console.log("sending ", sendArgs);
+                this._zmq.send.apply(this._zmq, sendArgs);
+                flags = this._ioevents;
+            }
+
         }
-      }
-
-      if (flags & zmq.ZMQ_POLLOUT) {
-        var sendArgs = this._outgoing.shift();
-        this._zmq.send.apply(this._zmq, sendArgs);
-      }
     }
-  }
-  catch (e) {
-    this.emit('error', e);
-  }
+    catch (e) {
+        console.log("sending got error", e);
+        console.log("flags are ", flags, " in: ", flags & zmq.ZMQ_POLLIN,
+                    " out: ", flags & zmq.ZMQ_POLLOUT);
+        console.log("outgoing is ", sys.inspect(this._outgoing));
+        try {
+            this.emit('error', e);
+        } catch (e2) {
+            this._inFlush = false;
+            throw e2;
+        }
+    }
+
+    this._inFlush = false;
 };
 
 // Clean up the socket.
