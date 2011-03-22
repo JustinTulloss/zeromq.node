@@ -518,6 +518,11 @@ public:
     }
 
     inline Local<Value> GetBuffer() {
+#if 0
+        Handle<Object> buf
+            = Buffer::New(v8::String::New((char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_)));
+        return buf;
+#else        
         if (buf_.IsEmpty()) {
             Buffer* buf_obj = Buffer::New(
               (char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_),
@@ -525,6 +530,7 @@ public:
             buf_ = Persistent<Object>::New(buf_obj->handle_);
         }
         return Local<Value>::New(buf_);
+#endif
     }
 
 private:
@@ -671,9 +677,27 @@ Handle<Value> Socket::Send(const Arguments &args) {
 
     GET_SOCKET(args);
 
+#if 0  // zero-copy version, but doesn't properly pin buffer and so has GC issues
     OutgoingMessage msg(args[0]->ToObject());
     if (zmq_send(socket->socket_, msg, flags) < 0)
         return ThrowException(ExceptionFromError());
+    
+#else // copying version that has no GC issues
+    zmq_msg_t msg;
+    Local<Object> buf = args[0]->ToObject();
+    size_t len = Buffer::Length(buf);
+    int res = zmq_msg_init_size(&msg, len);
+    if (res != 0)
+        return ThrowException(ExceptionFromError());        
+        
+    char * cp = (char *)zmq_msg_data(&msg);
+    const char * dat = Buffer::Data(buf);
+    std::copy(dat, dat + len, cp);
+    
+    if (zmq_send(socket->socket_, &msg, flags) < 0)
+        return ThrowException(ExceptionFromError());
+#endif // zero copy / copying version
+
     return Undefined();
 }
 
