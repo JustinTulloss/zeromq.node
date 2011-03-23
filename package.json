@@ -1,6 +1,6 @@
 {
     "name": "zeromq",
-    "version": "0.3.0",
+    "version": "0.3.0-recoset",
     "description": "Bindings for node.js to zeromq",
     "main": "zeromq",
     "repository": {
