@@ -1,6 +1,6 @@
 {
     "name": "zeromq",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "description": "Bindings for node.js to zeromq",
     "main": "zeromq",
     "repository": {
@@ -14,6 +14,7 @@
         "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
         "Stéphan Kochen <stephan@kochen.nl> (http://stephan.kochen.nl/)",
         "Mike Castleman <m@mlcastle.net> (http://mlcastle.net/)",
-        "Matt Crocker"
+        "Matt Crocker",
+        "Jeremy Barnes <jeremny@barneso.com> (http://www.barneso.com/)"
     ]
 }
