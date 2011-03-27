@@ -1,4 +1,5 @@
 /*globals require exports process Buffer */
+
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var IOWatcher = process.binding('io_watcher').IOWatcher;
@@ -78,6 +79,7 @@ var sockProp = function(name, option) {
     return this._zmq.setsockopt(option, value);
   });
 };
+
 sockProp('_fd',               zmq.ZMQ_FD);
 sockProp('_ioevents',         zmq.ZMQ_EVENTS);
 sockProp('_receiveMore',      zmq.ZMQ_RCVMORE);
@@ -105,6 +107,8 @@ Socket.prototype.bind = function(addr, cb) {
     cb(err);
   });
 };
+
+/* Currently buggy.
 Socket.prototype.bindSync = function(addr) {
   var self = this;
   self._watcher.stop();
@@ -116,6 +120,8 @@ Socket.prototype.bindSync = function(addr) {
   }
   self._watcher.start();
 };
+*/
+
 Socket.prototype.connect = function(addr) {
   this._zmq.connect(addr);
 };
@@ -125,6 +131,7 @@ Socket.prototype.connect = function(addr) {
 Socket.prototype.subscribe = function(filter) {
   this._subscribe = filter;
 };
+
 Socket.prototype.unsubscribe = function(filter) {
   this._unsubscribe = filter;
 };
@@ -150,6 +157,7 @@ Socket.prototype.send = function() {
   this._outgoing = this._outgoing.concat(parts);
   this._flush();
 };
+
 Socket.prototype.currentSendBacklog = function() {
     return this._outgoing.length;
 };
@@ -161,17 +169,14 @@ Socket.prototype._flush = function() {
 
     // Don't allow recursive flush invocation as it can lead to stack
     // exhaustion and write starvation
-    if (this._inFlush === true) return;
+    if (this._inFlush === true) { return; }
 
     this._inFlush = true;
-
-    //console.log("flushing with ", this._outgoing.length, " entries");
 
     try {
 
         while (true) {
             var flags = this._ioevents;
-            //console.log("flags = ", flags, "outgoing = ", this._outgoing.length);
             if (this._outgoing.length === 0) {
                 flags &= ~zmq.ZMQ_POLLOUT;
             }
@@ -185,11 +190,8 @@ Socket.prototype._flush = function() {
                     emitArgs.push(this._zmq.recv());
                 } while (this._receiveMore);
 
-                //console.log("received ", emitArgs.length, " messages");
-
                 this.emit.apply(this, emitArgs);
                 if (this._zmq.state != zmq.STATE_READY) {
-                    console.log("state not ready");
                     return;
                 }
             }
@@ -197,11 +199,9 @@ Socket.prototype._flush = function() {
             // We send as much as possible in one burst so that we don't
             // starve sends if we receive more than one message for each
             // one sent.
-            //while (flags & zmq.ZMQ_POLLOUT)
             while ((flags & zmq.ZMQ_POLLOUT) && (this._outgoing.length !== 0))
             {
                 var sendArgs = this._outgoing.shift();
-                //console.log("sending ", sendArgs);
                 this._zmq.send.apply(this._zmq, sendArgs);
                 flags = this._ioevents;
             }
@@ -209,10 +209,8 @@ Socket.prototype._flush = function() {
         }
     }
     catch (e) {
-        console.log("sending got error", e);
-        console.log("flags are ", flags, " in: ", flags & zmq.ZMQ_POLLIN,
-                    " out: ", flags & zmq.ZMQ_POLLOUT);
-        console.log("outgoing is ", sys.inspect(this._outgoing));
+        e.flags = flags;
+        e.outgoing = sys.inspect(this._outgoing);
         try {
             this.emit('error', e);
         } catch (e2) {
