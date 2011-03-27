@@ -1,12 +1,12 @@
-**This is alpha quality. Proceed with caution**
-===============================================
 
-This library gives you experimental bindings to ØMQ from node.js.
+This library gives you bindings to ØMQ from node.js. This is not terribly
+well tested, but there is at least one company successfully using these bindings
+in production. Bug reports welcome.
 
 To Install
 ==========
 
-First, get [ØMQ 2.1] (which as of this writing is still in beta).
+First, get [ØMQ 2.1]
 
 Then use [npm] to install zeromq.node:
 
