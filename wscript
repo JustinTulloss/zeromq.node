@@ -11,13 +11,14 @@ def set_options(opt):
 def configure(conf):
     conf.check_tool("compiler_cxx")
     conf.check_tool("node_addon")
+    conf.check_cfg(package='libzmq', args='--cflags --libs "libzmq >= 2.1.0"')
 
 def build(bld):
     obj = bld.new_task_gen("cxx", "shlib", "node_addon")
     obj.cxxflags = ["-Wall", "-Werror"]
     obj.target = "binding"
     obj.source = "binding.cc"
-    obj.lib = ["zmq"]
+    obj.uselib = "LIBZMQ"
 
 def shutdown():
   # HACK to get binding.node out of build directory.
