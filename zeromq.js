@@ -50,7 +50,9 @@ var defaultContext = function() {
 // The socket type returned by `createSocket`. Wraps the low-level ZMQ binding
 // with all the conveniences.
 var Socket = function(typename) {
-  var typecode = typename;
+  var self = this,
+    typecode = typename;
+
   if (typeof(typecode) !== 'number') {
     typecode = namemap[typename];
     if (!namemap.hasOwnProperty(typename) || typecode === undefined) {
@@ -58,7 +60,6 @@ var Socket = function(typename) {
     }
   }
 
-  var self = this;
   self.type = typename;
   self._zmq = new zmq.Socket(defaultContext(), typecode);
   self._outgoing = [];
@@ -139,16 +140,17 @@ Socket.prototype.unsubscribe = function(filter) {
 // Queue a message. Each arguments is a multipart message part.
 // It is assumed that strings should be send in UTF-8 encoding.
 Socket.prototype.send = function() {
-  var i, length = arguments.length,
+  var i, part, flags,
+      length = arguments.length,
       parts = [];
   for (i = 0; i < length; i++) {
-    var part = arguments[i];
+    part = arguments[i];
     // We only send Buffers, but if you give us a type that can
     // easily be converted, we'll do that for you.
     if (!(part instanceof Buffer)) {
       part = new Buffer(part, 'utf-8');
     }
-    var flags = 0;
+    flags = 0;
     if (i !== length-1) {
       flags |= zmq.ZMQ_SNDMORE;
     }
@@ -159,7 +161,7 @@ Socket.prototype.send = function() {
 };
 
 Socket.prototype.currentSendBacklog = function() {
-    return this._outgoing.length;
+  return this._outgoing.length;
 };
 
 // The workhorse that does actual send and receive operations.
@@ -167,59 +169,57 @@ Socket.prototype.currentSendBacklog = function() {
 // the watcher noticing the signaller fd is readable.
 Socket.prototype._flush = function() {
 
-    // Don't allow recursive flush invocation as it can lead to stack
-    // exhaustion and write starvation
-    if (this._inFlush === true) { return; }
+  // Don't allow recursive flush invocation as it can lead to stack
+  // exhaustion and write starvation
+  if (this._inFlush === true) { return; }
 
-    this._inFlush = true;
+  this._inFlush = true;
 
+  try {
+    while (true) {
+      var emitArgs, sendArgs,
+        flags = this._ioevents;
+      if (this._outgoing.length === 0) {
+        flags &= ~zmq.ZMQ_POLLOUT;
+      }
+      if (!flags) {
+        break;
+      }
+
+      if (flags & zmq.ZMQ_POLLIN) {
+          emitArgs = ['message'];
+          do {
+            emitArgs.push(this._zmq.recv());
+          } while (this._receiveMore);
+
+          this.emit.apply(this, emitArgs);
+          if (this._zmq.state != zmq.STATE_READY) {
+            return;
+          }
+      }
+
+      // We send as much as possible in one burst so that we don't
+      // starve sends if we receive more than one message for each
+      // one sent.
+      while ((flags & zmq.ZMQ_POLLOUT) && (this._outgoing.length !== 0)) {
+        sendArgs = this._outgoing.shift();
+        this._zmq.send.apply(this._zmq, sendArgs);
+        flags = this._ioevents;
+      }
+    }
+  }
+  catch (e) {
+    e.flags = flags;
+    e.outgoing = sys.inspect(this._outgoing);
     try {
-
-        while (true) {
-            var flags = this._ioevents;
-            if (this._outgoing.length === 0) {
-                flags &= ~zmq.ZMQ_POLLOUT;
-            }
-            if (!flags) {
-                break;
-            }
-
-            if (flags & zmq.ZMQ_POLLIN) {
-                var emitArgs = ['message'];
-                do {
-                    emitArgs.push(this._zmq.recv());
-                } while (this._receiveMore);
-
-                this.emit.apply(this, emitArgs);
-                if (this._zmq.state != zmq.STATE_READY) {
-                    return;
-                }
-            }
-
-            // We send as much as possible in one burst so that we don't
-            // starve sends if we receive more than one message for each
-            // one sent.
-            while ((flags & zmq.ZMQ_POLLOUT) && (this._outgoing.length !== 0))
-            {
-                var sendArgs = this._outgoing.shift();
-                this._zmq.send.apply(this._zmq, sendArgs);
-                flags = this._ioevents;
-            }
-
-        }
+      this.emit('error', e);
+    } catch (e2) {
+      this._inFlush = false;
+      throw e2;
     }
-    catch (e) {
-        e.flags = flags;
-        e.outgoing = sys.inspect(this._outgoing);
-        try {
-            this.emit('error', e);
-        } catch (e2) {
-            this._inFlush = false;
-            throw e2;
-        }
-    }
+  }
 
-    this._inFlush = false;
+  this._inFlush = false;
 };
 
 // Clean up the socket.
@@ -231,10 +231,11 @@ Socket.prototype.close = function() {
 
 // The main function of the library.
 exports.createSocket = function(typename, options) {
-  var sock = new Socket(typename);
+  var key,
+    sock = new Socket(typename);
 
   if (typeof(options) === 'object') {
-    for (var key in options) {
+    for (key in options) {
       if (options.hasOwnProperty(key)) {
         sock[key] = options[key];
       }
