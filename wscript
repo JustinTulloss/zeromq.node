@@ -3,7 +3,7 @@ from os import unlink, link
 from os.path import exists 
 
 APPNAME = 'zeromq.node'
-VERSION = "0.0.1"
+VERSION = "0.3.1"
 
 def set_options(opt):
     opt.tool_options("compiler_cxx")
@@ -11,13 +11,14 @@ def set_options(opt):
 def configure(conf):
     conf.check_tool("compiler_cxx")
     conf.check_tool("node_addon")
+    conf.check_cfg(package='libzmq', args='--cflags --libs "libzmq >= 2.1.0"')
 
 def build(bld):
     obj = bld.new_task_gen("cxx", "shlib", "node_addon")
     obj.cxxflags = ["-Wall", "-Werror"]
     obj.target = "binding"
     obj.source = "binding.cc"
-    obj.lib = ["zmq"]
+    obj.uselib = "LIBZMQ"
 
 def shutdown():
   # HACK to get binding.node out of build directory.

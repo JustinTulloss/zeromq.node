@@ -538,11 +538,6 @@ public:
     }
 
     inline Local<Value> GetBuffer() {
-#if 0
-        Handle<Object> buf
-            = Buffer::New(v8::String::New((char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_)));
-        return buf;
-#else        
         if (buf_.IsEmpty()) {
             Buffer* buf_obj = Buffer::New(
               (char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_),
@@ -552,7 +547,6 @@ public:
             buf_ = Persistent<Object>::New(buf_obj->handle_);
         }
         return Local<Value>::New(buf_);
-#endif
     }
 
 private:
@@ -655,7 +649,7 @@ private:
             // Raise a flag indicating that we're done with the buffer
             ((BufferReference*)message)->noLongerNeeded_ = true;
         }
-        
+
         // Called when V8 would like to GC buf_
         static void WeakCheck(v8::Persistent<v8::Value> obj, void* data) {
             if (((BufferReference*)data)->noLongerNeeded_) {
@@ -703,19 +697,19 @@ Handle<Value> Socket::Send(const Arguments &args) {
     OutgoingMessage msg(args[0]->ToObject());
     if (zmq_send(socket->socket_, msg, flags) < 0)
         return ThrowException(ExceptionFromError());
-    
+
 #else // copying version that has no GC issues
     zmq_msg_t msg;
     Local<Object> buf = args[0]->ToObject();
     size_t len = Buffer::Length(buf);
     int res = zmq_msg_init_size(&msg, len);
     if (res != 0)
-        return ThrowException(ExceptionFromError());        
-        
+        return ThrowException(ExceptionFromError());
+
     char * cp = (char *)zmq_msg_data(&msg);
     const char * dat = Buffer::Data(buf);
     std::copy(dat, dat + len, cp);
-    
+
     if (zmq_send(socket->socket_, &msg, flags) < 0)
         return ThrowException(ExceptionFromError());
 #endif // zero copy / copying version
