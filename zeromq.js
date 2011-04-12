@@ -113,10 +113,10 @@ Socket.prototype.bindSync = function(addr) {
   var self = this;
   self._watcher.stop();
   try {
-      self._zmq.bindSync(addr);
+    self._zmq.bindSync(addr);
   } catch (e) {
-      self._watcher.start();
-      throw e;
+    self._watcher.start();
+    throw e;
   }
   self._watcher.start();
 };
