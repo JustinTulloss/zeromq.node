@@ -3,7 +3,7 @@ from os import unlink, link
 from os.path import exists 
 
 APPNAME = 'zeromq.node'
-VERSION = "0.3.1"
+VERSION = "0.4.0"
 
 def set_options(opt):
     opt.tool_options("compiler_cxx")
