@@ -87,9 +87,15 @@ function onBindDone()
     intervalId = setInterval(onTick, 1);
 }
 
-sock2.bind(uri, onBindDone);
+var doSync = true;
 
-
+if (doSync) {
+    sock2.bindSync(uri);
+    onBindDone();
+}
+else {
+    sock2.bind(uri, onBindDone);
+}
 
 
 var suite = vows.describe('ZeroMQ');

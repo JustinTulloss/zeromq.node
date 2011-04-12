@@ -109,7 +109,6 @@ Socket.prototype.bind = function(addr, cb) {
   });
 };
 
-/* Currently buggy.
 Socket.prototype.bindSync = function(addr) {
   var self = this;
   self._watcher.stop();
@@ -121,7 +120,6 @@ Socket.prototype.bindSync = function(addr) {
   }
   self._watcher.start();
 };
-*/
 
 Socket.prototype.connect = function(addr) {
   this._zmq.connect(addr);
