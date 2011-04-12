@@ -486,7 +486,7 @@ Handle<Value> Socket::BindSync(const Arguments &args) {
 
     socket->state_ = STATE_BUSY;
 
-    if (zmq_bind(socket, *addr) < 0)
+    if (zmq_bind(socket->socket_, *addr) < 0)
         return ThrowException(ExceptionFromError());
 
     socket->state_ = STATE_READY;
