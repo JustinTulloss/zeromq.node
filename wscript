@@ -18,7 +18,7 @@ def build(bld):
     obj.cxxflags = ["-Wall", "-Werror"]
     obj.target = "binding"
     obj.source = "binding.cc"
-    obj.uselib = "LIBZMQ"
+    obj.lib = ["zmq"]
 
 def shutdown():
   # HACK to get binding.node out of build directory.
