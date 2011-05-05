@@ -1,6 +1,6 @@
 var vows = require('vows'),
     assert = require('assert'),
-    zeromq = require('zeromq');
+    zeromq = require('../zeromq');
 
 var suite = vows.describe('ZeroMQ');
 suite.options.error = false;
