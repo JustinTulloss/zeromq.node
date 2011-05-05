@@ -192,6 +192,7 @@ Socket.prototype._flush = function() {
 
           this.emit.apply(this, emitArgs);
           if (this._zmq.state != zmq.STATE_READY) {
+            this._inFlush = false;
             return;
           }
       }
