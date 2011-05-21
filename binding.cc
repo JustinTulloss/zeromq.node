@@ -753,6 +753,8 @@ static void Initialize(Handle<Object> target) {
     NODE_DEFINE_CONSTANT(target, ZMQ_XREQ);
     NODE_DEFINE_CONSTANT(target, ZMQ_REP);
     NODE_DEFINE_CONSTANT(target, ZMQ_XREP);
+    NODE_DEFINE_CONSTANT(target, ZMQ_DEALER);
+    NODE_DEFINE_CONSTANT(target, ZMQ_ROUTER);
     NODE_DEFINE_CONSTANT(target, ZMQ_PUSH);
     NODE_DEFINE_CONSTANT(target, ZMQ_PULL);
     NODE_DEFINE_CONSTANT(target, ZMQ_PAIR);

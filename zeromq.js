@@ -9,15 +9,17 @@ var sys = require('sys');
 // A map of convenient names to the ZMQ constants for socket types.
 var namemap = (function() {
   var m = {};
-  m.pub  = m.publish   = m.publisher  = zmq.ZMQ_PUB;
-  m.sub  = m.subscribe = m.subscriber = zmq.ZMQ_SUB;
-  m.req  = m.request   = m.requester  = zmq.ZMQ_REQ;
-  m.xreq = m.xrequest  = m.xrequester = zmq.ZMQ_XREQ;
-  m.rep  = m.reply     = m.replier    = zmq.ZMQ_REP;
-  m.xrep = m.xreply    = m.xreplier   = zmq.ZMQ_XREP;
-  m.push = m.pusher    = zmq.ZMQ_PUSH;
-  m.pull = m.puller    = zmq.ZMQ_PULL;
-  m.pair = zmq.ZMQ_PAIR;
+  m.pub    = m.publish   = m.publisher  = zmq.ZMQ_PUB;
+  m.sub    = m.subscribe = m.subscriber = zmq.ZMQ_SUB;
+  m.req    = m.request   = m.requester  = zmq.ZMQ_REQ;
+  m.xreq   = m.xrequest  = m.xrequester = zmq.ZMQ_XREQ;
+  m.rep    = m.reply     = m.replier    = zmq.ZMQ_REP;
+  m.xrep   = m.xreply    = m.xreplier   = zmq.ZMQ_XREP;
+  m.push   = m.pusher    = zmq.ZMQ_PUSH;
+  m.pull   = m.puller    = zmq.ZMQ_PULL;
+  m.dealer = zmq.ZMQ_DEALER;
+  m.router = zmq.ZMQ_ROUTER;
+  m.pair   = zmq.ZMQ_PAIR;
   return m;
 })();
 
