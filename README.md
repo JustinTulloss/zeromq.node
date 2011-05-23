@@ -6,7 +6,8 @@ in production. Bug reports welcome.
 To Install
 ==========
 
-First, get [ØMQ 2.1]
+First, get [ØMQ 2.1], >2.1.3 is required. [Homebrew] on Mac will get you what
+you need.
 
 Then use [npm] to install zeromq.node:
 
@@ -99,6 +100,7 @@ Licensed under the very permissive [MIT License].
 [node.js]: http://github.com/ry/node
 [npm]: https://github.com/isaacs/npm
 [ØMQ 2.1]: http://www.zeromq.org/intro:get-the-software
+[Homebrew]: http://mxcl.github.com/homebrew/
 [ØMQ API]: http://api.zeromq.org/
 [zmq_socket]: http://api.zeromq.org/zmq_socket.html
 [zmq_connect]: http://api.zeromq.org/zmq_connect.html
