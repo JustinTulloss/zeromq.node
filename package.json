@@ -1,6 +1,6 @@
 {
     "name": "zeromq",
-    "version": "0.4.1",
+    "version": "0.5.0",
     "description": "Bindings for node.js to zeromq",
     "main": "zeromq",
     "repository": {
@@ -15,6 +15,8 @@
         "Stéphan Kochen <stephan@kochen.nl> (http://stephan.kochen.nl/)",
         "Mike Castleman <m@mlcastle.net> (http://mlcastle.net/)",
         "Matt Crocker",
-        "Jeremy Barnes <jeremy@barneso.com> (http://www.barneso.com/)"
+        "Jeremy Barnes <jeremy@barneso.com> (http://www.barneso.com/)",
+        "Rick <technoweenie@gmail.com> (http://techno-weenie.net/)",
+        "Corey Jewett (http://syntheticplayground.com/)"
     ]
 }
