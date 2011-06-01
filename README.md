@@ -1,4 +1,3 @@
-
 This library gives you bindings to ØMQ from node.js. This is not terribly
 well tested, but there is at least one company successfully using these bindings
 in production. Bug reports welcome.
@@ -87,6 +86,7 @@ oh such fun.
    * diskOffloadSize - set the amount of disk swap space in bytes for buffering messages in case of disconnection (integer, ZMQ_SWAP)
 
    The following options are applicable to multicast:
+
    * multicastLoop - set whether multicast can go over loopback or not (boolean, ZMQ_MCAST_LOOP);
    * multicastDataRate - set maximum multicast transmission rate in kbits per second (integer, ZMQ_RATE);
    * multicastRecovery - set maximum multicast recovery interval in seconds (integer, ZMQ_RECOVERY_IVL)
