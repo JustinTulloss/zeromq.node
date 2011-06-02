@@ -5,8 +5,7 @@ in production. Bug reports welcome.
 To Install
 ==========
 
-First, get [ØMQ 2.1], >2.1.0 is required. [Homebrew] on Mac will get you what
-you need.
+First, get [ØMQ 2.1], [Homebrew] on Mac will get you what you need.
 
 Then use [npm] to install zeromq.node:
 
