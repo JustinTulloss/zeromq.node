@@ -739,6 +739,12 @@ Handle<Value> Socket::Close(const Arguments &args) {
     return Undefined();
 }
 
+// Make zeromq versions less than 2.1.3 work by defining the new constants
+// if they don't already exist
+#if (ZMQ_VERSION < 20103)
+#   define ZMQ_DEALER ZMQ_XREQ
+#   define ZMQ_ROUTER ZMQ_XREP
+#endif
 
 /*
  * Module functions.

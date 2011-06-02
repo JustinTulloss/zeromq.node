@@ -1,4 +1,3 @@
-
 This library gives you bindings to ØMQ from node.js. This is not terribly
 well tested, but there is at least one company successfully using these bindings
 in production. Bug reports welcome.
@@ -6,7 +5,7 @@ in production. Bug reports welcome.
 To Install
 ==========
 
-First, get [ØMQ 2.1], >2.1.3 is required. [Homebrew] on Mac will get you what
+First, get [ØMQ 2.1], >2.1.0 is required. [Homebrew] on Mac will get you what
 you need.
 
 Then use [npm] to install zeromq.node:
@@ -65,6 +64,42 @@ oh such fun.
 
  * close() - Closes the socket
 
+#### Socket Options
+
+   To set a socket option on a socket, use socket[property].  For example,
+
+   socket['identity'] = "mainLoop";
+
+   The following properties are available (the ZMQ_XXX constant describes the name in the ZeroMQ documentation available at [ØMQ setsockopt API]):
+
+   * ioThreadAffinity - set affinity for IO thread (integer, ZMQ_AFFINITY);
+   * backlog - set connection backlog for listening sockets (integer, ZMQ_BACKLOG);
+   * identity - set the socket identity (name) (string, ZMQ_IDENTITY);
+   * lingerPeriod - set the linger period in milliseconds (integer, -1 = unlimited, ZMQ_LINGER);
+   * receiveBufferSize - set the kernel receive buffer size (integer, 0 = OS default, ZMQ_RCVBUF);
+   * sendBufferSize - set the kernel receive buffer size (integer, 0 = OS default, ZMQ_RCVBUF);
+
+   The following apply to message buffering and reconnection:
+
+   * reconnectionInterval - set the time to wait between reconnection attempts in milliseconds (ZeroMQ attempts to reconnect broken connection automatically behind the scenes) (integer, ZMQ_RECONNECT_IVL)
+   * highWaterMark - set high water mark (in number of outstanding messages) before buffered messages start being dropped or swapped to disk (integer, zero = unlimited, ZMQ_HWM);
+   * diskOffloadSize - set the amount of disk swap space in bytes for buffering messages in case of disconnection (integer, ZMQ_SWAP)
+
+   The following options are applicable to multicast:
+
+   * multicastLoop - set whether multicast can go over loopback or not (boolean, ZMQ_MCAST_LOOP);
+   * multicastDataRate - set maximum multicast transmission rate in kbits per second (integer, ZMQ_RATE);
+   * multicastRecovery - set maximum multicast recovery interval in seconds (integer, ZMQ_RECOVERY_IVL)
+
+   The following properties are exposed but not normally used by client code (they are used internally by the library):
+
+   * _fd - File descriptor (integer, ZMQ_FD);
+   * _ioevents - Event loop used internally (ZMQ_EVENTS);
+   * _receiveMore - Message has more parts (boolean, ZMQ_RCVMORE);
+   * _subscribe - Subscribe to a channel (see subscribe() method) (string, ZMQ_SUBSCRIBE);
+   * _unsubscribe - Unsubscribe to a channel (see unsubscribe() method) (string, ZMQ_UNSUBSCRIBE);
+
+
 #### Events
 
  * message - A message was received. The arguments are the parts of the
@@ -102,6 +137,7 @@ Licensed under the very permissive [MIT License].
 [ØMQ 2.1]: http://www.zeromq.org/intro:get-the-software
 [Homebrew]: http://mxcl.github.com/homebrew/
 [ØMQ API]: http://api.zeromq.org/
+[ØMQ setsockopt API]: http://api.zeromq.org/2-1-3:zmq-setsockopt
 [zmq_socket]: http://api.zeromq.org/zmq_socket.html
 [zmq_connect]: http://api.zeromq.org/zmq_connect.html
 [zmq_bind]: http://api.zeromq.org/zmq_bind.html
