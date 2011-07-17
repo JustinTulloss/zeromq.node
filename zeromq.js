@@ -189,7 +189,7 @@ Socket.prototype._flush = function() {
       if (flags & zmq.ZMQ_POLLIN) {
           emitArgs = ['message'];
           do {
-            emitArgs.push(this._zmq.recv());
+            emitArgs.push(new Buffer(this._zmq.recv()));
           } while (this._receiveMore);
 
           this.emit.apply(this, emitArgs);
