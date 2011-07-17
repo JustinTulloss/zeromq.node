@@ -79,6 +79,9 @@ var sockProp = function(name, option) {
     return this._zmq.getsockopt(option);
   });
   Socket.prototype.__defineSetter__(name, function(value) {
+    if (typeof value == 'string') {
+      value = new Buffer(value, 'utf8');
+    }
     return this._zmq.setsockopt(option, value);
   });
 };

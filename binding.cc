@@ -305,11 +305,13 @@ Socket::GetSockOpt<char*>(int option) {
 
 template<> Handle<Value>
 Socket::SetSockOpt<char*>(int option, Handle<Value> wrappedValue) {
-    if (!wrappedValue->IsString())
+
+    if (!Buffer::HasInstance(wrappedValue))
         return ThrowException(Exception::TypeError(
-            String::New("Value must be a string")));
-    String::Utf8Value value(wrappedValue->ToString());
-    if (zmq_setsockopt(socket_, option, *value, value.length()) < 0)
+            String::New("Value must be a buffer")));
+    Local<Object> buf = wrappedValue->ToObject();
+    size_t length = Buffer::Length(buf);
+    if (zmq_setsockopt(socket_, option, Buffer::Data(buf), length) < 0)
         return ThrowException(ExceptionFromError());
     return Undefined();
 }
