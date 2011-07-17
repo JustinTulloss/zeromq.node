@@ -16,7 +16,7 @@
  * more of a problem, because it is harder to detect.
  */
 
-var zmq = require('zeromq'),
+var zmq = require('zmq'),
     util = require('util');
 
 s = zmq.createSocket('xrep');

@@ -1,4 +1,4 @@
-var zeromq = require('zeromq'),
+var zeromq = require('zmq'),
     util = require('util');
 
 var netstringRe = /([0-9]+):(.*)/;

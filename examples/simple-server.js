@@ -1,4 +1,4 @@
-zmq = require('zeromq');
+zmq = require('zmq');
 util = require('util');
 
 s = zmq.createSocket('rep');

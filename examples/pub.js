@@ -1,6 +1,6 @@
 var NO = 384;
 
-var zmq = require("zeromq");
+var zmq = require("zmq");
 
 var socket = zmq.createSocket("pub");
 socket.bind("tcp://127.0.0.1:9000", function() {});

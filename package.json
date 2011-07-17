@@ -1,5 +1,5 @@
 {
-    "name": "zeromq",
+    "name": "zmq",
     "version": "0.5.1",
     "description": "Bindings for node.js to zeromq",
     "main": "zeromq",

@@ -1,6 +1,6 @@
 var NO = 384;
 
-var zmq = require("zeromq");
+var zmq = require("zmq");
 
 var b = new Buffer(4);
 b[0] = NO >>> 24;
