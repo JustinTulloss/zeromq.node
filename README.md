@@ -6,10 +6,11 @@ To Install
 ==========
 
 First, get [ØMQ 2.1], [Homebrew] on Mac will get you what you need.
+Debian/Ubuntu users may also need to install the `libev-dev` package.
 
 Then use [npm] to install zeromq.node:
 
-    $ npm install zeromq
+    $ npm install zmq
 
 `npm` will yell at you if you don't have node 0.3.0, as that is required.
 
@@ -23,11 +24,11 @@ described in the ØMQ documentation occur.
 
 First, include the module:
 
-    zeromq = require('zeromq');
+    zmq = require('zmq');
 
 After that, you can create sockets with:
 
-    socket = zeromq.createSocket('req');
+    socket = zmq.createSocket('req');
 
 Using ØMQ sockets
 -----------------
