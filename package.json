@@ -1,8 +1,8 @@
 {
     "name": "zmq",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Bindings for node.js to zeromq",
-    "main": "zeromq",
+    "main": "zmq",
     "repository": {
         "type" : "git",
         "url" : "http://github.com/JustinTulloss/zeromq.node.git"
