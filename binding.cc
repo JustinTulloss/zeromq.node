@@ -84,7 +84,7 @@ private:
 
     struct BindState;
     static Handle<Value> Bind(const Arguments &args);
-    static int EIO_DoBind(eio_req *req);
+    static void EIO_DoBind(eio_req *req);
     static int EIO_BindDone(eio_req *req);
     static Handle<Value> BindSync(const Arguments &args);
 
