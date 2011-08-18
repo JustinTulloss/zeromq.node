@@ -447,11 +447,10 @@ Handle<Value> Socket::Bind(const Arguments &args) {
     return Undefined();
 }
 
-int Socket::EIO_DoBind(eio_req *req) {
+void Socket::EIO_DoBind(eio_req *req) {
     BindState* state = (BindState*) req->data;
     if (zmq_bind(state->sock, *state->addr) < 0)
         state->error = zmq_errno();
-    return 0;
 }
 
 int Socket::EIO_BindDone(eio_req *req) {
