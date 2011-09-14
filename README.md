@@ -55,7 +55,7 @@ oh such fun.
 
  * send(message, ...) - `message` is a string to send across the wire. The
    message is not sent immediately, but there is no callback indicating when
-   it has been transmitted. See the zeromq documentation for [zmq_send](http://api.zeromq.org/2-1:zmq-send) for exact
+   it has been transmitted. See the [0MQ](http://www.zeromq.org/intro:read-the-manual) documentation for [zmq_send](http://api.zeromq.org/2-1:zmq-send) for exact
    transmission semantics. Raises an exception if the return is < 0.
 
    The message must be a `Buffer` object or a string. It is assumed that
