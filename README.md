@@ -50,13 +50,13 @@ oh such fun.
 
  * bind(address, callback) - Bind to a socket to wait for incoming data.
    `address` should be a string as described in the [ØMQ API docs][zmq_bind].
-   `callback` will be called when binding is complete and takes one argument, 
+   `callback` will be called when binding is complete and takes one argument,
    which may be an `Error`, or simply `undefined` if everything's peachy.
 
  * send(message, ...) - `message` is a string to send across the wire. The
    message is not sent immediately, but there is no callback indicating when
-   it has been transmitted. Have your server ack or something if you care that
-   much.
+   it has been transmitted. See the zeromq documentation for [zmq_send](http://api.zeromq.org/2-1:zmq-send) for exact
+   transmission semantics. Raises an exception if the return is < 0.
 
    The message must be a `Buffer` object or a string. It is assumed that
    strings should be transmitted as UTF-8. If you provide more than one
