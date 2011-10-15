@@ -1,24 +1,24 @@
 {
-    "name": "zmq",
-    "version": "1.0.2",
-    "description": "Bindings for node.js to zeromq",
-    "main": "zmq",
-    "repository": {
-        "type" : "git",
-        "url" : "http://github.com/JustinTulloss/zeromq.node.git"
-    },
-    "engines": {
-        "node": ">=0.3.0"
-    },
-    "contributors": [
-        "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
-        "Stéphan Kochen <stephan@kochen.nl> (http://stephan.kochen.nl/)",
-        "Mike Castleman <m@mlcastle.net> (http://mlcastle.net/)",
-        "Matt Crocker",
-        "Jeremy Barnes <jeremy@barneso.com> (http://www.barneso.com/)",
-        "Rick <technoweenie@gmail.com> (http://techno-weenie.net/)",
-        "Corey Jewett (http://syntheticplayground.com/)",
-        "Micheil Smith <micheil@brandedcode.com> (http://brandedcode.com/)",
-        "TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com/)"
-    ]
+  "name": "zmq",
+  "version": "1.0.2",
+  "description": "Bindings for node.js to zeromq",
+  "main": "zmq",
+  "repository": {
+    "type" : "git",
+    "url" : "http://github.com/JustinTulloss/zeromq.node.git"
+  },
+  "engines": {
+    "node": ">=0.3.0"
+  },
+  "contributors": [
+    "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
+    "Stéphan Kochen <stephan@kochen.nl> (http://stephan.kochen.nl/)",
+    "Mike Castleman <m@mlcastle.net> (http://mlcastle.net/)",
+    "Matt Crocker",
+    "Jeremy Barnes <jeremy@barneso.com> (http://www.barneso.com/)",
+    "Rick <technoweenie@gmail.com> (http://techno-weenie.net/)",
+    "Corey Jewett (http://syntheticplayground.com/)",
+    "Micheil Smith <micheil@brandedcode.com> (http://brandedcode.com/)",
+    "TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com/)"
+  ]
 }
