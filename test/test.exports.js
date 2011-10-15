@@ -14,7 +14,7 @@ var zmq = require('../')
 ['HWM', 'SWAP', 'AFFINITY', 'IDENTITY',
  'SUBSCRIBE', 'UNSUBSCRIBE', 'RATE',
  'RECOVERY_IVL', 'RECOVERY_IVL', 'MCAST_LOOP',
- 'SNDBUF', 'RCVBUF', 'RCVMORE', 'FD', 'EVENTS',
+ 'SNDBUF', 'RCVBUF', 'RCVMORE', 'SNDMORE', 'FD', 'EVENTS',
  'TYPE', 'LINGER', 'RECONNECT_IVL', 'BACKLOG'].forEach(function(prop){
   zmq['ZMQ_' + prop].should.be.a('number');
 });

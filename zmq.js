@@ -48,7 +48,7 @@ var defaultContext = function() {
 
   context_ = new zmq.Context(io_threads);
   process.on('exit', function() {
-    context_.close();
+    // context_.close();
     context_ = null;
   });
 
