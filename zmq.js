@@ -131,37 +131,18 @@ Socket.prototype.getsockopt = function(opt){
   return this._zmq.getsockopt(opt);
 };
 
+// set / get opt accessors
 
-// Define property accessors for all socket options.
-var sockProp = function(name, option) {
+Object.keys(opts).forEach(function(name){
   Socket.prototype.__defineGetter__(name, function() {
-    return this._zmq.getsockopt(option);
+    return this._zmq.getsockopt(opts[name]);
   });
-  Socket.prototype.__defineSetter__(name, function(value) {
-    if (typeof value == 'string') {
-      value = new Buffer(value, 'utf8');
-    }
-    return this._zmq.setsockopt(option, value);
-  });
-};
 
-sockProp('_fd',               zmq.ZMQ_FD);
-sockProp('_ioevents',         zmq.ZMQ_EVENTS);
-sockProp('_receiveMore',      zmq.ZMQ_RCVMORE);
-sockProp('_subscribe',        zmq.ZMQ_SUBSCRIBE);
-sockProp('_unsubscribe',      zmq.ZMQ_UNSUBSCRIBE);
-sockProp('ioThreadAffinity',  zmq.ZMQ_AFFINITY);
-sockProp('backlog',           zmq.ZMQ_BACKLOG);
-sockProp('highWaterMark',     zmq.ZMQ_HWM);
-sockProp('identity',          zmq.ZMQ_IDENTITY);
-sockProp('lingerPeriod',      zmq.ZMQ_LINGER);
-sockProp('multicastLoop',     zmq.ZMQ_MCAST_LOOP);
-sockProp('multicastDataRate', zmq.ZMQ_RATE);
-sockProp('receiveBufferSize', zmq.ZMQ_RCVBUF);
-sockProp('reconnectInterval', zmq.ZMQ_RECONNECT_IVL);
-sockProp('multicastRecovery', zmq.ZMQ_RECOVERY_IVL);
-sockProp('sendBufferSize',    zmq.ZMQ_SNDBUF);
-sockProp('diskOffloadSize',   zmq.ZMQ_SWAP);
+  Socket.prototype.__defineSetter__(name, function(val) {
+    if ('string' == typeof val) val = new Buffer(val, 'utf8');
+    return this._zmq.setsockopt(opts[name], val);
+  });
+});
 
 // `bind` and `connect` map directly to our binding.
 Socket.prototype.bind = function(addr, cb) {
