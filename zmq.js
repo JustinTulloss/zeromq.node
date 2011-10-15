@@ -79,6 +79,16 @@ var Socket = function(typename) {
 };
 util.inherits(Socket, EventEmitter);
 
+Socket.prototype.setsockopt = function(opt, val){
+  this._zmq.setsockopt(opt, val);
+  return this;
+};
+
+Socket.prototype.getsockopt = function(opt){
+  return this._zmq.getsockopt(opt);
+};
+
+
 // Define property accessors for all socket options.
 var sockProp = function(name, option) {
   Socket.prototype.__defineGetter__(name, function() {
