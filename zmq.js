@@ -1,10 +1,12 @@
-/*globals require exports process Buffer */
 
-var util = require('util');
-var EventEmitter = require('events').EventEmitter;
-var IOWatcher = process.binding('io_watcher').IOWatcher;
-var zmq = require('./build/default/binding');
-var util = require('util');
+/**
+ * Module dependencies.
+ */
+
+var EventEmitter = require('events').EventEmitter
+  , IOWatcher = process.binding('io_watcher').IOWatcher
+  , zmq = require('./build/default/binding')
+  , util = require('util');
 
 /**
  * Expose bindings as the module.
