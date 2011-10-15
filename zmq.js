@@ -82,10 +82,26 @@ function Socket(type) {
 
 Socket.prototype.__proto__ = EventEmitter.prototype;
 
+/**
+ * Set `opt` to `val`.
+ *
+ * @param {Number} opt
+ * @param {Mixed} val
+ * @return {Socket} for chaining
+ * @api public
+ */
+
 Socket.prototype.setsockopt = function(opt, val){
   this._zmq.setsockopt(opt, val);
   return this;
 };
+
+/**
+ * Get socket `opt`.
+ *
+ * @return {Mixed}
+ * @api public
+ */
 
 Socket.prototype.getsockopt = function(opt){
   return this._zmq.getsockopt(opt);
