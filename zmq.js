@@ -132,7 +132,10 @@ Socket.prototype.getsockopt = function(opt){
   return this._zmq.getsockopt(opts[opt] || opt);
 };
 
-// set / get opt accessors
+/**
+ * Socket opt accessors allowing `sock.backlog = val`
+ * instead of `sock.setsockopt('backlog', val)`.
+ */
 
 Object.keys(opts).forEach(function(name){
   Socket.prototype.__defineGetter__(name, function() {
