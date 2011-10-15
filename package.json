@@ -7,6 +7,9 @@
     "type" : "git",
     "url" : "http://github.com/JustinTulloss/zeromq.node.git"
   },
+  "devDependencies": {
+    "should": "0.3.1"
+  },
   "engines": {
     "node": ">=0.3.0"
   },
