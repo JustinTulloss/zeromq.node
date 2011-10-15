@@ -6,6 +6,12 @@ var IOWatcher = process.binding('io_watcher').IOWatcher;
 var zmq = require('./build/default/binding');
 var sys = require('sys');
 
+/**
+ * Expose bindings as the module.
+ */
+
+exports = module.exports = zmq;
+
 // A map of convenient names to the ZMQ constants for socket types.
 var namemap = (function() {
   var m = {};
