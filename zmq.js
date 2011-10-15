@@ -14,22 +14,19 @@ var EventEmitter = require('events').EventEmitter
 
 exports = module.exports = zmq;
 
-// A map of convenient names to the ZMQ constants for socket types.
-var namemap = (function() {
-  var m = {};
-  m.pub    = m.publish   = m.publisher  = zmq.ZMQ_PUB;
-  m.sub    = m.subscribe = m.subscriber = zmq.ZMQ_SUB;
-  m.req    = m.request   = m.requester  = zmq.ZMQ_REQ;
-  m.xreq   = m.xrequest  = m.xrequester = zmq.ZMQ_XREQ;
-  m.rep    = m.reply     = m.replier    = zmq.ZMQ_REP;
-  m.xrep   = m.xreply    = m.xreplier   = zmq.ZMQ_XREP;
-  m.push   = m.pusher    = zmq.ZMQ_PUSH;
-  m.pull   = m.puller    = zmq.ZMQ_PULL;
-  m.dealer = zmq.ZMQ_DEALER;
-  m.router = zmq.ZMQ_ROUTER;
-  m.pair   = zmq.ZMQ_PAIR;
-  return m;
-})();
+var types = exports.types = {
+    pub: zmq.ZMQ_PUB
+  , sub: zmq.ZMQ_SUB
+  , req: zmq.ZMQ_REQ
+  , xreq: zmq.ZMQ_XREQ
+  , rep: zmq.ZMQ_REP
+  , xrep: zmq.ZMQ_XREP
+  , push: zmq.ZMQ_PUSH
+  , pull: zmq.ZMQ_PULL
+  , dealer: zmq.ZMQ_DEALER
+  , router: zmq.ZMQ_ROUTER
+  , pair: zmq.ZMQ_PAIR
+};
 
 // Context management happens here. We lazily initialize a default context,
 // and use that everywhere. Also cleans up on exit.
@@ -64,8 +61,8 @@ var Socket = function(typename) {
     typecode = typename;
 
   if (typeof(typecode) !== 'number') {
-    typecode = namemap[typename];
-    if (!namemap.hasOwnProperty(typename) || typecode === undefined) {
+    typecode = types[typename];
+    if (!types.hasOwnProperty(typename) || typecode === undefined) {
       throw new TypeError("Unknown socket type: " + typename);
     }
   }
