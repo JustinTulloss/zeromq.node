@@ -32,6 +32,30 @@ var types = exports.types = {
   , pair: zmq.ZMQ_PAIR
 };
 
+/**
+ * Map of socket options.
+ */
+
+var opts = exports.options = {
+    _fd: zmq.ZMQ_FD
+  , _ioevents: zmq.ZMQ_EVENTS
+  , _receiveMore: zmq.ZMQ_RCVMORE
+  , _subscribe: zmq.ZMQ_SUBSCRIBE
+  , _unsubscribe: zmq.ZMQ_UNSUBSCRIBE
+  , ioThreadAffinity: zmq.ZMQ_AFFINITY
+  , backlog: zmq.ZMQ_BACKLOG
+  , highWaterMark: zmq.ZMQ_HWM
+  , identity: zmq.ZMQ_IDENTITY
+  , lingerPeriod: zmq.ZMQ_LINGER
+  , multicastLoop: zmq.ZMQ_MCAST_LOOP
+  , multicastDateRate: zmq.ZMQ_RATE
+  , receiveBufferSize: zmq.ZMQ_RCVBUF
+  , reconnectInterval: zmq.ZMQ_RECONNECT_IVL
+  , multicastRecovery: zmq.ZMQ_RECOVERY_IVL
+  , sendBufferSize: zmq.ZMQ_SNDBUF
+  , diskOffloadSize: zmq.ZMQ_SWAP
+};
+
 // Context management happens here. We lazily initialize a default context,
 // and use that everywhere. Also cleans up on exit.
 var context_ = null;
