@@ -17,6 +17,13 @@ zmq.socket.should.equal(zmq.createSocket);
 sock.getsockopt(zmq.ZMQ_BACKLOG).should.not.equal(75);
 sock.setsockopt(zmq.ZMQ_BACKLOG, 75).should.equal(sock);
 sock.getsockopt(zmq.ZMQ_BACKLOG).should.equal(75);
+sock.setsockopt(zmq.ZMQ_BACKLOG, 100);
+
+// setsockopt + string sugar
+
+sock.getsockopt('backlog').should.not.equal(75);
+sock.setsockopt('backlog', 75).should.equal(sock);
+sock.getsockopt('backlog').should.equal(75);
 
 // setsockopt sugar
 

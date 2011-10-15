@@ -109,26 +109,27 @@ Socket.prototype.__proto__ = EventEmitter.prototype;
 /**
  * Set `opt` to `val`.
  *
- * @param {Number} opt
+ * @param {String|Number} opt
  * @param {Mixed} val
  * @return {Socket} for chaining
  * @api public
  */
 
 Socket.prototype.setsockopt = function(opt, val){
-  this._zmq.setsockopt(opt, val);
+  this._zmq.setsockopt(opts[opt] || opt, val);
   return this;
 };
 
 /**
  * Get socket `opt`.
  *
+ * @param {String|Number} opt
  * @return {Mixed}
  * @api public
  */
 
 Socket.prototype.getsockopt = function(opt){
-  return this._zmq.getsockopt(opt);
+  return this._zmq.getsockopt(opts[opt] || opt);
 };
 
 // set / get opt accessors
