@@ -61,13 +61,12 @@ var defaultContext = function() {
 // The socket type returned by `createSocket`. Wraps the low-level ZMQ binding
 // with all the conveniences.
 function Socket(type) {
-  var self = this;
   this.type = type;
   this._zmq = new zmq.Socket(defaultContext(), types[type]);
   this._outgoing = [];
   this._watcher = new IOWatcher;
-  this._watcher.callback = function() { self._flush(); };
-  this._watcher.set(self._fd, true, false);
+  this._watcher.callback = this._flush.bind(this);
+  this._watcher.set(this._fd, true, false);
   this._watcher.start();
   this._inFlush = false;
 };
