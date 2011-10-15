@@ -2,10 +2,15 @@
 var zmq = require('../')
   , should = require('should');
 
+// .createSocket
+
 var sock = zmq.createSocket('req');
 sock.type.should.equal('req');
-
 sock.close.should.be.a('function');
+
+// .socket
+
+zmq.socket.should.equal(zmq.createSocket);
 
 // setsockopt
 

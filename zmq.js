@@ -316,7 +316,7 @@ Socket.prototype.close = function() {
 };
 
 // The main function of the library.
-exports.createSocket = function(typename, options) {
+exports.socket = exports.createSocket = function(typename, options) {
   var key,
     sock = new Socket(typename);
 
