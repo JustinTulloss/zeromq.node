@@ -42,18 +42,18 @@ var opts = exports.options = {
   , _receiveMore: zmq.ZMQ_RCVMORE
   , _subscribe: zmq.ZMQ_SUBSCRIBE
   , _unsubscribe: zmq.ZMQ_UNSUBSCRIBE
-  , ioThreadAffinity: zmq.ZMQ_AFFINITY
+  , affinity: zmq.ZMQ_AFFINITY
   , backlog: zmq.ZMQ_BACKLOG
-  , highWaterMark: zmq.ZMQ_HWM
+  , hwm: zmq.ZMQ_HWM
   , identity: zmq.ZMQ_IDENTITY
-  , lingerPeriod: zmq.ZMQ_LINGER
-  , multicastLoop: zmq.ZMQ_MCAST_LOOP
-  , multicastDateRate: zmq.ZMQ_RATE
-  , receiveBufferSize: zmq.ZMQ_RCVBUF
-  , reconnectInterval: zmq.ZMQ_RECONNECT_IVL
-  , multicastRecovery: zmq.ZMQ_RECOVERY_IVL
-  , sendBufferSize: zmq.ZMQ_SNDBUF
-  , diskOffloadSize: zmq.ZMQ_SWAP
+  , linger: zmq.ZMQ_LINGER
+  , mcast_loop: zmq.ZMQ_MCAST_LOOP
+  , rate: zmq.ZMQ_RATE
+  , rcvbuf: zmq.ZMQ_RCVBUF
+  , reconnect_ivl: zmq.ZMQ_RECONNECT_IVL
+  , recovery_ivl: zmq.ZMQ_RECOVERY_IVL
+  , sndbuf: zmq.ZMQ_SNDBUF
+  , swap: zmq.ZMQ_SWAP
 };
 
 // Context management happens here. We lazily initialize a default context,
