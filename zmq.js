@@ -144,7 +144,15 @@ Object.keys(opts).forEach(function(name){
   });
 });
 
-// `bind` and `connect` map directly to our binding.
+/**
+ * Async bind.
+ *
+ * @param {String} addr
+ * @param {Function} cb
+ * @return {Socket} for chaining
+ * @api public
+ */
+
 Socket.prototype.bind = function(addr, cb) {
   var self = this;
   self._watcher.stop();
@@ -152,32 +160,66 @@ Socket.prototype.bind = function(addr, cb) {
     self._watcher.start();
     cb(err);
   });
+  return this;
 };
 
+/**
+ * Sync bind.
+ *
+ * @param {String} addr
+ * @return {Socket} for chaining
+ * @api public
+ */
+
 Socket.prototype.bindSync = function(addr) {
-  var self = this;
-  self._watcher.stop();
+  this._watcher.stop();
   try {
-    self._zmq.bindSync(addr);
+    this._zmq.bindSync(addr);
   } catch (e) {
-    self._watcher.start();
+    this._watcher.start();
     throw e;
   }
-  self._watcher.start();
+  this._watcher.start();
+  return this;
 };
+
+/**
+ * Connect to `addr`.
+ *
+ * @param {String} addr
+ * @return {Socket} for chaining
+ * @api public
+ */
 
 Socket.prototype.connect = function(addr) {
   this._zmq.connect(addr);
+  return this;
 };
 
-// `subscribe` and `unsubcribe` are exposed as methods.
-// The binding expects a setsockopt call for these, though.
+/**
+ * Subscribe with the given `filter`.
+ *
+ * @param {String} filter
+ * @return {Socket} for chaining
+ * @api public
+ */
+
 Socket.prototype.subscribe = function(filter) {
   this._subscribe = filter;
+  return this;
 };
+
+/**
+ * Unsubscribe with the given `filter`.
+ *
+ * @param {String} filter
+ * @return {Socket} for chaining
+ * @api public
+ */
 
 Socket.prototype.unsubscribe = function(filter) {
   this._unsubscribe = filter;
+  return this;
 };
 
 // Queue a message. Each arguments is a multipart message part.
