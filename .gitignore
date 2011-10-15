@@ -5,3 +5,4 @@ build
 *.lock*
 binding.node
 examples/stress-test-client
+node_modules
