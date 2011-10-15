@@ -14,6 +14,10 @@ var EventEmitter = require('events').EventEmitter
 
 exports = module.exports = zmq;
 
+/**
+ * Map of socket types.
+ */
+
 var types = exports.types = {
     pub: zmq.ZMQ_PUB
   , sub: zmq.ZMQ_SUB
@@ -56,25 +60,16 @@ var defaultContext = function() {
 
 // The socket type returned by `createSocket`. Wraps the low-level ZMQ binding
 // with all the conveniences.
-var Socket = function(typename) {
-  var self = this,
-    typecode = typename;
-
-  if (typeof(typecode) !== 'number') {
-    typecode = types[typename];
-    if (!types.hasOwnProperty(typename) || typecode === undefined) {
-      throw new TypeError("Unknown socket type: " + typename);
-    }
-  }
-
-  self.type = typename;
-  self._zmq = new zmq.Socket(defaultContext(), typecode);
-  self._outgoing = [];
-  self._watcher = new IOWatcher();
-  self._watcher.callback = function() { self._flush(); };
-  self._watcher.set(self._fd, true, false);
-  self._watcher.start();
-  self._inFlush = false;
+function Socket(type) {
+  var self = this;
+  this.type = type;
+  this._zmq = new zmq.Socket(defaultContext(), types[type]);
+  this._outgoing = [];
+  this._watcher = new IOWatcher;
+  this._watcher.callback = function() { self._flush(); };
+  this._watcher.set(self._fd, true, false);
+  this._watcher.start();
+  this._inFlush = false;
 };
 
 /**
