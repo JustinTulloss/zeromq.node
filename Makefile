@@ -6,7 +6,7 @@ build:
 	node-waf configure
 
 test:
-	vows test/test.js
+	@./test/run
 
 clean:
 	node-waf clean
