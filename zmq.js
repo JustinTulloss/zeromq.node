@@ -58,8 +58,13 @@ var defaultContext = function() {
   return context_;
 };
 
-// The socket type returned by `createSocket`. Wraps the low-level ZMQ binding
-// with all the conveniences.
+/**
+ * Create a new socket of the given `type`.
+ *
+ * @param {String|Number} type
+ * @api public
+ */
+
 function Socket(type) {
   this.type = type;
   this._zmq = new zmq.Socket(defaultContext(), types[type]);
