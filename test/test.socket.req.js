@@ -2,8 +2,8 @@
 var zmq = require('../')
   , should = require('should');
 
-var rep = zmq.createSocket('rep')
-  , req = zmq.createSocket('req');
+var rep = zmq.socket('rep')
+  , req = zmq.socket('req');
 
 rep.on('message', function(msg){
   msg.should.be.an.instanceof(Buffer);
