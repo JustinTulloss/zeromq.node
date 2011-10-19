@@ -162,7 +162,7 @@ Socket.prototype.bind = function(addr, cb) {
   self._watcher.stop();
   self._zmq.bind(addr, function(err) {
     self._watcher.start();
-    cb(err);
+    cb && cb(err);
   });
   return this;
 };
