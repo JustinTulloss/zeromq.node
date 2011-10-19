@@ -12,6 +12,10 @@ sock.close.should.be.a('function');
 
 zmq.socket.should.equal(zmq.createSocket);
 
+// options
+
+zmq.socket('req', { backlog: 30 }).backlog.should.equal(30);
+
 // setsockopt
 
 sock.getsockopt(zmq.ZMQ_BACKLOG).should.not.equal(75);
