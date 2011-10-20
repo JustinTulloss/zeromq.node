@@ -424,89 +424,91 @@ namespace zmq {
       int error;
   };
 
-  Handle<Value> Socket::Bind(const Arguments &args) {
-      HandleScope scope;
-      if (!args[0]->IsString())
-          return ThrowException(Exception::TypeError(
-              String::New("Address must be a string!")));
-      Local<String> addr = args[0]->ToString();
-      if (args.Length() > 1 && !args[1]->IsFunction())
-          return ThrowException(Exception::TypeError(
-              String::New("Provided callback must be a function")));
-      Local<Function> cb = Local<Function>::Cast(args[1]);
+  Handle<Value>
+  Socket::Bind(const Arguments &args) {
+    HandleScope scope;
+    if (!args[0]->IsString())
+      return ThrowException(Exception::TypeError(
+          String::New("Address must be a string!")));
+    Local<String> addr = args[0]->ToString();
+    if (args.Length() > 1 && !args[1]->IsFunction())
+      return ThrowException(Exception::TypeError(
+        String::New("Provided callback must be a function")));
+    Local<Function> cb = Local<Function>::Cast(args[1]);
 
-      GET_SOCKET(args);
+    GET_SOCKET(args);
 
-      BindState* state = new BindState(socket, cb, addr);
-      eio_custom(EIO_DoBind, EIO_PRI_DEFAULT, EIO_BindDone, state);
-      ev_ref(EV_DEFAULT_UC);
-      socket->state_ = STATE_BUSY;
+    BindState* state = new BindState(socket, cb, addr);
+    eio_custom(EIO_DoBind, EIO_PRI_DEFAULT, EIO_BindDone, state);
+    ev_ref(EV_DEFAULT_UC);
+    socket->state_ = STATE_BUSY;
 
-      return Undefined();
+    return Undefined();
   }
 
-  int Socket::EIO_DoBind(eio_req *req) {
-      BindState* state = (BindState*) req->data;
-      if (zmq_bind(state->sock, *state->addr) < 0)
-          state->error = zmq_errno();
-      return 0;
+  int
+  Socket::EIO_DoBind(eio_req *req) {
+    BindState* state = (BindState*) req->data;
+    if (zmq_bind(state->sock, *state->addr) < 0)
+      state->error = zmq_errno();
+    return 0;
   }
 
-  int Socket::EIO_BindDone(eio_req *req) {
-      BindState* state = (BindState*) req->data;
-      HandleScope scope;
+  int
+  Socket::EIO_BindDone(eio_req *req) {
+    BindState* state = (BindState*) req->data;
+    HandleScope scope;
 
-      Local<Value> argv[1];
-      if (state->error)
-          argv[0] = Exception::Error(String::New(zmq_strerror(state->error)));
-      else
-          argv[0] = Local<Value>::New(Undefined());
-      Local<Function> cb = Local<Function>::New(state->cb);
+    Local<Value> argv[1];
+    if (state->error) argv[0] = Exception::Error(String::New(zmq_strerror(state->error)));
+    else argv[0] = Local<Value>::New(Undefined());
+    Local<Function> cb = Local<Function>::New(state->cb);
 
-      ObjectWrap::Unwrap<Socket>(state->sock_obj)->state_ = STATE_READY;
-      delete state;
+    ObjectWrap::Unwrap<Socket>(state->sock_obj)->state_ = STATE_READY;
+    delete state;
 
-      TryCatch try_catch;
-      cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
-      if (try_catch.HasCaught())
-          FatalException(try_catch);
+    TryCatch try_catch;
+    cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
+    if (try_catch.HasCaught()) FatalException(try_catch);
 
-      ev_unref(EV_DEFAULT_UC);
-      return 0;
+    ev_unref(EV_DEFAULT_UC);
+    return 0;
   }
 
-  Handle<Value> Socket::BindSync(const Arguments &args) {
-      HandleScope scope;
-      if (!args[0]->IsString())
-          return ThrowException(Exception::TypeError(
-              String::New("Address must be a string!")));
-      String::Utf8Value addr(args[0]->ToString());
+  Handle<Value>
+  Socket::BindSync(const Arguments &args) {
+    HandleScope scope;
+    if (!args[0]->IsString())
+      return ThrowException(Exception::TypeError(
+        String::New("Address must be a string!")));
+    String::Utf8Value addr(args[0]->ToString());
 
-      GET_SOCKET(args);
+    GET_SOCKET(args);
 
-      socket->state_ = STATE_BUSY;
+    socket->state_ = STATE_BUSY;
 
-      if (zmq_bind(socket->socket_, *addr) < 0)
-          return ThrowException(ExceptionFromError());
+    if (zmq_bind(socket->socket_, *addr) < 0)
+      return ThrowException(ExceptionFromError());
 
-      socket->state_ = STATE_READY;
+    socket->state_ = STATE_READY;
 
-      return Undefined();
+    return Undefined();
   }
 
-  Handle<Value> Socket::Connect(const Arguments &args) {
-      HandleScope scope;
-      if (!args[0]->IsString()) {
-          return ThrowException(Exception::TypeError(
-              String::New("Address must be a string!")));
-      }
+  Handle<Value>
+  Socket::Connect(const Arguments &args) {
+    HandleScope scope;
+    if (!args[0]->IsString()) {
+      return ThrowException(Exception::TypeError(
+        String::New("Address must be a string!")));
+    }
 
-      GET_SOCKET(args);
+    GET_SOCKET(args);
 
-      String::Utf8Value address(args[0]->ToString());
-      if (zmq_connect(socket->socket_, *address))
-          return ThrowException(ExceptionFromError());
-      return Undefined();
+    String::Utf8Value address(args[0]->ToString());
+    if (zmq_connect(socket->socket_, *address))
+      return ThrowException(ExceptionFromError());
+    return Undefined();
   }
 
 
@@ -520,54 +522,54 @@ namespace zmq {
   class Socket::IncomingMessage {
   public:
       inline IncomingMessage() {
-          msgref_ = new MessageReference();
+        msgref_ = new MessageReference();
       };
 
       inline ~IncomingMessage() {
-          if (buf_.IsEmpty() && msgref_) {
-              delete msgref_;
-              msgref_ = NULL;
-          } else {
-              buf_.Dispose();
-              buf_.Clear();
-          }
+        if (buf_.IsEmpty() && msgref_) {
+          delete msgref_;
+          msgref_ = NULL;
+        } else {
+          buf_.Dispose();
+          buf_.Clear();
+        }
       };
 
       inline operator zmq_msg_t*() {
-          return *msgref_;
+        return *msgref_;
       }
 
       inline Local<Value> GetBuffer() {
-          if (buf_.IsEmpty()) {
-              Buffer* buf_obj = Buffer::New(
-                (char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_),
-                FreeCallback, msgref_);
-              if (!buf_obj)
-                  return Local<Value>();
-              buf_ = Persistent<Object>::New(buf_obj->handle_);
-          }
-          return Local<Value>::New(buf_);
+        if (buf_.IsEmpty()) {
+          Buffer* buf_obj = Buffer::New(
+            (char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_),
+            FreeCallback, msgref_);
+          if (!buf_obj)
+            return Local<Value>();
+          buf_ = Persistent<Object>::New(buf_obj->handle_);
+        }
+        return Local<Value>::New(buf_);
       }
 
   private:
       static void FreeCallback(char* data, void* message) {
-          delete (MessageReference*) message;
+        delete (MessageReference*) message;
       }
 
       class MessageReference {
       public:
           inline MessageReference() {
-              if (zmq_msg_init(&msg_) < 0)
-                  throw std::runtime_error(ErrorMessage());
+            if (zmq_msg_init(&msg_) < 0)
+              throw std::runtime_error(ErrorMessage());
           }
 
           inline ~MessageReference() {
-              if (zmq_msg_close(&msg_) < 0)
-                  throw std::runtime_error(ErrorMessage());
+            if (zmq_msg_close(&msg_) < 0)
+              throw std::runtime_error(ErrorMessage());
           }
 
           inline operator zmq_msg_t*() {
-              return &msg_;
+            return &msg_;
           }
 
       private:
@@ -584,10 +586,10 @@ namespace zmq {
       int flags = 0;
       int argc = args.Length();
       if (argc == 1) {
-          if (!args[0]->IsNumber())
-              return ThrowException(Exception::TypeError(
-                  String::New("Argument should be an integer")));
-          flags = args[0]->ToInteger()->Value();
+        if (!args[0]->IsNumber())
+          return ThrowException(Exception::TypeError(
+            String::New("Argument should be an integer")));
+        flags = args[0]->ToInteger()->Value();
       }
       else if (argc != 0)
           return ThrowException(Exception::TypeError(
@@ -600,7 +602,6 @@ namespace zmq {
           return ThrowException(ExceptionFromError());        
       return scope.Close(msg.GetBuffer());
   }
-
 
   /*
    * An object that creates a ØMQ message from the given Buffer Object,
