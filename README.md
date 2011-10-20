@@ -24,11 +24,15 @@ described in the ØMQ documentation occur.
 
 First, include the module:
 
-    zmq = require('zmq');
+```js
+var zmq = require('zmq');
+```
 
 After that, you can create sockets with:
 
-    socket = zmq.createSocket('req');
+```js
+var sock = zmq.socket('req');
+```
 
 Using ØMQ sockets
 -----------------
@@ -119,15 +123,16 @@ oh such fun.
 To Build
 ========
 
-     $ node-waf configure build
+```
+$ make
+```
 
 Testing
 =======
 
-Tests are pretty incomplete right now, but to run what's there:
-
-    $ npm install vows
-    $ vows
+```
+$ make test
+```
 
 Licensing
 =========
