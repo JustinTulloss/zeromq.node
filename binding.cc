@@ -20,17 +20,21 @@
  * THE SOFTWARE.
  */
 
-#include <v8.h>
-#include <ev.h>
-#include <node.h>
-#include <node_buffer.h>
-#include <zmq.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <stdexcept>
+
+#include <v8.h>
+#include <ev.h>
+
+#include <node.h>
+#include <node_buffer.h>
+#include <node_version.h>
+
+#include <zmq.h>
 
 using namespace v8;
 using namespace node;
@@ -84,7 +88,12 @@ private:
 
     struct BindState;
     static Handle<Value> Bind(const Arguments &args);
+
+#if NODE_VERSION_AT_LEAST(0, 5, 4)
+    static void EIO_DoBind(eio_req *req);
+#else
     static int EIO_DoBind(eio_req *req);
+#endif
     static int EIO_BindDone(eio_req *req);
     static Handle<Value> BindSync(const Arguments &args);
 
@@ -447,12 +456,20 @@ Handle<Value> Socket::Bind(const Arguments &args) {
     return Undefined();
 }
 
+#if NODE_VERSION_AT_LEAST(0, 5, 4)
+void Socket::EIO_DoBind(eio_req *req) {
+    BindState* state = (BindState*) req->data;
+    if (zmq_bind(state->sock, *state->addr) < 0)
+        state->error = zmq_errno();
+}
+#else
 int Socket::EIO_DoBind(eio_req *req) {
     BindState* state = (BindState*) req->data;
     if (zmq_bind(state->sock, *state->addr) < 0)
         state->error = zmq_errno();
     return 0;
 }
+#endif
 
 int Socket::EIO_BindDone(eio_req *req) {
     BindState* state = (BindState*) req->data;
