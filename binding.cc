@@ -28,7 +28,6 @@
 #include <stdexcept>
 
 #include <v8.h>
-#include <ev.h>
 
 #include <node.h>
 #include <node_buffer.h>
