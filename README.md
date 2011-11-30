@@ -13,6 +13,10 @@
   
      $ npm install
 
+  Build:
+
+     $ make
+
   Test:
   
      $ make test
