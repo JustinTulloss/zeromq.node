@@ -121,8 +121,6 @@ namespace zmq {
     return Exception::Error(String::New(ErrorMessage()));
   }
 
-
-
   /*
    * Context methods.
    */
@@ -141,9 +139,8 @@ namespace zmq {
 
 
   Context::~Context() {
-      Close();
+    Close();
   }
-
 
   Handle<Value>
   Context::New(const Arguments& args) {
@@ -218,11 +215,9 @@ namespace zmq {
     target->Set(String::NewSymbol("Socket"), t->GetFunction());
   }
 
-
   Socket::~Socket() {
     Close();
   }
-
 
   Handle<Value>
   Socket::New(const Arguments &args) {
@@ -245,9 +240,9 @@ namespace zmq {
   }
 
   Socket::Socket(Context *context, int type) : ObjectWrap() {
-      context_ = Persistent<Object>::New(context->handle_);
-      socket_ = zmq_socket(context->context_, type);
-      state_ = STATE_READY;
+    context_ = Persistent<Object>::New(context->handle_);
+    socket_ = zmq_socket(context->context_, type);
+    state_ = STATE_READY;
   }
 
   Socket *
@@ -268,13 +263,11 @@ namespace zmq {
           return ThrowException(Exception::TypeError(   \
               String::New("Socket is busy")));
 
-
   Handle<Value>
   Socket::GetState(Local<String> p, const AccessorInfo& info) {
     Socket* socket = ObjectWrap::Unwrap<Socket>(info.Holder());
     return Integer::New(socket->state_);
   }
-
 
   template<typename T>
   Handle<Value> Socket::GetSockOpt(int option) {
@@ -404,28 +397,27 @@ namespace zmq {
     }
   }
 
-
   struct Socket::BindState {
-      BindState(Socket* sock_, Handle<Function> cb_, Handle<String> addr_)
-            : addr(addr_) {
-        sock_obj = Persistent<Object>::New(sock_->handle_);
-        sock = sock_->socket_;
-        cb = Persistent<Function>::New(cb_);
-        error = 0;
-      }
+    BindState(Socket* sock_, Handle<Function> cb_, Handle<String> addr_)
+          : addr(addr_) {
+      sock_obj = Persistent<Object>::New(sock_->handle_);
+      sock = sock_->socket_;
+      cb = Persistent<Function>::New(cb_);
+      error = 0;
+    }
 
-      ~BindState() {
-        sock_obj.Dispose();
-        sock_obj.Clear();
-        cb.Dispose();
-        cb.Clear();
-      }
+    ~BindState() {
+      sock_obj.Dispose();
+      sock_obj.Clear();
+      cb.Dispose();
+      cb.Clear();
+    }
 
-      Persistent<Object> sock_obj;
-      void* sock;
-      Persistent<Function> cb;
-      String::Utf8Value addr;
-      int error;
+    Persistent<Object> sock_obj;
+    void* sock;
+    Persistent<Function> cb;
+    String::Utf8Value addr;
+    int error;
   };
 
   Handle<Value>
@@ -515,7 +507,6 @@ namespace zmq {
     return Undefined();
   }
 
-
   /*
    * An object that creates an empty ØMQ message, which can be used for
    * zmq_recv. After the receive call, a Buffer object wrapping the ØMQ
@@ -524,7 +515,7 @@ namespace zmq {
    */
 
   class Socket::IncomingMessage {
-  public:
+    public:
       inline IncomingMessage() {
         msgref_ = new MessageReference();
       };
@@ -555,13 +546,13 @@ namespace zmq {
         return Local<Value>::New(buf_);
       }
 
-  private:
+    private:
       static void FreeCallback(char* data, void* message) {
         delete (MessageReference*) message;
       }
 
       class MessageReference {
-      public:
+        public:
           inline MessageReference() {
             if (zmq_msg_init(&msg_) < 0)
               throw std::runtime_error(ErrorMessage());
@@ -576,7 +567,7 @@ namespace zmq {
             return &msg_;
           }
 
-      private:
+        private:
           zmq_msg_t msg_;
       };
 
@@ -585,26 +576,26 @@ namespace zmq {
   };
 
   Handle<Value> Socket::Recv(const Arguments &args) {
-      HandleScope scope;
+    HandleScope scope;
 
-      int flags = 0;
-      int argc = args.Length();
-      if (argc == 1) {
-        if (!args[0]->IsNumber())
-          return ThrowException(Exception::TypeError(
-            String::New("Argument should be an integer")));
-        flags = args[0]->ToInteger()->Value();
-      }
-      else if (argc != 0)
-          return ThrowException(Exception::TypeError(
-              String::New("Only one argument at most was expected")));
+    int flags = 0;
+    int argc = args.Length();
+    if (argc == 1) {
+      if (!args[0]->IsNumber())
+        return ThrowException(Exception::TypeError(
+          String::New("Argument should be an integer")));
+      flags = args[0]->ToInteger()->Value();
+    }
+    else if (argc != 0)
+      return ThrowException(Exception::TypeError(
+        String::New("Only one argument at most was expected")));
 
-      GET_SOCKET(args);
+    GET_SOCKET(args);
 
-      IncomingMessage msg;
-      if (zmq_recv(socket->socket_, msg, flags) < 0)
-          return ThrowException(ExceptionFromError());        
-      return scope.Close(msg.GetBuffer());
+    IncomingMessage msg;
+    if (zmq_recv(socket->socket_, msg, flags) < 0)
+      return ThrowException(ExceptionFromError());        
+    return scope.Close(msg.GetBuffer());
   }
 
   /*
@@ -614,64 +605,64 @@ namespace zmq {
    */
 
   class Socket::OutgoingMessage {
-  public:
+    public:
       inline OutgoingMessage(Handle<Object> buf) {
-          bufref_ = new BufferReference(buf);
-          if (zmq_msg_init_data(&msg_, Buffer::Data(buf), Buffer::Length(buf),
-                  BufferReference::FreeCallback, bufref_) < 0) {
-              delete bufref_;
-              throw std::runtime_error(ErrorMessage());
-          }
+        bufref_ = new BufferReference(buf);
+        if (zmq_msg_init_data(&msg_, Buffer::Data(buf), Buffer::Length(buf),
+            BufferReference::FreeCallback, bufref_) < 0) {
+          delete bufref_;
+          throw std::runtime_error(ErrorMessage());
+        }
       };
 
       inline ~OutgoingMessage() {
-          if (zmq_msg_close(&msg_) < 0)
-              throw std::runtime_error(ErrorMessage());
+        if (zmq_msg_close(&msg_) < 0)
+          throw std::runtime_error(ErrorMessage());
       };
 
       inline operator zmq_msg_t*() {
-          return &msg_;
+        return &msg_;
       }
 
-  private:
+    private:
       class BufferReference {
-      public:
+        public:
           inline BufferReference(Handle<Object> buf) {
-              // Keep the handle alive until zmq is done with the buffer
-              noLongerNeeded_ = false;
-              buf_ = Persistent<Object>::New(buf);
-              buf_.MakeWeak(this, &WeakCheck);
+            // Keep the handle alive until zmq is done with the buffer
+            noLongerNeeded_ = false;
+            buf_ = Persistent<Object>::New(buf);
+            buf_.MakeWeak(this, &WeakCheck);
           }
 
           inline ~BufferReference() {
-              buf_.Dispose();
-              buf_.Clear();
+            buf_.Dispose();
+            buf_.Clear();
           }
 
           // Called by zmq when the message has been sent.
           // NOTE: May be called from a worker thread. Do not modify V8/Node.
           static void FreeCallback(void* data, void* message) {
-              // Raise a flag indicating that we're done with the buffer
-              ((BufferReference*)message)->noLongerNeeded_ = true;
+            // Raise a flag indicating that we're done with the buffer
+            ((BufferReference*)message)->noLongerNeeded_ = true;
           }
 
           // Called when V8 would like to GC buf_
           static void WeakCheck(v8::Persistent<v8::Value> obj, void* data) {
-              if (((BufferReference*)data)->noLongerNeeded_) {
-                  delete (BufferReference*)data;
-              } else {
-                  // Still in use, revive, prevent GC
-                  obj.MakeWeak(data, &WeakCheck);
-              }
+            if (((BufferReference*)data)->noLongerNeeded_) {
+              delete (BufferReference*)data;
+            } else {
+              // Still in use, revive, prevent GC
+              obj.MakeWeak(data, &WeakCheck);
+            }
           }
 
-      private:
+        private:
           bool noLongerNeeded_;
           Persistent<Object> buf_;
       };
 
-      zmq_msg_t msg_;
-      BufferReference* bufref_;
+    zmq_msg_t msg_;
+    BufferReference* bufref_;
   };
 
   // WARNING: the buffer passed here will be kept alive
@@ -679,55 +670,55 @@ namespace zmq {
   // Do not modify or reuse any buffer passed to send.
   // This is bad, but allows us to send without copying.
   Handle<Value> Socket::Send(const Arguments &args) {
-      HandleScope scope;
+    HandleScope scope;
 
-      int argc = args.Length();
-      if (argc != 1 && argc != 2)
-          return ThrowException(Exception::TypeError(
-              String::New("Must pass a Buffer and optionally flags")));
-      if (!Buffer::HasInstance(args[0]))
-            return ThrowException(Exception::TypeError(
-                String::New("First argument should be a Buffer")));
-      int flags = 0;
-      if (argc == 2) {
-          if (!args[1]->IsNumber())
-              return ThrowException(Exception::TypeError(
-                  String::New("Second argument should be an integer")));
-          flags = args[1]->ToInteger()->Value();
-      }
+    int argc = args.Length();
+    if (argc != 1 && argc != 2)
+      return ThrowException(Exception::TypeError(
+        String::New("Must pass a Buffer and optionally flags")));
+    if (!Buffer::HasInstance(args[0]))
+        return ThrowException(Exception::TypeError(
+          String::New("First argument should be a Buffer")));
+    int flags = 0;
+    if (argc == 2) {
+      if (!args[1]->IsNumber())
+        return ThrowException(Exception::TypeError(
+          String::New("Second argument should be an integer")));
+      flags = args[1]->ToInteger()->Value();
+    }
 
-      GET_SOCKET(args);
+    GET_SOCKET(args);
 
-  #if 0  // zero-copy version, but doesn't properly pin buffer and so has GC issues
-      OutgoingMessage msg(args[0]->ToObject());
-      if (zmq_send(socket->socket_, msg, flags) < 0)
-          return ThrowException(ExceptionFromError());
+#if 0  // zero-copy version, but doesn't properly pin buffer and so has GC issues
+    OutgoingMessage msg(args[0]->ToObject());
+    if (zmq_send(socket->socket_, msg, flags) < 0)
+        return ThrowException(ExceptionFromError());
 
-  #else // copying version that has no GC issues
-      zmq_msg_t msg;
-      Local<Object> buf = args[0]->ToObject();
-      size_t len = Buffer::Length(buf);
-      int res = zmq_msg_init_size(&msg, len);
-      if (res != 0)
-          return ThrowException(ExceptionFromError());
+#else // copying version that has no GC issues
+    zmq_msg_t msg;
+    Local<Object> buf = args[0]->ToObject();
+    size_t len = Buffer::Length(buf);
+    int res = zmq_msg_init_size(&msg, len);
+    if (res != 0)
+      return ThrowException(ExceptionFromError());
 
-      char * cp = (char *)zmq_msg_data(&msg);
-      const char * dat = Buffer::Data(buf);
-      std::copy(dat, dat + len, cp);
+    char * cp = (char *)zmq_msg_data(&msg);
+    const char * dat = Buffer::Data(buf);
+    std::copy(dat, dat + len, cp);
 
-      if (zmq_send(socket->socket_, &msg, flags) < 0)
-          return ThrowException(ExceptionFromError());
-  #endif // zero copy / copying version
+    if (zmq_send(socket->socket_, &msg, flags) < 0)
+      return ThrowException(ExceptionFromError());
+#endif // zero copy / copying version
 
-      return Undefined();
+    return Undefined();
   }
 
 
   void
   Socket::Close() {
     if (socket_) {
-        if (zmq_close(socket_) < 0)
-          throw std::runtime_error(ErrorMessage());
+      if (zmq_close(socket_) < 0)
+        throw std::runtime_error(ErrorMessage());
       socket_ = NULL;
       state_ = STATE_CLOSED;
       context_.Dispose();
