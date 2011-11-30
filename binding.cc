@@ -37,9 +37,11 @@
 using namespace v8;
 using namespace node;
 
-#define STATE_READY  0
-#define STATE_BUSY   1
-#define STATE_CLOSED 2
+enum {
+    STATE_READY
+  , STATE_BUSY
+  , STATE_CLOSED
+};
 
 namespace zmq {
   class Socket;
