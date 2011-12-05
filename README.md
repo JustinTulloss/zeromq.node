@@ -1,11 +1,11 @@
 
 # node-zeromq
 
-  ØMQ bindings for node.js, a fork of [zeromq.node](https://github.com/JustinTulloss/zeromq.node).
+  ØMQ bindings for node.js
 
 ## Installation
 
-    $ npm install zeromq
+    $ npm install zmq
 
 ## Example
 
@@ -15,7 +15,7 @@ producer.js:
 var zmq = require('zeromq')
   , sock = zmq.socket('push');
 
-sock.bind('tcp://127.0.0.1:3000');
+sock.bindSync('tcp://127.0.0.1:3000');
 console.log('Producer bound to port 3000');
 
 setInterval(function(){
@@ -42,7 +42,7 @@ sock.on('message', function(msg){
 ## Running tests
 
   Install dev deps:
-  
+
      $ npm install
 
   Build:
@@ -50,6 +50,6 @@ sock.on('message', function(msg){
      $ make
 
   Test:
-  
+
      $ make test
 
