@@ -23,10 +23,12 @@
  */
 
 #include <v8.h>
-#include <ev.h>
 #include <node.h>
 #include <node_version.h>
 #include <node_buffer.h>
+#if !NODE_VERSION_AT_LEAST(0, 5, 5)
+#include <ev.h>
+#endif
 #include <zmq.h>
 #include <assert.h>
 #include <stdio.h>
