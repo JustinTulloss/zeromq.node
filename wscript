@@ -21,3 +21,17 @@ def build(bld):
     obj.target = "binding"
     obj.source = "binding.cc"
     obj.uselib = "ZMQ UUID"
+
+def shutdown():
+  # HACK to get binding.node out of build directory.
+  # better way to do this?
+  if exists('./binding.node'):
+    unlink('./binding.node')
+  if Options.commands['build']:
+    if exists('./build/default/binding.node'):
+      link('./build/default/binding.node', './binding.node')
+    elif exists('./build/Release/binding.node'):
+      link('./build/Release/binding.node', './binding.node')
+    else:
+      raise Exception("Cannot locate build binding.node")
+
