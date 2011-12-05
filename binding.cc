@@ -32,6 +32,9 @@
 #include <node.h>
 #include <node_buffer.h>
 #include <node_version.h>
+#if !NODE_VERSION_AT_LEAST(0, 5, 5)
+#include <ev.h>
+#endif
 
 #include <zmq.h>
 
