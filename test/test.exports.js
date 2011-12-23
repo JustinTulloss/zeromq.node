@@ -32,4 +32,4 @@ zmq.Socket.should.be.a('function');
 
 // methods
 
-zmq.createSocket.should.be.a('function');
+zmq.socket.should.be.a('function');

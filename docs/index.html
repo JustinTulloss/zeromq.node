@@ -1,23 +1,5 @@
-
-/**
- * Module dependencies.
- */
-
-var EventEmitter = require('events').EventEmitter
-  , IOWatcher = process.binding('io_watcher').IOWatcher
-  , zmq = require('../binding');
-
-/**
- * Expose bindings as the module.
- */
-
-exports = module.exports = zmq;
-
-/**
- * Map of socket types.
- */
-
-var types = exports.types = {
+<!DOCTYPE html><html><head><title>node-zeromq</title><link rel="stylesheet" href="style.css"><script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.3/jquery.min.js"></script><script src="highlight.js"></script><script src="menu.js"></script></head><body><h1>node-zeromq</h1><p><a href="http://www.zeromq.org/">ZeroMQ </a>bindings for Node.js
+</p><div class="comment"><h2>types</h2><div class="description"><p>Map of socket types.</p></div><a href="#" class="view-source">View source</a><pre><code>var types = exports.types = {
     pub: zmq.ZMQ_PUB
   , sub: zmq.ZMQ_SUB
   , req: zmq.ZMQ_REQ
@@ -29,13 +11,7 @@ var types = exports.types = {
   , dealer: zmq.ZMQ_DEALER
   , router: zmq.ZMQ_ROUTER
   , pair: zmq.ZMQ_PAIR
-};
-
-/**
- * Map of socket options.
- */
-
-var opts = exports.options = {
+};</code></pre></div><div class="comment"><h2>opts</h2><div class="description"><p>Map of socket options.</p></div><a href="#" class="view-source">View source</a><pre><code>var opts = exports.options = {
     _fd: zmq.ZMQ_FD
   , _ioevents: zmq.ZMQ_EVENTS
   , _receiveMore: zmq.ZMQ_RCVMORE
@@ -77,17 +53,7 @@ function defaultContext() {
   });
 
   return ctx;
-};
-
-/**
- * Create a new socket of the given `type`.
- *
- * @constructor
- * @param {String|Number} type
- * @api public
- */
-
-function Socket(type) {
+};</code></pre></div><div class="comment"><h2>Socket()</h2><div class="description"><p>Create a new socket of the given <code>type</code>.</p></div><a href="#" class="view-source">View source</a><pre><code>function Socket(type) {
   this.type = type;
   this._zmq = new zmq.Socket(defaultContext(), types[type]);
   this._outgoing = [];
@@ -95,68 +61,14 @@ function Socket(type) {
   this._watcher.callback = this._flush.bind(this);
   this._watcher.set(this._fd, true, false);
   this._watcher.start();
-};
-
-/**
- * Inherit from `EventEmitter.prototype`.
- */
-
-Socket.prototype.__proto__ = EventEmitter.prototype;
-
-/**
- * Set `opt` to `val`.
- *
- * @param {String|Number} opt
- * @param {Mixed} val
- * @return {Socket} for chaining
- * @api public
- */
-
-Socket.prototype.setsockopt = function(opt, val){
+};</code></pre></div><div class="comment"><h2>Socket.prototype.setsockopt()</h2><div class="description"><p>Set <code>opt</code> to <code>val</code>.</p></div><a href="#" class="view-source">View source</a><pre><code>Socket.prototype.setsockopt = function(opt, val){
   this._zmq.setsockopt(opts[opt] || opt, val);
   return this;
-};
-
-/**
- * Get socket `opt`.
- *
- * @param {String|Number} opt
- * @return {Mixed}
- * @api public
- */
-
-Socket.prototype.getsockopt = function(opt){
+};</code></pre></div><div class="comment"><h2>Socket.prototype.getsockopt()</h2><div class="description"><p>Get socket <code>opt</code>.</p></div><a href="#" class="view-source">View source</a><pre><code>Socket.prototype.getsockopt = function(opt){
   return this._zmq.getsockopt(opts[opt] || opt);
-};
+};</code></pre></div><div class="comment"><h2>Socket.prototype.bind()</h2><div class="description"><p>Async bind.</p>
 
-/**
- * Socket opt accessors allowing `sock.backlog = val`
- * instead of `sock.setsockopt('backlog', val)`.
- */
-
-Object.keys(opts).forEach(function(name){
-  Socket.prototype.__defineGetter__(name, function() {
-    return this._zmq.getsockopt(opts[name]);
-  });
-
-  Socket.prototype.__defineSetter__(name, function(val) {
-    if ('string' == typeof val) val = new Buffer(val, 'utf8');
-    return this._zmq.setsockopt(opts[name], val);
-  });
-});
-
-/**
- * Async bind.
- *
- * Emits the "bind" event.
- *
- * @param {String} addr
- * @param {Function} cb
- * @return {Socket} for chaining
- * @api public
- */
-
-Socket.prototype.bind = function(addr, cb) {
+<p>Emits the "bind" event.</p></div><a href="#" class="view-source">View source</a><pre><code>Socket.prototype.bind = function(addr, cb) {
   var self = this;
   self._watcher.stop();
   self._zmq.bind(addr, function(err) {
@@ -165,17 +77,7 @@ Socket.prototype.bind = function(addr, cb) {
     cb && cb(err);
   });
   return this;
-};
-
-/**
- * Sync bind.
- *
- * @param {String} addr
- * @return {Socket} for chaining
- * @api public
- */
-
-Socket.prototype.bindSync = function(addr) {
+};</code></pre></div><div class="comment"><h2>Socket.prototype.bindSync()</h2><div class="description"><p>Sync bind.</p></div><a href="#" class="view-source">View source</a><pre><code>Socket.prototype.bindSync = function(addr) {
   this._watcher.stop();
   try {
     this._zmq.bindSync(addr);
@@ -185,57 +87,16 @@ Socket.prototype.bindSync = function(addr) {
   }
   this._watcher.start();
   return this;
-};
-
-/**
- * Connect to `addr`.
- *
- * @param {String} addr
- * @return {Socket} for chaining
- * @api public
- */
-
-Socket.prototype.connect = function(addr) {
+};</code></pre></div><div class="comment"><h2>Socket.prototype.connect()</h2><div class="description"><p>Connect to <code>addr</code>.</p></div><a href="#" class="view-source">View source</a><pre><code>Socket.prototype.connect = function(addr) {
   this._zmq.connect(addr);
   return this;
-};
-
-/**
- * Subscribe with the given `filter`.
- *
- * @param {String} filter
- * @return {Socket} for chaining
- * @api public
- */
-
-Socket.prototype.subscribe = function(filter) {
+};</code></pre></div><div class="comment"><h2>Socket.prototype.subscribe()</h2><div class="description"><p>Subscribe with the given <code>filter</code>.</p></div><a href="#" class="view-source">View source</a><pre><code>Socket.prototype.subscribe = function(filter) {
   this._subscribe = filter;
   return this;
-};
-
-/**
- * Unsubscribe with the given `filter`.
- *
- * @param {String} filter
- * @return {Socket} for chaining
- * @api public
- */
-
-Socket.prototype.unsubscribe = function(filter) {
+};</code></pre></div><div class="comment"><h2>Socket.prototype.unsubscribe()</h2><div class="description"><p>Unsubscribe with the given <code>filter</code>.</p></div><a href="#" class="view-source">View source</a><pre><code>Socket.prototype.unsubscribe = function(filter) {
   this._unsubscribe = filter;
   return this;
-};
-
-/**
- * Send the given `msg`.
- *
- * @param {String|Buffer} msg
- * @param {Number} flags
- * @return {Socket} for chaining
- * @api public
- */
-
-Socket.prototype.send = function(msg, flags) {
+};</code></pre></div><div class="comment"><h2>Socket.prototype.send()</h2><div class="description"><p>Send the given <code>msg</code>.</p></div><a href="#" class="view-source">View source</a><pre><code>Socket.prototype.send = function(msg, flags) {
   // allow strings etc
   if (!Buffer.isBuffer(msg)) {
     msg = new Buffer(String(msg), 'utf8');
@@ -297,33 +158,13 @@ Socket.prototype._flush = function() {
   }
 
   this._flushing = false;
-};
-
-/**
- * Close the socket.
- *
- * @return {Socket} for chaining
- * @api public
- */
-
-Socket.prototype.close = function() {
+};</code></pre></div><div class="comment"><h2>Socket.prototype.close()</h2><div class="description"><p>Close the socket.</p></div><a href="#" class="view-source">View source</a><pre><code>Socket.prototype.close = function() {
   this._watcher.stop();
   this._watcher = null;
   this._zmq.close();
   return this;
-};
-
-/**
- * Create a `type` socket with the given `options`.
- *
- * @param {String} type
- * @param {Object} options
- * @return {Socket}
- * @api public
- */
-
-exports.socket = function(type, options) {
+};</code></pre></div><div class="comment"><h2>exports.socket()</h2><div class="description"><p>Create a <code>type</code> socket with the given <code>options</code>.</p></div><a href="#" class="view-source">View source</a><pre><code>exports.socket = function(type, options) {
   var sock = new Socket(type);
   for (var key in options) sock[key] = options[key];
   return sock;
-};
+};</code></pre></div></body></html>
