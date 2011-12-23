@@ -1,4 +1,7 @@
 
+DOX = ./node_modules/.bin/dox
+JADE = ./node_modules/.bin/jade
+
 binding.node: build binding.cc
 	node-waf build
 
@@ -12,8 +15,8 @@ clean:
 	node-waf clean
 
 docs:
-	dox < lib/index.js > docs/index.json
-	jade < docs/template.jade -o "{comments:$$(cat docs/index.json)}" > docs/index.html
+	$(DOX) < lib/index.js > docs/index.json
+	$(JADE) < docs/template.jade -o "{comments:$$(cat docs/index.json)}" > docs/index.html
 
 docclean:
 	rm -fr docs/index.{json,html}
