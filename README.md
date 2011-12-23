@@ -1,7 +1,7 @@
 
 # node-zeromq
 
-  ØMQ bindings for node.js.
+  [ØMQ](http://www.zeromq.org/) bindings for node.js.
 
 ## Installation
 
