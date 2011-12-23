@@ -68,8 +68,7 @@ sock.on('message', function(msg){
 
 ## Contributors
 
- Authored by Justin Tulloss, maintained by Shripad K and TJ Holowaychuk.
-
+ Authored by Justin Tulloss, maintained by Shripad K and TJ Holowaychuk. To contribute please ensure _all_ tests pass, and do your best to maintain the style used within the rest of the library.
 
  Output of `git summary`:
 
