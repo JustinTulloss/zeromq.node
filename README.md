@@ -12,7 +12,7 @@
 producer.js:
 
 ```js
-var zmq = require('zeromq')
+var zmq = require('zmq')
   , sock = zmq.socket('push');
 
 sock.bindSync('tcp://127.0.0.1:3000');
@@ -28,7 +28,7 @@ worker.js:
 
 ```js
 
-var zmq = require('zeromq')
+var zmq = require('zmq')
   , sock = zmq.socket('pull');
 
 sock.connect('tcp://127.0.0.1:3000');
