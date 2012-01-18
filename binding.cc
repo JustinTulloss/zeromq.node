@@ -760,6 +760,19 @@ namespace zmq {
    * Module functions.
    */
 
+  static Handle<Value>
+  ZmqVersion(const Arguments& args) {
+    HandleScope scope;
+
+    int major, minor, patch;
+    zmq_version(&major, &minor, &patch);
+
+    char version_info[16];
+    snprintf(version_info, 16, "%d.%d.%d", major, minor, patch);
+
+    return scope.Close(String::New(version_info));
+  }
+
   static void
   Initialize(Handle<Object> target) {
     HandleScope scope;
@@ -805,6 +818,8 @@ namespace zmq {
     NODE_DEFINE_CONSTANT(target, STATE_READY);
     NODE_DEFINE_CONSTANT(target, STATE_BUSY);
     NODE_DEFINE_CONSTANT(target, STATE_CLOSED);
+
+    NODE_SET_METHOD(target, "zmqVersion", ZmqVersion);
 
     Context::Initialize(target);
     Socket::Initialize(target);
