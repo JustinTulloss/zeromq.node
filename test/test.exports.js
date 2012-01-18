@@ -2,6 +2,10 @@
 var zmq = require('../')
   , should = require('should');
 
+// version
+
+zmq.version.should.match(/^\d+\.\d+\.\d+$/);
+
 // socket types
 
 ['PUB', 'SUB', 'REQ', 'XREQ', 'XREP',
