@@ -18,7 +18,6 @@ pull.on('message', function(a, b, c, d, e){
 pull.bind('inproc://stuff', function(){
   push.connect('inproc://stuff');
   push.send(['tobi', 'loki'], zmq.ZMQ_SNDMORE);
-  push.send('jane', zmq.ZMQ_SNDMORE);
-  push.send('luna', zmq.ZMQ_SNDMORE);
+  push.send(['jane', 'luna'], zmq.ZMQ_SNDMORE);
   push.send('manny');
 });
