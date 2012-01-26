@@ -1,6 +1,6 @@
 {
   "name": "zmq",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Bindings for node.js to zeromq",
   "main": "index",
   "repository": {
@@ -13,7 +13,7 @@
     , "dox": "*"
   },
   "engines": {
-    "node": ">=0.3.0 <0.7.0"
+    "node": ">=0.3.0 < 0.7.0"
   },
   "contributors": [
     "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
