@@ -5,7 +5,7 @@ var zmq = require('../')
 var push = zmq.socket('push')
   , pull = zmq.socket('pull');
 
-pull.on('message', function(msg1,msg2,msg3){
+pull.on('message', function(msg1, msg2, msg3){
   msg1.toString().should.equal('string');
   msg2.toString().should.equal('15.99');
   msg3.toString().should.equal('buffer');
