@@ -1,10 +1,9 @@
-
+ 
 var zmq = require('../')
   , should = require('should');
 
 var push = zmq.socket('push')
   , pull = zmq.socket('pull');
-
 
 pull.on('message', function(msg1,msg2,msg3){
   msg1.toString().should.equal('string');
@@ -16,5 +15,5 @@ pull.on('message', function(msg1,msg2,msg3){
 
 pull.bind('inproc://stuff', function(){
   push.connect('inproc://stuff');
-  push.send(['string',15.99,new Buffer('buffer')]);
+  push.send(['string', 15.99, new Buffer('buffer')]);
 });
