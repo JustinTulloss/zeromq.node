@@ -26,9 +26,6 @@
 #include <node.h>
 #include <node_version.h>
 #include <node_buffer.h>
-#if !NODE_VERSION_AT_LEAST(0, 5, 5)
-#include <ev.h>
-#endif
 #include <zmq.h>
 #include <assert.h>
 #include <stdio.h>
@@ -88,13 +85,9 @@ namespace zmq {
       struct BindState;
       static Handle<Value> Bind(const Arguments &args);
 
-#if NODE_VERSION_AT_LEAST(0, 5, 4)
-      static void EIO_DoBind(eio_req *req);
-#else
-      static int EIO_DoBind(eio_req *req);
-#endif
+      static void UV_DoBind(uv_work_t *req);
+      static void UV_BindDone(uv_work_t *req);
 
-      static int EIO_BindDone(eio_req *req);
       static Handle<Value> BindSync(const Arguments &args);
 
       static Handle<Value> Connect(const Arguments &args);
@@ -409,6 +402,7 @@ namespace zmq {
   struct Socket::BindState {
     BindState(Socket* sock_, Handle<Function> cb_, Handle<String> addr_)
           : addr(addr_) {
+      request.data = this;
       sock_obj = Persistent<Object>::New(sock_->handle_);
       sock = sock_->socket_;
       cb = Persistent<Function>::New(cb_);
@@ -422,6 +416,7 @@ namespace zmq {
       cb.Clear();
     }
 
+    uv_work_t request;
     Persistent<Object> sock_obj;
     void* sock;
     Persistent<Function> cb;
@@ -444,30 +439,24 @@ namespace zmq {
     GET_SOCKET(args);
 
     BindState* state = new BindState(socket, cb, addr);
-    eio_custom(EIO_DoBind, EIO_PRI_DEFAULT, EIO_BindDone, state);
-    ev_ref(EV_DEFAULT_UC);
+
+    uv_queue_work(uv_default_loop(), &state->request, UV_DoBind, UV_BindDone);
+
     socket->state_ = STATE_BUSY;
 
     return Undefined();
   }
 
-#if NODE_VERSION_AT_LEAST(0, 5, 4)
   void
-#else
-  int
-#endif
-  Socket::EIO_DoBind(eio_req *req) {
-    BindState* state = (BindState*) req->data;
+  Socket::UV_DoBind(uv_work_t *req) {
+    BindState* state = static_cast<BindState*>(req->data);
     if (zmq_bind(state->sock, *state->addr) < 0)
         state->error = zmq_errno();
-#if !NODE_VERSION_AT_LEAST(0, 5, 4)
-    return 0;
-#endif
   }
 
-  int
-  Socket::EIO_BindDone(eio_req *req) {
-    BindState* state = (BindState*) req->data;
+  void
+  Socket::UV_BindDone(uv_work_t *req) {
+    BindState* state = static_cast<BindState*>(req->data);
     HandleScope scope;
 
     Local<Value> argv[1];
@@ -481,9 +470,6 @@ namespace zmq {
     TryCatch try_catch;
     cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
     if (try_catch.HasCaught()) FatalException(try_catch);
-
-    ev_unref(EV_DEFAULT_UC);
-    return 0;
   }
 
   Handle<Value>
@@ -609,7 +595,7 @@ namespace zmq {
 
     IncomingMessage msg;
     if (zmq_recv(socket->socket_, msg, flags) < 0)
-      return ThrowException(ExceptionFromError());        
+      return ThrowException(ExceptionFromError());
     return scope.Close(msg.GetBuffer());
   }
 
