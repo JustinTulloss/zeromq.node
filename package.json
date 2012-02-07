@@ -8,9 +8,10 @@
     "url" : "http://github.com/JustinTulloss/zeromq.node.git"
   },
   "devDependencies": {
-      "should": "*"
-    , "jade": "*"
-    , "dox": "*"
+    "should": "*",
+    "batch": "*",
+    "jade": "*",
+    "dox": "*"
   },
   "engines": {
     "node": ">=0.3.0 < 0.7.0"

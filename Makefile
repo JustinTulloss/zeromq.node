@@ -1,4 +1,5 @@
 
+TESTS = $(wildcard test/test.*.js)
 DOX = ./node_modules/.bin/dox
 JADE = ./node_modules/.bin/jade
 
@@ -9,7 +10,7 @@ build:
 	node-waf configure
 
 test:
-	@./test/run
+	@node test/run $(TESTS)
 
 clean:
 	node-waf clean

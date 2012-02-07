@@ -8,10 +8,6 @@ var sock = zmq.socket('req');
 sock.type.should.equal('req');
 sock.close.should.be.a('function');
 
-// options
-
-zmq.socket('req', { backlog: 30 }).backlog.should.equal(30);
-
 // setsockopt
 
 sock.getsockopt(zmq.ZMQ_BACKLOG).should.not.equal(75);
@@ -32,4 +28,10 @@ sock.backlog.should.not.equal(50);
 sock.backlog = 50;
 sock.backlog.should.equal(50);
 
-process.exit(0);
+sock.close();
+
+// options
+
+sock = zmq.socket('req', { backlog: 30 });
+sock.backlog.should.equal(30);
+sock.close();
