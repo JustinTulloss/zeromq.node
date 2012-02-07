@@ -21,5 +21,5 @@ files.forEach(function(file){
 batch.end(function(err){
   if (err) throw err;
   var duration = new Date - start;
-  console.log('  \033[32m✓\033[0m \033[90m%s\033[0m', 'completed in ' + duration + 'ms\n');
+  console.log('\n  \033[32m✓\033[0m \033[90m%s\033[0m', 'completed in ' + duration + 'ms\n');
 });
