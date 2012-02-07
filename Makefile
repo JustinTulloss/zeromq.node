@@ -12,6 +12,9 @@ build:
 test:
 	@node test/run $(TESTS)
 
+benchmark:
+	@node test/benchmark
+
 clean:
 	node-waf clean
 
@@ -25,4 +28,4 @@ docclean:
 distclean:
 	node-waf distclean
 
-.PHONY: clean distclean test docs docclean
+.PHONY: clean distclean test docs docclean benchmark
