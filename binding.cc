@@ -23,9 +23,12 @@
  */
 
 #include <v8.h>
-#include <ev.h>
 #include <node.h>
+#include <node_version.h>
 #include <node_buffer.h>
+#if !NODE_VERSION_AT_LEAST(0, 5, 5)
+#include <ev.h>
+#endif
 #include <zmq.h>
 #include <assert.h>
 #include <stdio.h>
@@ -84,7 +87,13 @@ namespace zmq {
 
       struct BindState;
       static Handle<Value> Bind(const Arguments &args);
+
+#if NODE_VERSION_AT_LEAST(0, 5, 4)
+      static void EIO_DoBind(eio_req *req);
+#else
       static int EIO_DoBind(eio_req *req);
+#endif
+
       static int EIO_BindDone(eio_req *req);
       static Handle<Value> BindSync(const Arguments &args);
 
@@ -442,12 +451,18 @@ namespace zmq {
     return Undefined();
   }
 
+#if NODE_VERSION_AT_LEAST(0, 5, 4)
+  void
+#else
   int
+#endif
   Socket::EIO_DoBind(eio_req *req) {
     BindState* state = (BindState*) req->data;
     if (zmq_bind(state->sock, *state->addr) < 0)
-      state->error = zmq_errno();
+        state->error = zmq_errno();
+#if !NODE_VERSION_AT_LEAST(0, 5, 4)
     return 0;
+#endif
   }
 
   int
@@ -745,6 +760,19 @@ namespace zmq {
    * Module functions.
    */
 
+  static Handle<Value>
+  ZmqVersion(const Arguments& args) {
+    HandleScope scope;
+
+    int major, minor, patch;
+    zmq_version(&major, &minor, &patch);
+
+    char version_info[16];
+    snprintf(version_info, 16, "%d.%d.%d", major, minor, patch);
+
+    return scope.Close(String::New(version_info));
+  }
+
   static void
   Initialize(Handle<Object> target) {
     HandleScope scope;
@@ -790,6 +818,8 @@ namespace zmq {
     NODE_DEFINE_CONSTANT(target, STATE_READY);
     NODE_DEFINE_CONSTANT(target, STATE_BUSY);
     NODE_DEFINE_CONSTANT(target, STATE_CLOSED);
+
+    NODE_SET_METHOD(target, "zmqVersion", ZmqVersion);
 
     Context::Initialize(target);
     Socket::Initialize(target);
