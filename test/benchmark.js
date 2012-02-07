@@ -7,7 +7,7 @@ var pub = zmq.socket('pub')
 
 var start = new Date
   , n = 100000
-  , total = n;
+  , ops = n;
 
 sub.subscribe('');
 sub.on('message', function(msg){
@@ -17,8 +17,9 @@ sub.on('message', function(msg){
     sub.close();
     console.log();
     console.log('  pub/sub:');
-    console.log('    %d msgs', total);
-    console.log('    %dms', duration);
+    console.log('    \033[36m%d\033[m msgs', ops);
+    console.log('    \033[36m%d\033[m ops/s', ops / (duration / 1000) | 0);
+    console.log('    \033[36m%d\033[m ms', duration);
     console.log();
   })();
 });
