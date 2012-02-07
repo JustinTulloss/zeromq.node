@@ -1,4 +1,6 @@
 
+TESTS = $(wildcard test/test.*.js)
+
 binding.node: build binding.cc
 	node-waf build
 
@@ -6,7 +8,7 @@ build:
 	node-waf configure
 
 test:
-	@./test/run
+	@node test/run $(TESTS)
 
 clean:
 	node-waf clean
