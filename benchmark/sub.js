@@ -1,16 +1,13 @@
 
 var zmq = require('../')
-  , should = require('should');
-
-var pub = zmq.socket('pub')
   , sub = zmq.socket('sub');
 
-var start = new Date
-  , n = 100000
-  , ops = n;
+var start
+  , ops = 100000;
 
 sub.subscribe('');
 sub.on('message', function(msg){
+  console.error(msg);
   --n || (function(){
     var duration = new Date - start;
     pub.close();
@@ -25,7 +22,6 @@ sub.on('message', function(msg){
 });
 
 sub.bind('ipc:///tmp/zmq.sock', function(){
-  pub.connect('ipc:///tmp/zmq.sock');
-  var times = n;
-  while (times--) pub.send('foo');
+  start = new Date;
+  console.log('sub bound');
 });
