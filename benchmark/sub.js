@@ -3,14 +3,13 @@ var zmq = require('../')
   , sub = zmq.socket('sub');
 
 var start
-  , ops = 100000;
+  , ops = 100000
+  , n = ops;
 
 sub.subscribe('');
 sub.on('message', function(msg){
-  console.error(msg);
   --n || (function(){
     var duration = new Date - start;
-    pub.close();
     sub.close();
     console.log();
     console.log('  pub/sub:');
