@@ -2,6 +2,10 @@
 var zmq = require('../')
   , should = require('should');
 
+// alias
+
+zmq.createSocket.should.equal(zmq.socket);
+
 // .socket
 
 var sock = zmq.socket('req');
