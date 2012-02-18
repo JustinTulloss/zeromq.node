@@ -1,5 +1,5 @@
 import Options
-from os import unlink, link
+from os import unlink, symlink
 from os.path import exists 
 
 APPNAME = 'zeromq.node'
@@ -29,9 +29,9 @@ def shutdown():
     unlink('./binding.node')
   if Options.commands['build']:
     if exists('./build/default/binding.node'):
-      link('./build/default/binding.node', './binding.node')
+      symlink('./build/default/binding.node', './binding.node')
     elif exists('./build/Release/binding.node'):
-      link('./build/Release/binding.node', './binding.node')
+      symlink('./build/Release/binding.node', './binding.node')
     else:
       raise Exception("Cannot locate build binding.node")
 
