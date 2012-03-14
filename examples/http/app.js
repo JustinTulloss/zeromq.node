@@ -5,6 +5,7 @@ var zmq = require('../../')
   , Stream = require('stream')
 
 var server = http.createServer(function(req, res){
+  res.writeHead(200, req.headers);
   req.on('data', function(chunk){
     res.write(chunk.toString().toUpperCase());
   }).on('end', function(){
@@ -25,6 +26,11 @@ sock.on('message', function(envelope, id, type, data){
       req = new Stream;
       res = new Stream;
       res.socket = req;
+
+      res.writeHead = function(status, headers){
+        var obj = JSON.stringify({ status: status, header: headers });
+        sock.send([envelope, id, 'response', obj]);
+      };
 
       res.write = function(data){
         sock.send([envelope, id, 'data', data]);

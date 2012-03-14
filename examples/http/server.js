@@ -3,9 +3,13 @@ var http = require('http')
   , zmq = require('../../')
   , sock = zmq.socket('dealer');
 
+var requests = {};
+
 http.createServer(function(req, res){
   var id = Date.now() + Math.random();
   console.log('%s : %s "%s"', id, req.method, req.url);
+
+  requests[id] = res;
 
   var obj = {
     method: req.method,
@@ -26,8 +30,24 @@ http.createServer(function(req, res){
   });
 }).listen(3000);
 
-sock.on('message', function(){
-  console.log(arguments);
+sock.on('message', function(envelope, id, type, data){
+  var id = id.toString()
+    , type = type.toString()
+    , res = requests[id];
+
+  switch (type) {
+    case 'response':
+      data = JSON.parse(data);
+      res.writeHead(data.status, data.header);
+      break;
+    case 'data':
+      res.write(data);
+      break;
+    case 'end':
+      res.end();
+      delete requests[id];
+      break;
+  }
 });
 
 sock.connect('tcp://127.0.0.1:5000');
