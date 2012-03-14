@@ -7,7 +7,7 @@ var requests = {};
 
 http.createServer(function(req, res){
   var id = Date.now() + Math.random();
-  console.log('%s : %s "%s"', id, req.method, req.url);
+  // console.log('%s : %s "%s"', id, req.method, req.url);
 
   requests[id] = res;
 
