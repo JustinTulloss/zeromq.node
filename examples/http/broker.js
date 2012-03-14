@@ -3,12 +3,12 @@ var zmq = require('../../')
   , router = zmq.socket('router')
   , dealer = zmq.socket('dealer');
 
-router.on('message', function(){
+router.on('message', function(envelope, id){
   var args = Array.apply(null, arguments);
   dealer.send(args);
 });
 
-dealer.on('message', function(){
+dealer.on('message', function(envelope, id){
   var args = Array.apply(null, arguments);
   router.send(args);
 });
