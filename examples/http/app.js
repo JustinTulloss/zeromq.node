@@ -13,6 +13,7 @@ sock.on('message', function(envelope, id, type, data){
       console.log('%s : %s "%s"', id, req.method, req.url);
       break;
     case 'data':
+      console.log();
       console.log('data');
       console.log(data.toString());
       break;
