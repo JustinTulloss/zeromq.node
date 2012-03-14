@@ -14,7 +14,8 @@ var server = http.createServer(function(req, res){
 
   var body = 'Hello';
   res.writeHead(200, { 'Content-Length': body.length });
-  res.end(body);
+  res.write(body);
+  res.end();
 });
 
 var socks = {};
