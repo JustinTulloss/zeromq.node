@@ -27,18 +27,18 @@ sock.on('message', function(envelope, id, type, data){
       req.url = data.url;
       req.method = data.method;
       req.headers = data.header;
-      console.log('%s : %s "%s"', id, req.method, req.url);
+      // console.log('%s : %s "%s"', id, req.method, req.url);
       server.emit('request', req, res);
       break;
     case 'data':
-      console.log();
-      console.log('data');
-      console.log(data.toString());
+      // console.log();
+      // console.log('data');
+      // console.log(data.toString());
       req = socks[id];
       req.emit('data', data);
       break;
     case 'end':
-      console.log('end');
+      // console.log('end');
       req = socks[id];
       req.emit('end');
       delete socks[id];
