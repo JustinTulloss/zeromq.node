@@ -5,6 +5,7 @@ var http = require('http')
 
 http.createServer(function(req, res){
   var id = Date.now() + Math.random();
+  console.log('%s : %s "%s"', id, req.method, req.url);
 
   var obj = {
     method: req.method,
