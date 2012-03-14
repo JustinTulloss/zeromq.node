@@ -6,7 +6,7 @@ var zmq = require('../../')
 
 var server = http.createServer(function(req, res){
   req.on('data', function(chunk){
-    res.write(chunk);
+    res.write(chunk.toString().toUpperCase());
   }).on('end', function(){
     res.end();
   });
@@ -25,6 +25,15 @@ sock.on('message', function(envelope, id, type, data){
       req = new Stream;
       res = new Stream;
       res.socket = req;
+
+      res.write = function(data){
+        sock.send([envelope, id, 'data', data]);
+      };
+
+      res.end = function(){
+        sock.send([envelope, id, 'end']);
+      };
+
       socks[id] = req;
       data = JSON.parse(data.toString());
       req.url = data.url;
