@@ -16,6 +16,14 @@ http.createServer(function(req, res){
   var json = JSON.stringify(obj);
 
   sock.send([id, 'request', json]);
+
+  req.on('data', function(chunk){
+    sock.send([id, 'data', chunk]);
+  });
+
+  req.on('end', function(){
+    sock.send([id, 'end']);
+  });
 }).listen(3000);
 
 sock.on('message', function(){

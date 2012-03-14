@@ -3,10 +3,19 @@ var zmq = require('../../')
   , sock = zmq.socket('dealer');
 
 sock.on('message', function(envelope, id, type, json){
-  id = id.toString();
-  type = type.toString();
-  var req = JSON.parse(json.toString());
-  
+  var id = id.toString()
+    , type = type.toString()
+    , req;
+
+  switch (type) {
+    case 'request':
+      req = JSON.parse(json.toString());
+      break;
+    case 'data':
+      break;
+    case 'end':
+      break;
+  }
 });
 
 sock.connect('tcp://127.0.0.1:5001');
