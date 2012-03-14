@@ -18,4 +18,11 @@ http.createServer(function(req, res){
   sock.send([id, 'request', json]);
 }).listen(3000);
 
+sock.on('message', function(){
+  console.log(arguments);
+});
+
+sock.connect('tcp://127.0.0.1:5000');
+
 console.log('HTTP server listening on :3000');
+console.log('dealer connected to :5000');

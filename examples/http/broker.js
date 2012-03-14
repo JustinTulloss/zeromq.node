@@ -4,11 +4,11 @@ var zmq = require('../../')
   , dealer = zmq.socket('dealer');
 
 router.on('message', function(){
-  dealer.send(Array.apply(arguments));
+  dealer.send(Array.apply(null, arguments));
 });
 
 dealer.on('message', function(){
-  router.send(Array.apply(arguments));
+  router.send(Array.apply(null, arguments));
 });
 
 router.bind('tcp://127.0.0.1:5000');
