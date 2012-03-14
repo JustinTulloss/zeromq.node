@@ -17,3 +17,4 @@ http.createServer(function(req, res){
   sock.send([id, 'request', json]);
 }).listen(3000);
 
+console.log('HTTP server listening on :3000');
