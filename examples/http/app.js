@@ -27,6 +27,8 @@ sock.on('message', function(envelope, id, type, data){
     , req
     , res;
 
+  console.log('%s %s', id, type);
+
   switch (type) {
     case 'request':
       req = new Stream;
