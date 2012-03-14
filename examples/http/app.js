@@ -5,8 +5,11 @@ var zmq = require('../../')
   , Stream = require('stream')
 
 var server = http.createServer(function(req, res){
-  console.log(req.url);
-  console.log(req.method);
+  req.on('data', function(chunk){
+    res.write(chunk);
+  }).on('end', function(){
+    res.end();
+  });
 });
 
 var socks = {};
