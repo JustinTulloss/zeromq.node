@@ -10,6 +10,7 @@ sock.on('message', function(envelope, id, type, json){
   switch (type) {
     case 'request':
       req = JSON.parse(json.toString());
+      console.log('%s : %s "%s"', id, req.method, req.url);
       break;
     case 'data':
       break;
