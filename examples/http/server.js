@@ -30,7 +30,7 @@ http.createServer(function(req, res){
   });
 }).listen(3000);
 
-sock.on('message', function(envelope, id, type, data){
+sock.on('message', function(id, type, data){
   var id = id.toString()
     , type = type.toString()
     , res = requests[id];
