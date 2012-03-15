@@ -4,9 +4,9 @@
  *
  */
 
-var cluster = require('cluster'),
-    zeromq = require('zmq'),
-    port = 'tcp://127.0.0.1:12345';
+var cluster = require('cluster')
+    , zeromq = require('../')
+    , port = 'tcp://127.0.0.1:12345';
 
 if (cluster.isMaster) {
     //Fork servers.
