@@ -3,17 +3,14 @@ TESTS = $(wildcard test/test.*.js)
 DOX = ./node_modules/.bin/dox
 JADE = ./node_modules/.bin/jade
 
-binding.node: build binding.cc
-	node-waf build
-
-build:
-	node-waf configure
+build/Release/binding.node: binding.cc binding.gyp
+	npm install
 
 test:
 	@node test/run $(TESTS)
 
 clean:
-	node-waf clean
+	rm -fr build
 
 docs:
 	$(DOX) < lib/index.js > docs/index.json
