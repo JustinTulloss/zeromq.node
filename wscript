@@ -17,7 +17,6 @@ def configure(conf):
 
 def build(bld):
     obj = bld.new_task_gen("cxx", "shlib", "node_addon")
-    obj.cxxflags = ["-Wall", "-Werror"]
     obj.target = "binding"
     obj.source = "binding.cc"
     obj.uselib = "ZMQ UUID"
