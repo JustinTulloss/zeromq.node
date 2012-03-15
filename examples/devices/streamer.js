@@ -4,13 +4,12 @@
  *
  */
 
-var cluster = require('cluster'),
-    zeromq = require('zmq'),
-    frontPort = 'tcp://127.0.0.1:12345',
-    backPort = 'tcp://127.0.0.1:12346';
+var zmq = require('../../')
+    , frontPort = 'tcp://127.0.0.1:12345'
+    , backPort = 'tcp://127.0.0.1:12346';
 
 function createClient (port) {
-    var socket = zeromq.socket('push');
+    var socket = zmq.socket('push');
 
     socket.identity = 'client' + process.pid;
 
@@ -26,7 +25,7 @@ function createClient (port) {
 };
 
 function createWorker (port) {
-    var socket = zeromq.socket('pull');
+    var socket = zmq.socket('pull');
 
     socket.identity = 'worker' + process.pid;
 
@@ -41,8 +40,8 @@ function createWorker (port) {
 };
 
 function createStreamerDevice(frontPort, backPort) {
-    var frontSocket = zeromq.socket('pull'),
-        backSocket = zeromq.socket('push');
+    var frontSocket = zmq.socket('pull'),
+        backSocket = zmq.socket('push');
 
     frontSocket.identity = 'sub' + process.pid;
     backSocket.identity = 'pub' + process.pid;
