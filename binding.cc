@@ -26,9 +26,6 @@
 #include <node.h>
 #include <node_version.h>
 #include <node_buffer.h>
-#if !NODE_VERSION_AT_LEAST(0, 5, 5)
-#include <ev.h>
-#endif
 #include <zmq.h>
 #include <assert.h>
 #include <stdio.h>
@@ -36,6 +33,10 @@
 #include <string.h>
 #include <errno.h>
 #include <stdexcept>
+
+#ifdef _WIN32
+#define snprintf _snprintf_s
+#endif
 
 using namespace v8;
 using namespace node;
@@ -70,6 +71,7 @@ namespace zmq {
     public:
       static void Initialize(v8::Handle<v8::Object> target);
       virtual ~Socket();
+      void CallbackIfReady();
 
     private:
       static Handle<Value> New(const Arguments &args);
@@ -88,13 +90,9 @@ namespace zmq {
       struct BindState;
       static Handle<Value> Bind(const Arguments &args);
 
-#if NODE_VERSION_AT_LEAST(0, 5, 4)
-      static void EIO_DoBind(eio_req *req);
-#else
-      static int EIO_DoBind(eio_req *req);
-#endif
+      static void UV_BindAsync(uv_work_t* req);
+      static void UV_BindAsyncAfter(uv_work_t* req);
 
-      static int EIO_BindDone(eio_req *req);
       static Handle<Value> BindSync(const Arguments &args);
 
       static Handle<Value> Connect(const Arguments &args);
@@ -111,7 +109,13 @@ namespace zmq {
       Persistent<Object> context_;
       void *socket_;
       uint8_t state_;
+
+      bool IsReady();
+      uv_poll_t *poll_handle_;
+      static void UV_PollCallback(uv_poll_t* handle, int status, int events);
   };
+
+  Persistent<String> callback_symbol;
 
   static void
   Initialize(Handle<Object> target);
@@ -154,6 +158,9 @@ namespace zmq {
   Handle<Value>
   Context::New(const Arguments& args) {
     HandleScope scope;
+
+    assert(args.IsConstructCall());
+
     int io_threads = 1;
     if (args.Length() == 1) {
       if (!args[0]->IsNumber()) {
@@ -222,6 +229,8 @@ namespace zmq {
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
 
     target->Set(String::NewSymbol("Socket"), t->GetFunction());
+
+    callback_symbol = NODE_PSYMBOL("onReady");
   }
 
   Socket::~Socket() {
@@ -231,6 +240,9 @@ namespace zmq {
   Handle<Value>
   Socket::New(const Arguments &args) {
     HandleScope scope;
+
+    assert(args.IsConstructCall());
+
     if (args.Length() != 2) {
       return ThrowException(Exception::Error(
           String::New("Must pass a context and a type to constructor")));
@@ -248,10 +260,57 @@ namespace zmq {
     return args.This();
   }
 
+  bool
+  Socket::IsReady() {
+    zmq_pollitem_t items[1];
+    items[0].socket = socket_;
+    items[0].events = ZMQ_POLLIN;
+    return zmq_poll(items, 1, 0);
+  }
+
+  void
+  Socket::CallbackIfReady() {
+    if (this->IsReady()) {
+      HandleScope scope;
+
+      Local<Value> callback_v = this->handle_->Get(callback_symbol);
+      if (!callback_v->IsFunction()) {
+        return;
+      }
+
+      TryCatch try_catch;
+
+      callback_v.As<Function>()->Call(this->handle_, 0, NULL);
+
+      if (try_catch.HasCaught()) {
+        FatalException(try_catch);
+      }
+    }
+  }
+
+  void
+  Socket::UV_PollCallback(uv_poll_t* handle, int status, int events) {
+    assert(status == 0);
+
+    Socket* s = static_cast<Socket*>(handle->data);
+    s->CallbackIfReady();
+  }
+
   Socket::Socket(Context *context, int type) : ObjectWrap() {
     context_ = Persistent<Object>::New(context->handle_);
     socket_ = zmq_socket(context->context_, type);
     state_ = STATE_READY;
+
+    poll_handle_ = new uv_poll_t;
+
+    poll_handle_->data = this;
+
+    uv_os_sock_t socket;
+    size_t len = sizeof(uv_os_sock_t);
+    // TODO error handling
+    zmq_getsockopt(socket_, ZMQ_FD, &socket, &len);
+    uv_poll_init_socket(uv_default_loop(), poll_handle_, socket);
+    uv_poll_start(poll_handle_, UV_READABLE, Socket::UV_PollCallback);
   }
 
   Socket *
@@ -444,30 +503,22 @@ namespace zmq {
     GET_SOCKET(args);
 
     BindState* state = new BindState(socket, cb, addr);
-    eio_custom(EIO_DoBind, EIO_PRI_DEFAULT, EIO_BindDone, state);
-    ev_ref(EV_DEFAULT_UC);
+    uv_work_t* req = new uv_work_t;
+    req->data = state;
+    uv_queue_work(uv_default_loop(), req, UV_BindAsync, UV_BindAsyncAfter);
     socket->state_ = STATE_BUSY;
 
     return Undefined();
   }
 
-#if NODE_VERSION_AT_LEAST(0, 5, 4)
-  void
-#else
-  int
-#endif
-  Socket::EIO_DoBind(eio_req *req) {
-    BindState* state = (BindState*) req->data;
+  void Socket::UV_BindAsync(uv_work_t* req) {
+    BindState* state = static_cast<BindState*>(req->data);
     if (zmq_bind(state->sock, *state->addr) < 0)
         state->error = zmq_errno();
-#if !NODE_VERSION_AT_LEAST(0, 5, 4)
-    return 0;
-#endif
   }
 
-  int
-  Socket::EIO_BindDone(eio_req *req) {
-    BindState* state = (BindState*) req->data;
+  void Socket::UV_BindAsyncAfter(uv_work_t* req) {
+    BindState* state = static_cast<BindState*>(req->data);
     HandleScope scope;
 
     Local<Value> argv[1];
@@ -482,8 +533,7 @@ namespace zmq {
     cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
     if (try_catch.HasCaught()) FatalException(try_catch);
 
-    ev_unref(EV_DEFAULT_UC);
-    return 0;
+    delete req;
   }
 
   Handle<Value>
@@ -738,6 +788,8 @@ namespace zmq {
       state_ = STATE_CLOSED;
       context_.Dispose();
       context_.Clear();
+
+      uv_poll_stop(poll_handle_);
     }
   }
 
@@ -832,3 +884,5 @@ extern "C" void
 init(Handle<Object> target) {
   zmq::Initialize(target);
 }
+
+NODE_MODULE(binding, init)
