@@ -1,4 +1,11 @@
 
+2.1.0 / 2012-06-29 
+==================
+
+  * fix require() for 0.8.0
+  * change: use uv_poll in place of IOWatcher
+  * remove stupid engines field
+
 2.0.3 / 2012-03-14 
 ==================
 
