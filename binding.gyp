@@ -3,10 +3,25 @@
     {
       'target_name': 'binding',
       'sources': [ 'binding.cc' ],
-      'libraries': ['-lzmq'],
-      'cflags!': ['-fno-exceptions'],
-      'cflags_cc!': ['-fno-exceptions'],
       'conditions': [
+        ['OS=="win"', {
+          'link_settings': {
+            'libraries': [
+              '<(PRODUCT_DIR)/../../win32/libzmq-v100-mt.lib',
+              'Delayimp.lib',
+            ],
+          },
+          'msvs_settings': {
+            'VCLinkerTool': {
+              'DelayLoadDLLs': ['libzmq-v100-mt.dll']
+            }
+          },
+          'include_dirs': ['win32'],
+        }, {
+          'libraries': ['-lzmq'],
+          'cflags!': ['-fno-exceptions'],
+          'cflags_cc!': ['-fno-exceptions'],
+        }],
         ['OS=="mac"', {
           'xcode_settings': {
             'GCC_ENABLE_CPP_EXCEPTIONS': 'YES'
