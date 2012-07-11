@@ -7,7 +7,7 @@
         ['OS=="win"', {
           'link_settings': {
             'libraries': [
-              '<(PRODUCT_DIR)/../../win32/libzmq-v100-mt.lib',
+              '<(PRODUCT_DIR)/../../win32/lib/libzmq-v100-mt.lib',
               'Delayimp.lib',
             ],
           },
@@ -16,7 +16,7 @@
               'DelayLoadDLLs': ['libzmq-v100-mt.dll']
             }
           },
-          'include_dirs': ['win32'],
+          'include_dirs': ['win32/include'],
         }, {
           'libraries': ['-lzmq'],
           'cflags!': ['-fno-exceptions'],
