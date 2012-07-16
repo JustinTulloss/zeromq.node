@@ -3,6 +3,7 @@
     {
       'target_name': 'binding',
       'sources': [ 'binding.cc' ],
+      'include_dirs': ['win32/include'],
       'conditions': [
         ['OS=="win"', {
           'link_settings': {
@@ -16,7 +17,6 @@
               'DelayLoadDLLs': ['libzmq-v100-mt.dll']
             }
           },
-          'include_dirs': ['win32/include'],
         }, {
           'libraries': ['-lzmq'],
           'cflags!': ['-fno-exceptions'],
