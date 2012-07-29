@@ -896,8 +896,8 @@ namespace zmq {
 
 extern "C" void
 init(Handle<Object> target) {
-#ifdef _WIN32
-  // On Windows, inject the win32/lib folder into the DLL search path so that
+#ifdef _MSC_VER
+  // On Windows, inject the windows/lib folder into the DLL search path so that
   // it will pick up our bundled DLL in case we do not have zmq installed on
   // this system.
   HMODULE kernel32_dll = GetModuleHandleW(L"kernel32.dll");
@@ -913,9 +913,12 @@ init(Handle<Object> target) {
       wcsncpy(pathDir, path, wcsrchr(path, '\\') - path);
       path[0] = '\0';
       pathDir[wcslen(pathDir)] = '\0';
-      wcscat(pathDir, L"\\..\\..\\win32\\lib");
+# ifdef _WIN64
+      wcscat(pathDir, L"\\..\\..\\windows\\lib\\x64");
+# else
+      wcscat(pathDir, L"\\..\\..\\windows\\lib\\x86");
+# endif
       _wfullpath(path, pathDir, MAX_PATH);
-      wprintf(L"%s\n", path);
       set_dll_directory(path);
       caller.set_func(set_dll_directory);
       LoadLibrary("libzmq-v100-mt");

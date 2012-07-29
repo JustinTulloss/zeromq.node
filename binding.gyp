@@ -3,13 +3,23 @@
     {
       'target_name': 'binding',
       'sources': [ 'binding.cc' ],
-      'include_dirs': ['win32/include'],
+      'include_dirs': ['windows/include'],
       'conditions': [
         ['OS=="win"', {
           'link_settings': {
             'libraries': [
-              '<(PRODUCT_DIR)/../../win32/lib/libzmq-v100-mt.lib',
               'Delayimp.lib',
+            ],
+            'conditions': [
+              ['target_arch=="ia32"', {
+                'libraries': [
+                  '<(PRODUCT_DIR)/../../windows/lib/x86/libzmq-v100-mt.lib',
+                ]
+              },{
+                'libraries': [
+                  '<(PRODUCT_DIR)/../../windows/lib/x64/libzmq-v100-mt.lib',
+                ]
+              }]
             ],
           },
           'msvs_settings': {
