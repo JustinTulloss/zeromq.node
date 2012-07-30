@@ -526,7 +526,7 @@ namespace zmq {
     Local<Function> cb = Local<Function>::New(state->cb);
 
     ObjectWrap::Unwrap<Socket>(state->sock_obj)->state_ = STATE_READY;
-    // delete state; can't delete here because we loose ref to cb
+    delete state;
 
     TryCatch try_catch;
     cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
