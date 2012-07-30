@@ -13,6 +13,9 @@
     "jade": "*",
     "dox": "*"
   },
+  "engines": {
+    "node": ">=0.7.9"
+  },
   "contributors": [
     "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
     "Stéphan Kochen <stephan@kochen.nl> (http://stephan.kochen.nl/)",
