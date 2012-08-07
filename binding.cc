@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2011 Justin Tulloss
  * Copyright (c) 2010 Justin Tulloss
