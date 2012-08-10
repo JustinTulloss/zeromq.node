@@ -261,10 +261,7 @@ namespace zmq {
 
   bool
   Socket::IsReady() {
-    zmq_pollitem_t items[1];
-    items[0].socket = socket_;
-    items[0].events = ZMQ_POLLIN;
-    return zmq_poll(items, 1, 0);
+    return GetSockOpt<uint32_t>(ZMQ_EVENTS)->Int32Value() & ZMQ_POLLIN;
   }
 
   void
@@ -658,7 +655,7 @@ namespace zmq {
 
     IncomingMessage msg;
     if (zmq_recv(socket->socket_, msg, flags) < 0)
-      return ThrowException(ExceptionFromError());        
+      return ThrowException(ExceptionFromError());
     return scope.Close(msg.GetBuffer());
   }
 
