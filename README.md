@@ -1,83 +1,49 @@
-
-# node-zeromq
+# ZeroMQ bindings for versions 2.x, 3.x
 
   [ØMQ](http://www.zeromq.org/) bindings for node.js.
 
 ## Installation
 
-    $ npm install zmq
+    $ npm install zeromq-port
 
 ## Example
 
-producer.js:
+server.js:
 
 ```js
-var zmq = require('zmq')
-  , sock = zmq.socket('push');
+var zmq = require('zeromq-port');
 
-sock.bindSync('tcp://127.0.0.1:3000');
-console.log('Producer bound to port 3000');
+// publisher = send only
+var socket = zmq.createSocket('pub');
 
-setInterval(function(){
-  console.log('sending work');
-  sock.send('some work');
-}, 500);
-```
+var stocks = ["AAPL", "GOOG", "YHOO", "MSFT", "INTC"];
 
-worker.js:
-
-```js
-
-var zmq = require('zmq')
-  , sock = zmq.socket('pull');
-
-sock.connect('tcp://127.0.0.1:3000');
-console.log('Worker connected to port 3000');
-
-sock.on('message', function(msg){
-  console.log('work: %s', msg.toString());
+socket.bind("tcp://127.0.0.1:12345", function(err) {
+  if (err) console.log(err);
+  console.log("bound!");
+  setInterval(function() {
+    var symbol = stocks[Math.floor(Math.random()*stocks.length)];
+    var value = Math.random()*1000;
+    socket.send(symbol+" "+value);
+    console.log("Sent: "+symbol+" "+value);
+  }, 100);
 });
 ```
 
-## Running tests
+client.js:
 
-  Install dev deps:
+```js
 
-     $ npm install
+var zmq = require('zeromq-port');
 
-  Build:
+// subscriber = receive only
+var socket = zmq.createSocket('sub');
+socket.connect("tcp://127.0.0.1:12345");
+socket.subscribe("AAPL");
 
-     $ make
+console.log("connected!");
 
-  Test:
-
-     $ make test
-
-## Contributors
-
- Authored by Justin Tulloss, maintained by Shripad K and TJ Holowaychuk. To contribute please ensure _all_ tests pass, and do your best to maintain the style used within the rest of the library.
-
- Output of `git summary`:
-
-      project: zeromq.node
-      commits: 260
-      files  : 38
-      authors: 
-        114	Justin Tulloss          43.8%
-         53	Tj Holowaychuk          20.4%
-         48	Stéphan Kochen         18.5%
-         12	jeremybarnes            4.6%
-         10	TJ Holowaychuk          3.8%
-          9	mike castleman          3.5%
-          3	Yaroslav Shirokov       1.2%
-          2	Corey Jewett            0.8%
-          2	mgc                     0.8%
-          1	rick                    0.4%
-          1	Matt Crocker            0.4%
-          1	Joshua Gourneau         0.4%
-          1	Micheil Smith           0.4%
-          1	Jeremy Barnes           0.4%
-          1	nponeccop               0.4%
-          1	Paul Bergeron           0.4%
-
-
+socket.on('message', function(data) {
+  console.log("received data: " + data.toString('utf8'));
+});
+```
