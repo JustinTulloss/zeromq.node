@@ -1,4 +1,3 @@
-
 # node-zeromq
 
   [ØMQ](http://www.zeromq.org/) bindings for node.js.
@@ -63,21 +62,20 @@ sock.on('message', function(msg){
       commits: 260
       files  : 38
       authors: 
-        114	Justin Tulloss          43.8%
-         53	Tj Holowaychuk          20.4%
-         48	Stéphan Kochen         18.5%
-         12	jeremybarnes            4.6%
-         10	TJ Holowaychuk          3.8%
-          9	mike castleman          3.5%
-          3	Yaroslav Shirokov       1.2%
-          2	Corey Jewett            0.8%
-          2	mgc                     0.8%
-          1	rick                    0.4%
-          1	Matt Crocker            0.4%
-          1	Joshua Gourneau         0.4%
-          1	Micheil Smith           0.4%
-          1	Jeremy Barnes           0.4%
-          1	nponeccop               0.4%
-          1	Paul Bergeron           0.4%
-
+        114 Justin Tulloss          43.8%
+         53 Tj Holowaychuk          20.4%
+         48 Stéphan Kochen         18.5%
+         12 jeremybarnes            4.6%
+         10 TJ Holowaychuk          3.8%
+          9 mike castleman          3.5%
+          3 Yaroslav Shirokov       1.2%
+          2 Corey Jewett            0.8%
+          2 mgc                     0.8%
+          1 rick                    0.4%
+          1 Matt Crocker            0.4%
+          1 Joshua Gourneau         0.4%
+          1 Micheil Smith           0.4%
+          1 Jeremy Barnes           0.4%
+          1 nponeccop               0.4%
+          1 Paul Bergeron           0.4%
 
