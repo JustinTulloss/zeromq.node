@@ -1,4 +1,11 @@
 
+2.2.0 / 2012-10-17 
+==================
+
+  * add support for pkg-config
+  * add libzmq 3.x support [aaudis]
+  * fix: prevent GC happening too soon for connect/bindSync
+
 2.1.0 / 2012-06-29 
 ==================
 
