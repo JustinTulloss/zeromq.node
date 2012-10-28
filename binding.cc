@@ -393,8 +393,6 @@ namespace zmq {
     // FIXME: How to handle ZMQ_FD on Windows?
     switch (option) {
       case 1:
-      case 23:
-      case 24:
       case ZMQ_AFFINITY:
       case ZMQ_SNDBUF:
       case ZMQ_RCVBUF:
@@ -409,6 +407,8 @@ namespace zmq {
         return socket->GetSockOpt<char*>(option);
       case ZMQ_EVENTS:
         return socket->GetSockOpt<uint32_t>(option);
+      case 23: /* ZMQ_SNDHWM */
+      case 24: /* ZMQ_RCVHWM */
       case ZMQ_FD:
       case ZMQ_TYPE:
       case ZMQ_LINGER:
@@ -438,8 +438,6 @@ namespace zmq {
 
     switch (option) {
       case 1:
-      case 23:
-      case 24:
       case ZMQ_AFFINITY:
       case ZMQ_SNDBUF:
       case ZMQ_RCVBUF:
@@ -449,6 +447,8 @@ namespace zmq {
       case ZMQ_RECOVERY_IVL:
       case 10:
         return socket->SetSockOpt<int64_t>(option, args[1]);
+      case 23: /* ZMQ_SNDHWM */
+      case 24: /* ZMQ_RCVHWM */
       case ZMQ_IDENTITY:
       case ZMQ_SUBSCRIBE:
       case ZMQ_UNSUBSCRIBE:
