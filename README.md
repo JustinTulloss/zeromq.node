@@ -4,6 +4,8 @@
 
 ## Installation
 
+[Install zmq package](http://www.zeromq.org/intro:get-the-software) first.
+
     $ npm install zmq
 
 ## Example
