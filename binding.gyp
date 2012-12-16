@@ -43,7 +43,15 @@
           'libraries': [
             '-L/opt/local/lib'
           ]
-        }]
+        }],
+        ['OS=="linux"', {
+          'cflags': [
+            '<!(pkg-config libzmq --cflags 2>/dev/null || echo "")',
+          ],
+          'libraries': [
+            '<!(pkg-config libzmq --libs 2>/dev/null || echo "")',
+          ],
+        }],
       ]
     }
   ]
