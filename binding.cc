@@ -851,6 +851,10 @@ namespace zmq {
 
     NODE_DEFINE_CONSTANT(target, ZMQ_PUB);
     NODE_DEFINE_CONSTANT(target, ZMQ_SUB);
+    #if ZMQ_VERSION_MAJOR == 3
+    NODE_DEFINE_CONSTANT(target, ZMQ_XPUB);
+    NODE_DEFINE_CONSTANT(target, ZMQ_XSUB);
+    #endif
     NODE_DEFINE_CONSTANT(target, ZMQ_REQ);
     NODE_DEFINE_CONSTANT(target, ZMQ_XREQ);
     NODE_DEFINE_CONSTANT(target, ZMQ_REP);
