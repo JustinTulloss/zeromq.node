@@ -4,6 +4,8 @@
 
 ## Installation
 
+Require libzmq 2.1+, not support 3.x yet, https://github.com/zeromq/zeromq2-x
+
     $ npm install zmq
 
 ## Example
