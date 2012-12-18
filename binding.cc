@@ -404,6 +404,9 @@ namespace zmq {
       case 10:
         return socket->GetSockOpt<int64_t>(option);
       case ZMQ_IDENTITY:
+#ifdef ZMQ_LAST_ENDPOINT
+      case ZMQ_LAST_ENDPOINT:
+#endif
         return socket->GetSockOpt<char*>(option);
       case ZMQ_EVENTS:
         return socket->GetSockOpt<uint32_t>(option);
@@ -667,10 +670,10 @@ namespace zmq {
     IncomingMessage msg;
     #if ZMQ_VERSION_MAJOR == 2
       if (zmq_recv(socket->socket_, msg, flags) < 0)
-        return ThrowException(ExceptionFromError());        
+        return ThrowException(ExceptionFromError());
     #else
       if (zmq_recvmsg(socket->socket_, msg, flags) < 0)
-        return ThrowException(ExceptionFromError());        
+        return ThrowException(ExceptionFromError());
     #endif
     return scope.Close(msg.GetBuffer());
   }
@@ -867,6 +870,11 @@ namespace zmq {
     #endif
     NODE_DEFINE_CONSTANT(target, ZMQ_AFFINITY);
     NODE_DEFINE_CONSTANT(target, ZMQ_IDENTITY);
+
+    #ifdef ZMQ_LAST_ENDPOINT
+    NODE_DEFINE_CONSTANT(target, ZMQ_LAST_ENDPOINT);
+    #endif
+
     NODE_DEFINE_CONSTANT(target, ZMQ_SUBSCRIBE);
     NODE_DEFINE_CONSTANT(target, ZMQ_UNSUBSCRIBE);
     NODE_DEFINE_CONSTANT(target, ZMQ_RATE);
