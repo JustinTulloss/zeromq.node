@@ -512,7 +512,10 @@ namespace zmq {
     BindState* state = new BindState(socket, cb, addr);
     uv_work_t* req = new uv_work_t;
     req->data = state;
-    uv_queue_work(uv_default_loop(), req, UV_BindAsync, UV_BindAsyncAfter);
+    uv_queue_work(uv_default_loop(),
+                  req,
+                  UV_BindAsync,
+                  (uv_after_work_cb)UV_BindAsyncAfter);
     socket->state_ = STATE_BUSY;
 
     return Undefined();
