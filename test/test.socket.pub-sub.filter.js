@@ -26,8 +26,20 @@ sub.on('message', function(msg){
 
 sub.bind('inproc://stuff', function(){
   pub.connect('inproc://stuff');
-  pub.send('js is cool');
-  pub.send('ruby is meh');
-  pub.send('py is pretty cool');
-  pub.send('luna is cool too');
+
+  // The connect is asynchronous, and messages published to a non-
+  // connected socket are silently dropped.  That means that there is
+  // a race between connecting and sending the first message which
+  // causes this test to hang, especially when running on Linux. Even an
+  // inproc:// socket seems to be asynchronous.  So instead of
+  // sending straight away, we wait 100ms for the connection to be
+  // established before we start the send.  This fixes the observed
+  // hang.
+
+  setTimeout(function() {
+    pub.send('js is cool');
+    pub.send('ruby is meh');
+    pub.send('py is pretty cool');
+    pub.send('luna is cool too');
+  }, 100.0);
 });
