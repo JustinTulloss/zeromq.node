@@ -16,6 +16,9 @@
   "engines": {
     "node": ">=0.7.9"
   },
+  "scripts": {
+    "test": "make test"
+  },
   "contributors": [
     "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
     "Stéphan Kochen <stephan@kochen.nl> (http://stephan.kochen.nl/)",
@@ -28,3 +31,4 @@
     "TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com/)"
   ]
 }
+
