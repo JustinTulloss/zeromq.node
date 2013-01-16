@@ -5,7 +5,7 @@ var zmq = require('../')
 
 // version
 
-zmq.version.should.match(/^\d+\.\d+\.\d+$/);
+semver.valid(zmq.version).should.be.ok;
 
 // socket types and socket opts
 
