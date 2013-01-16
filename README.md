@@ -1,4 +1,4 @@
-[![Build Satus](https://travis-ci.org/JustinTulloss/zeromq.node)]
+[![Build Status](https://travis-ci.org/JustinTulloss/zeromq.node)]
 
 # node-zeromq
 
