@@ -10,7 +10,7 @@ semver.valid(zmq.version).should.be.ok;
 // socket types and socket opts
 
 // All versions.
-var socketList = [
+var constants = [
   'PUB',
   'SUB',
   'REQ',
@@ -45,7 +45,7 @@ var socketList = [
 
 // 2.x only.
 if (semver.satisfies(zmq.version, '2.x')) {
-  socketList.concat([
+  constants.concat([
     'HWM',
     'SWAP',
     'MCAST_LOOP',
@@ -55,7 +55,7 @@ if (semver.satisfies(zmq.version, '2.x')) {
 
 // 3.x only.
 if (semver.satisfies(zmq.version, '3.x')) {
-  socketList.concat([
+  constants.concat([
     'XPUB',
     'XSUB',
     'SNDHWM',
@@ -65,12 +65,12 @@ if (semver.satisfies(zmq.version, '3.x')) {
 
 // 3.2 and above.
 if (semver.gte('3.2')) {
-  socketList.concat([
+  constants.concat([
     'LAST_ENDPOINT'
   ]);
 }
 
-socketList.forEach(function(typeOrProp){
+constants.forEach(function(typeOrProp){
   zmq['ZMQ_' + typeOrProp].should.be.a('number');
 });
 
