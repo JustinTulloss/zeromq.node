@@ -11,7 +11,8 @@
     "should": "*",
     "batch": "*",
     "jade": "*",
-    "dox": "*"
+    "dox": "*",
+    "semver": "*"
   },
   "engines": {
     "node": ">=0.7.9"
@@ -31,4 +32,3 @@
     "TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com/)"
   ]
 }
-

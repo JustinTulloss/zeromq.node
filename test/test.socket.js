@@ -5,6 +5,7 @@ var zmq = require('../')
 // alias
 
 zmq.createSocket.should.equal(zmq.socket);
+console.log(zmq)
 
 // .socket
 
