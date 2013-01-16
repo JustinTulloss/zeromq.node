@@ -22,8 +22,6 @@ var socketList = [
   'PUSH',
   'PULL',
   'PAIR',
-  'SNDHWM',
-  'RCVHWM',
   'AFFINITY',
   'IDENTITY',
   'SUBSCRIBE',
@@ -42,7 +40,7 @@ var socketList = [
   'POLLIN',
   'POLLOUT',
   'POLLERR',
-  'SNDMORE',
+  'SNDMORE'
 ];
 
 // 2.x only.
@@ -60,6 +58,8 @@ if (semver.satisfies(zmq.version, '3.x')) {
   socketList.concat([
     'XPUB',
     'XSUB',
+    'SNDHWM',
+    'RCVHWM'
   ]);
 }
 
