@@ -11,10 +11,14 @@
     "should": "*",
     "batch": "*",
     "jade": "*",
-    "dox": "*"
+    "dox": "*",
+    "semver": "*"
   },
   "engines": {
     "node": ">=0.7.9"
+  },
+  "scripts": {
+    "test": "make test"
   },
   "contributors": [
     "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",

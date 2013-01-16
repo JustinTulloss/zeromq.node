@@ -1,26 +1,77 @@
 
 var zmq = require('../')
-  , should = require('should');
+  , should = require('should')
+  , semver = require('semver');
 
 // version
 
-zmq.version.should.match(/^\d+\.\d+\.\d+$/);
+semver.valid(zmq.version).should.be.ok;
 
-// socket types
+// socket types and socket opts
 
-['PUB', 'SUB', 'REQ', 'XREQ', 'XREP',
- 'DEALER', 'ROUTER', 'PUSH', 'PULL', 'PAIR'].forEach(function(type){
-  zmq['ZMQ_' + type].should.be.a('number');
-});
+// All versions.
+var constants = [
+  'PUB',
+  'SUB',
+  'REQ',
+  'XREQ',
+  'REP',
+  'XREP',
+  'DEALER',
+  'ROUTER',
+  'PUSH',
+  'PULL',
+  'PAIR',
+  'AFFINITY',
+  'IDENTITY',
+  'SUBSCRIBE',
+  'UNSUBSCRIBE',
+  'RATE',
+  'RECOVERY_IVL',
+  'SNDBUF',
+  'RCVBUF',
+  'RCVMORE',
+  'FD',
+  'EVENTS',
+  'TYPE',
+  'LINGER',
+  'RECONNECT_IVL',
+  'BACKLOG',
+  'POLLIN',
+  'POLLOUT',
+  'POLLERR',
+  'SNDMORE'
+];
 
-// socket opts
+// 2.x only.
+if (semver.satisfies(zmq.version, '2.x')) {
+  constants.concat([
+    'HWM',
+    'SWAP',
+    'MCAST_LOOP',
+    'NOBLOCK'
+  ]);
+}
 
-['HWM', 'SWAP', 'AFFINITY', 'IDENTITY',
- 'SUBSCRIBE', 'UNSUBSCRIBE', 'RATE',
- 'RECOVERY_IVL', 'RECOVERY_IVL', 'MCAST_LOOP',
- 'SNDBUF', 'RCVBUF', 'RCVMORE', 'SNDMORE', 'FD', 'EVENTS',
- 'TYPE', 'LINGER', 'RECONNECT_IVL', 'BACKLOG'].forEach(function(prop){
-  zmq['ZMQ_' + prop].should.be.a('number');
+// 3.x only.
+if (semver.satisfies(zmq.version, '3.x')) {
+  constants.concat([
+    'XPUB',
+    'XSUB',
+    'SNDHWM',
+    'RCVHWM'
+  ]);
+}
+
+// 3.2 and above.
+if (semver.gte('3.2')) {
+  constants.concat([
+    'LAST_ENDPOINT'
+  ]);
+}
+
+constants.forEach(function(typeOrProp){
+  zmq['ZMQ_' + typeOrProp].should.be.a('number');
 });
 
 // states

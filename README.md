@@ -1,3 +1,5 @@
+[![Build Satus](https://travis-ci.org/JustinTulloss/zeromq.node)]
+
 # node-zeromq
 
   [ØMQ](http://www.zeromq.org/) bindings for node.js.
