@@ -20,6 +20,7 @@
   "scripts": {
     "test": "make test"
   },
+  "author": "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
   "contributors": [
     "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
     "Stéphan Kochen <stephan@kochen.nl> (http://stephan.kochen.nl/)",
@@ -29,6 +30,18 @@
     "Rick <technoweenie@gmail.com> (http://techno-weenie.net/)",
     "Corey Jewett (http://syntheticplayground.com/)",
     "Micheil Smith <micheil@brandedcode.com> (http://brandedcode.com/)",
-    "TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com/)"
+    "TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com/)",
+    "Ron Korving (https://github.com/ronkorving)",
+    "Mark Everitt (http://qubyte.dyndns.org/)",
+    "Aldis Andrejevs (https://github.com/aaudis)",
+    "Iskren Ivov Chernev <iskren.chernev@gmail.com>",
+    "Seth Fitzsimmons",
+    "Patrick Lucas",
+    "Alexander Simmerl",
+    "Ian Babrou",
+    "Niall O'Higgins",
+    "Brian White",
+    "Joshua Gourneau",
+    "Yaroslav Shirokov"
   ]
 }
