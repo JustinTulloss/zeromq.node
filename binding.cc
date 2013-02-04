@@ -442,10 +442,12 @@ namespace zmq {
       case ZMQ_LINGER:
       case ZMQ_RECONNECT_IVL:
       case ZMQ_BACKLOG:
-      case 34:
-      case 35:
-      case 36:
-      case 37:
+#if ZMQ_VERSION_MAJOR > 2
+      case ZMQ_TCP_KEEPALIVE:
+      case ZMQ_TCP_KEEPALIVE_CNT:
+      case ZMQ_TCP_KEEPALIVE_IDLE:
+      case ZMQ_TCP_KEEPALIVE_INTVL:
+#endif
         return socket->GetSockOpt<int>(option);
       case ZMQ_SUBSCRIBE:
       case ZMQ_UNSUBSCRIBE:
@@ -488,10 +490,12 @@ namespace zmq {
       case ZMQ_LINGER:
       case ZMQ_RECONNECT_IVL:
       case ZMQ_BACKLOG:
-      case 34:
-      case 35:
-      case 36:
-      case 37:
+#if ZMQ_VERSION_MAJOR > 2
+      case ZMQ_TCP_KEEPALIVE:
+      case ZMQ_TCP_KEEPALIVE_CNT:
+      case ZMQ_TCP_KEEPALIVE_IDLE:
+      case ZMQ_TCP_KEEPALIVE_INTVL:
+#endif
         return socket->SetSockOpt<int>(option, args[1]);
       case ZMQ_RCVMORE:
       case ZMQ_EVENTS:

@@ -1,9 +1,10 @@
 
 var zmq = require('../')
   , should = require('should')
+  , semver = require('semver')
   , sock = zmq.socket('req');
 
-if (zmq.version >= '3.0.0') {
+if (semver.satisfies(zmq.version, '3.x')) {
   // ZMQ_SNDHWM
   sock.getsockopt(zmq.ZMQ_SNDHWM).should.not.equal(1);
   sock.setsockopt(zmq.ZMQ_SNDHWM, 1).should.equal(sock);

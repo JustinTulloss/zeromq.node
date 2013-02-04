@@ -1,6 +1,7 @@
 
 var zmq = require('../')
-  , should = require('should');
+  , should = require('should')
+  , semver = require('semver');
 
 var push = zmq.socket('push')
   , pull = zmq.socket('pull');
@@ -28,10 +29,10 @@ setTimeout(function () {
   n.should.equal(3);
 }, 1*1000);
 
-if (zmq.version >= '3.0.0') {
+if (semver.satisfies(zmq.version, '3.x')) {
   push.setsockopt(zmq.ZMQ_SNDHWM, 1);
   pull.setsockopt(zmq.ZMQ_RCVHWM, 1);
-} else {
+} else if (semver.satisfies(zmq.version, '2.x')) {
   push.setsockopt(zmq.ZMQ_HWM, 1);
   pull.setsockopt(zmq.ZMQ_HWM, 1);
 }
