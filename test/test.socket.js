@@ -11,6 +11,11 @@ zmq.createSocket.should.equal(zmq.socket);
 var sock = zmq.socket('req');
 sock.type.should.equal('req');
 sock.close.should.be.a('function');
+sock.close();
+
+sock = zmq.socket(zmq.ZMQ_REQ);
+sock.type.should.equal(zmq.ZMQ_REQ);
+sock.close.should.be.a('function');
 
 // setsockopt
 
