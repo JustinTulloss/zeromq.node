@@ -1,6 +1,9 @@
 env:
  - ZMQ="git://github.com/zeromq/zeromq2-x.git"
- - ZMQ="git://github.com/zeromq/zeromq3-x.git"
+ - ZMQ="git://github.com/zeromq/zeromq3-x.git -b v3.1.0"
+ - ZMQ="git://github.com/zeromq/zeromq3-x.git -b v3.2.0"
+ - ZMQ="git://github.com/zeromq/zeromq3-x.git -b v3.2.1"
+ - ZMQ="git://github.com/zeromq/zeromq3-x.git -b v3.2.2"
 before_install:
  - sudo apt-get install uuid-dev
  - git clone --depth 1 $ZMQ zmqlib
