@@ -37,6 +37,8 @@
 #define snprintf _snprintf_s
 #endif
 
+#define ZMQ_CAN_DISCONNECT (ZMQ_VERSION_MAJOR == 3 and ZMQ_VERSION_MINOR >= 2) or ZMQ_VERSION_MAJOR > 3
+
 using namespace v8;
 using namespace node;
 
@@ -96,6 +98,10 @@ namespace zmq {
       static Handle<Value> BindSync(const Arguments &args);
 
       static Handle<Value> Connect(const Arguments &args);
+      
+#if ZMQ_CAN_DISCONNECT
+      static Handle<Value> Disconnect(const Arguments &args);
+#endif
 
       class IncomingMessage;
       static Handle<Value> Recv(const Arguments &args);
@@ -227,6 +233,10 @@ namespace zmq {
     NODE_SET_PROTOTYPE_METHOD(t, "recv", Recv);
     NODE_SET_PROTOTYPE_METHOD(t, "send", Send);
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
+    
+#if ZMQ_CAN_DISCONNECT
+    NODE_SET_PROTOTYPE_METHOD(t, "disconnect", Disconnect);
+#endif
 
     target->Set(String::NewSymbol("Socket"), t->GetFunction());
 
@@ -581,6 +591,24 @@ namespace zmq {
       return ThrowException(ExceptionFromError());
     return Undefined();
   }
+  
+#if ZMQ_CAN_DISCONNECT
+  Handle<Value>
+  Socket::Disconnect(const Arguments &args) {
+    HandleScope scope;
+    if (!args[0]->IsString()) {
+      return ThrowException(Exception::TypeError(
+        String::New("Address must be a string!")));
+    }
+
+    GET_SOCKET(args);
+
+    String::Utf8Value address(args[0]->ToString());
+    if (zmq_disconnect(socket->socket_, *address))
+      return ThrowException(ExceptionFromError());
+    return Undefined();
+  }
+#endif
 
   /*
    * An object that creates an empty ØMQ message, which can be used for
@@ -849,6 +877,7 @@ namespace zmq {
   Initialize(Handle<Object> target) {
     HandleScope scope;
 
+    NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
     NODE_DEFINE_CONSTANT(target, ZMQ_PUB);
     NODE_DEFINE_CONSTANT(target, ZMQ_SUB);
     #if ZMQ_VERSION_MAJOR == 3
