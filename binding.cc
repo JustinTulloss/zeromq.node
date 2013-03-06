@@ -32,6 +32,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdexcept>
+#include <set>
 
 #ifdef _WIN32
 #define snprintf _snprintf_s
@@ -49,6 +50,12 @@ enum {
 };
 
 namespace zmq {
+
+  std::set<int> opts_int;
+  std::set<int> opts_int64;
+  std::set<int> opts_uint64;
+  std::set<int> opts_binary;
+  std::set<int>::iterator opts_it;
 
   class Socket;
 
@@ -400,41 +407,17 @@ namespace zmq {
 
     GET_SOCKET(args);
 
-    // FIXME: How to handle ZMQ_FD on Windows?
-    switch (option) {
-      case 1:
-      case ZMQ_AFFINITY:
-      case ZMQ_SNDBUF:
-      case ZMQ_RCVBUF:
-      case ZMQ_RCVMORE:
-        return socket->GetSockOpt<uint64_t>(option);
-      case 3:
-      case ZMQ_RATE:
-      case ZMQ_RECOVERY_IVL:
-      case 10:
-        return socket->GetSockOpt<int64_t>(option);
-      case ZMQ_IDENTITY:
-#ifdef ZMQ_LAST_ENDPOINT
-      case ZMQ_LAST_ENDPOINT:
-#endif
-        return socket->GetSockOpt<char*>(option);
-      case ZMQ_EVENTS:
-        return socket->GetSockOpt<uint32_t>(option);
-      case 23: /* ZMQ_SNDHWM */
-      case 24: /* ZMQ_RCVHWM */
-      case ZMQ_FD:
-      case ZMQ_TYPE:
-      case ZMQ_LINGER:
-      case ZMQ_RECONNECT_IVL:
-      case ZMQ_BACKLOG:
-        return socket->GetSockOpt<int>(option);
-      case ZMQ_SUBSCRIBE:
-      case ZMQ_UNSUBSCRIBE:
-        return ThrowException(Exception::TypeError(
-          String::New("Socket option cannot be read")));
-      default:
-        return ThrowException(Exception::TypeError(
-            String::New("Unknown socket option")));
+    if (opts_int.count(option)) {
+      return socket->GetSockOpt<int>(option);
+    } else if(opts_int64.count(option)) {
+      return socket->GetSockOpt<int64_t>(option);
+    } else if (opts_uint64.count(option)) {
+      return socket->GetSockOpt<uint64_t>(option);
+    } else if (opts_binary.count(option)) {
+      return socket->GetSockOpt<char*>(option);
+    } else {
+      return ThrowException(Exception::TypeError(
+        String::New("Unknown socket option")));
     }
   }
 
@@ -449,36 +432,17 @@ namespace zmq {
 
     GET_SOCKET(args);
 
-    switch (option) {
-      case 1:
-      case ZMQ_AFFINITY:
-      case ZMQ_SNDBUF:
-      case ZMQ_RCVBUF:
-        return socket->SetSockOpt<uint64_t>(option, args[1]);
-      case 3:
-      case ZMQ_RATE:
-      case ZMQ_RECOVERY_IVL:
-      case 10:
-        return socket->SetSockOpt<int64_t>(option, args[1]);
-      case 23: /* ZMQ_SNDHWM */
-      case 24: /* ZMQ_RCVHWM */
-      case ZMQ_IDENTITY:
-      case ZMQ_SUBSCRIBE:
-      case ZMQ_UNSUBSCRIBE:
-        return socket->SetSockOpt<char*>(option, args[1]);
-      case ZMQ_LINGER:
-      case ZMQ_RECONNECT_IVL:
-      case ZMQ_BACKLOG:
-        return socket->SetSockOpt<int>(option, args[1]);
-      case ZMQ_RCVMORE:
-      case ZMQ_EVENTS:
-      case ZMQ_FD:
-      case ZMQ_TYPE:
-        return ThrowException(Exception::TypeError(
-          String::New("Socket option cannot be written")));
-      default:
-        return ThrowException(Exception::TypeError(
-          String::New("Unknown socket option")));
+    if (opts_int.count(option)) {
+      return socket->SetSockOpt<int>(option, args[1]);
+    } else if(opts_int64.count(option)) {
+      return socket->SetSockOpt<int64_t>(option, args[1]);
+    } else if (opts_uint64.count(option)) {
+      return socket->SetSockOpt<uint64_t>(option, args[1]);
+    } else if (opts_binary.count(option)) {
+      return socket->SetSockOpt<char*>(option, args[1]);
+    } else {
+      return ThrowException(Exception::TypeError(
+        String::New("Unknown socket option")));
     }
   }
 
@@ -877,6 +841,48 @@ namespace zmq {
   Initialize(Handle<Object> target) {
     HandleScope scope;
 
+    opts_int.insert(13); // ZMQ_RCVMORE
+    opts_int.insert(14); // ZMQ_FD
+    opts_int.insert(15); // ZMQ_EVENTS
+    opts_int.insert(16); // ZMQ_TYPE
+    opts_int.insert(17); // ZMQ_LINGER
+    opts_int.insert(18); // ZMQ_RECONNECT_IVL
+    opts_int.insert(19); // ZMQ_BACKLOG
+    opts_int.insert(21); // ZMQ_RECONNECT_IVL_MAX
+    opts_int.insert(23); // ZMQ_SNDHWM
+    opts_int.insert(24); // ZMQ_RCVHWM
+    opts_int.insert(25); // ZMQ_MULTICAST_HOPS
+    opts_int.insert(27); // ZMQ_RCVTIMEO
+    opts_int.insert(28); // ZMQ_SNDTIMEO
+    opts_int.insert(31); // ZMQ_IPV4ONLY
+    opts_int.insert(33); // ZMQ_ROUTER_MANDATORY
+    opts_int.insert(34); // ZMQ_TCP_KEEPALIVE
+    opts_int.insert(35); // ZMQ_TCP_KEEPALIVE_CNT
+    opts_int.insert(36); // ZMQ_TCP_KEEPALIVE_IDLE
+    opts_int.insert(37); // ZMQ_TCP_KEEPALIVE_INTVL
+    opts_int.insert(39); // ZMQ_DELAY_ATTACH_ON_CONNECT
+    opts_int.insert(40); // ZMQ_XPUB_VERBOSE
+    opts_int.insert(41); // ZMQ_ROUTER_RAW
+    opts_int.insert(42); // ZMQ_IPV6
+
+    opts_int64.insert(3); // ZMQ_SWAP
+    opts_int64.insert(8); // ZMQ_RATE
+    opts_int64.insert(9); // ZMQ_RECOVERY_IVL
+    opts_int64.insert(10); // ZMQ_MCAST_LOOP
+    opts_int64.insert(20); // ZMQ_RECOVERY_IVL_MSEC
+    opts_int64.insert(22); // ZMQ_MAXMSGSIZE
+
+    opts_uint64.insert(1); // ZMQ_HWM
+    opts_uint64.insert(4); // ZMQ_AFFINITY
+    opts_uint64.insert(11); // ZMQ_SNDBUF
+    opts_uint64.insert(12); // ZMQ_RCVBUF
+
+    opts_binary.insert(5); // ZMQ_IDENTITY
+    opts_binary.insert(6); // ZMQ_SUBSCRIBE
+    opts_binary.insert(7); // ZMQ_UNSUBSCRIBE
+    opts_binary.insert(32); // ZMQ_LAST_ENDPOINT
+    opts_binary.insert(38); // ZMQ_TCP_ACCEPT_FILTER
+
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
     NODE_DEFINE_CONSTANT(target, ZMQ_PUB);
     NODE_DEFINE_CONSTANT(target, ZMQ_SUB);
@@ -893,37 +899,6 @@ namespace zmq {
     NODE_DEFINE_CONSTANT(target, ZMQ_PUSH);
     NODE_DEFINE_CONSTANT(target, ZMQ_PULL);
     NODE_DEFINE_CONSTANT(target, ZMQ_PAIR);
-
-    #if ZMQ_VERSION_MAJOR == 2
-    NODE_DEFINE_CONSTANT(target, ZMQ_HWM);
-    NODE_DEFINE_CONSTANT(target, ZMQ_SWAP);
-    #else
-    NODE_DEFINE_CONSTANT(target, ZMQ_SNDHWM);
-    NODE_DEFINE_CONSTANT(target, ZMQ_RCVHWM);
-    #endif
-    NODE_DEFINE_CONSTANT(target, ZMQ_AFFINITY);
-    NODE_DEFINE_CONSTANT(target, ZMQ_IDENTITY);
-
-    #ifdef ZMQ_LAST_ENDPOINT
-    NODE_DEFINE_CONSTANT(target, ZMQ_LAST_ENDPOINT);
-    #endif
-
-    NODE_DEFINE_CONSTANT(target, ZMQ_SUBSCRIBE);
-    NODE_DEFINE_CONSTANT(target, ZMQ_UNSUBSCRIBE);
-    NODE_DEFINE_CONSTANT(target, ZMQ_RATE);
-    NODE_DEFINE_CONSTANT(target, ZMQ_RECOVERY_IVL);
-    #if ZMQ_VERSION_MAJOR == 2
-    NODE_DEFINE_CONSTANT(target, ZMQ_MCAST_LOOP);
-    #endif
-    NODE_DEFINE_CONSTANT(target, ZMQ_SNDBUF);
-    NODE_DEFINE_CONSTANT(target, ZMQ_RCVBUF);
-    NODE_DEFINE_CONSTANT(target, ZMQ_RCVMORE);
-    NODE_DEFINE_CONSTANT(target, ZMQ_FD);
-    NODE_DEFINE_CONSTANT(target, ZMQ_EVENTS);
-    NODE_DEFINE_CONSTANT(target, ZMQ_TYPE);
-    NODE_DEFINE_CONSTANT(target, ZMQ_LINGER);
-    NODE_DEFINE_CONSTANT(target, ZMQ_RECONNECT_IVL);
-    NODE_DEFINE_CONSTANT(target, ZMQ_BACKLOG);
 
     NODE_DEFINE_CONSTANT(target, ZMQ_POLLIN);
     NODE_DEFINE_CONSTANT(target, ZMQ_POLLOUT);
