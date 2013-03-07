@@ -415,8 +415,8 @@ namespace zmq {
     } else if (opts_binary.count(option)) {
       return socket->GetSockOpt<char*>(option);
     } else {
-      return ThrowException(Exception::TypeError(
-        String::New("Unknown socket option")));
+      return ThrowException(Exception::Error(
+        String::New(zmq_strerror(EINVAL))));
     }
   }
 
@@ -440,8 +440,8 @@ namespace zmq {
     } else if (opts_binary.count(option)) {
       return socket->SetSockOpt<char*>(option, args[1]);
     } else {
-      return ThrowException(Exception::TypeError(
-        String::New("Unknown socket option")));
+      return ThrowException(Exception::Error(
+        String::New(zmq_strerror(EINVAL))));
     }
   }
 
