@@ -55,7 +55,6 @@ namespace zmq {
   std::set<int> opts_int64;
   std::set<int> opts_uint64;
   std::set<int> opts_binary;
-  std::set<int>::iterator opts_it;
 
   class Socket;
 
