@@ -59,7 +59,11 @@ if (semver.satisfies(zmq.version, '3.x')) {
     'XPUB',
     'XSUB',
     'SNDHWM',
-    'RCVHWM'
+    'RCVHWM',
+    'TCP_KEEPALIVE',
+    'TCP_KEEPALIVE_CNT',
+    'TCP_KEEPALIVE_IDLE',
+    'TCP_KEEPALIVE_INTVL'
   ]);
 }
 

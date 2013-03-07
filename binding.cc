@@ -82,6 +82,9 @@ namespace zmq {
 
       static Handle<Value> GetState(Local<String> p, const AccessorInfo& info);
 
+      static Handle<Value> GetPending(Local<String> p, const AccessorInfo& info);
+      static void SetPending(Local<String> p, Local<Value> v, const AccessorInfo& info);
+
       template<typename T>
       Handle<Value> GetSockOpt(int option);
       template<typename T>
@@ -114,6 +117,7 @@ namespace zmq {
 
       Persistent<Object> context_;
       void *socket_;
+      int32_t pending_;
       uint8_t state_;
 
       bool IsReady();
@@ -224,6 +228,8 @@ namespace zmq {
     t->InstanceTemplate()->SetInternalFieldCount(1);
     t->InstanceTemplate()->SetAccessor(
         String::NewSymbol("state"), GetState, NULL);
+    t->InstanceTemplate()->SetAccessor(
+        String::NewSymbol("pending"), GetPending, SetPending);
 
     NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
     NODE_SET_PROTOTYPE_METHOD(t, "bindSync", BindSync);
@@ -275,6 +281,8 @@ namespace zmq {
     zmq_pollitem_t items[1];
     items[0].socket = socket_;
     items[0].events = ZMQ_POLLIN;
+    if (pending_ > 0)
+      items[0].events |= ZMQ_POLLOUT;
     return zmq_poll(items, 1, 0);
   }
 
@@ -309,6 +317,7 @@ namespace zmq {
   Socket::Socket(Context *context, int type) : ObjectWrap() {
     context_ = Persistent<Object>::New(context->handle_);
     socket_ = zmq_socket(context->context_, type);
+    pending_ = 0;
     state_ = STATE_READY;
 
     poll_handle_ = new uv_poll_t;
@@ -345,6 +354,22 @@ namespace zmq {
   Socket::GetState(Local<String> p, const AccessorInfo& info) {
     Socket* socket = ObjectWrap::Unwrap<Socket>(info.Holder());
     return Integer::New(socket->state_);
+  }
+
+  Handle<Value>
+  Socket::GetPending(Local<String> p, const AccessorInfo& info) {
+    Socket* socket = ObjectWrap::Unwrap<Socket>(info.Holder());
+    return Integer::New(socket->pending_);
+  }
+
+  void
+  Socket::SetPending(Local<String> p, Local<Value> v, const AccessorInfo& info) {
+    if (!v->IsNumber())
+      ThrowException(Exception::TypeError(
+          String::New("Pending must be an integer")));
+
+    Socket* socket = ObjectWrap::Unwrap<Socket>(info.Holder());
+    socket->pending_ = v->Int32Value();
   }
 
   template<typename T>
@@ -427,6 +452,12 @@ namespace zmq {
       case ZMQ_LINGER:
       case ZMQ_RECONNECT_IVL:
       case ZMQ_BACKLOG:
+#if ZMQ_VERSION_MAJOR > 2
+      case ZMQ_TCP_KEEPALIVE:
+      case ZMQ_TCP_KEEPALIVE_CNT:
+      case ZMQ_TCP_KEEPALIVE_IDLE:
+      case ZMQ_TCP_KEEPALIVE_INTVL:
+#endif
         return socket->GetSockOpt<int>(option);
       case ZMQ_SUBSCRIBE:
       case ZMQ_UNSUBSCRIBE:
@@ -460,15 +491,21 @@ namespace zmq {
       case ZMQ_RECOVERY_IVL:
       case 10:
         return socket->SetSockOpt<int64_t>(option, args[1]);
-      case 23: /* ZMQ_SNDHWM */
-      case 24: /* ZMQ_RCVHWM */
       case ZMQ_IDENTITY:
       case ZMQ_SUBSCRIBE:
       case ZMQ_UNSUBSCRIBE:
         return socket->SetSockOpt<char*>(option, args[1]);
+      case 23: /* ZMQ_SNDHWM */
+      case 24: /* ZMQ_RCVHWM */
       case ZMQ_LINGER:
       case ZMQ_RECONNECT_IVL:
       case ZMQ_BACKLOG:
+#if ZMQ_VERSION_MAJOR > 2
+      case ZMQ_TCP_KEEPALIVE:
+      case ZMQ_TCP_KEEPALIVE_CNT:
+      case ZMQ_TCP_KEEPALIVE_IDLE:
+      case ZMQ_TCP_KEEPALIVE_INTVL:
+#endif
         return socket->SetSockOpt<int>(option, args[1]);
       case ZMQ_RCVMORE:
       case ZMQ_EVENTS:
@@ -924,6 +961,12 @@ namespace zmq {
     NODE_DEFINE_CONSTANT(target, ZMQ_LINGER);
     NODE_DEFINE_CONSTANT(target, ZMQ_RECONNECT_IVL);
     NODE_DEFINE_CONSTANT(target, ZMQ_BACKLOG);
+    #if ZMQ_VERSION_MAJOR > 2
+    NODE_DEFINE_CONSTANT(target, ZMQ_TCP_KEEPALIVE);
+    NODE_DEFINE_CONSTANT(target, ZMQ_TCP_KEEPALIVE_CNT);
+    NODE_DEFINE_CONSTANT(target, ZMQ_TCP_KEEPALIVE_IDLE);
+    NODE_DEFINE_CONSTANT(target, ZMQ_TCP_KEEPALIVE_INTVL);
+    #endif
 
     NODE_DEFINE_CONSTANT(target, ZMQ_POLLIN);
     NODE_DEFINE_CONSTANT(target, ZMQ_POLLOUT);
