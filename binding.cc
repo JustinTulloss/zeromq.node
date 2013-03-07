@@ -885,11 +885,21 @@ namespace zmq {
     opts_binary.insert(38); // ZMQ_TCP_ACCEPT_FILTER
 
     // transition types
-    opts_uint32.insert(15); // ZMQ_EVENTS  2.x uint32_t -> 3.x int
-    opts_int64.insert(13); // ZMQ_RCVMORE 2.x int64_t -> 3.x int
-    opts_int64.insert(9); // ZMQ_RECOVERY_IVL 2.x int64_t -> 3.x int
-    opts_uint64.insert(11); // ZMQ_SNDBUF 2.x uint64_t -> 3.x int
-    opts_uint64.insert(12); // ZMQ_RCVBUF 2.x uint64_t -> 3.x int
+    #if ZMQ_VERSION_MAJOR >= 3
+    opts_int.insert(15); // ZMQ_EVENTS 3.x int
+    opts_int.insert(8); // ZMQ_RATE 3.x int
+    opts_int.insert(9); // ZMQ_RECOVERY_IVL 3.x int
+    opts_int.insert(13); // ZMQ_RCVMORE 3.x int
+    opts_int.insert(11); // ZMQ_SNDBUF 3.x int
+    opts_int.insert(12); // ZMQ_RCVBUF 3.x int
+    #else
+    opts_uint32.insert(15); // ZMQ_EVENTS 2.x uint32_t
+    opts_int64.insert(8); // ZMQ_RATE 2.x int64_t
+    opts_int64.insert(9); // ZMQ_RECOVERY_IVL 2.x int64_t
+    opts_int64.insert(13); // ZMQ_RCVMORE 2.x int64_t
+    opts_uint64.insert(11); // ZMQ_SNDBUF 2.x uint64_t
+    opts_uint64.insert(12); // ZMQ_RCVBUF 2.x uint64_t
+    #endif
 
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
     NODE_DEFINE_CONSTANT(target, ZMQ_PUB);
