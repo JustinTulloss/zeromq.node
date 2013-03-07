@@ -52,6 +52,7 @@ enum {
 namespace zmq {
 
   std::set<int> opts_int;
+  std::set<int> opts_uint32;
   std::set<int> opts_int64;
   std::set<int> opts_uint64;
   std::set<int> opts_binary;
@@ -408,6 +409,8 @@ namespace zmq {
 
     if (opts_int.count(option)) {
       return socket->GetSockOpt<int>(option);
+    } else if (opts_uint32.count(option)) {
+      return socket->GetSockOpt<uint32_t>(option);
     } else if (opts_int64.count(option)) {
       return socket->GetSockOpt<int64_t>(option);
     } else if (opts_uint64.count(option)) {
@@ -433,6 +436,8 @@ namespace zmq {
 
     if (opts_int.count(option)) {
       return socket->SetSockOpt<int>(option, args[1]);
+    } else if (opts_uint32.count(option)) {
+      return socket->SetSockOpt<uint32_t>(option, args[1]);
     } else if (opts_int64.count(option)) {
       return socket->SetSockOpt<int64_t>(option, args[1]);
     } else if (opts_uint64.count(option)) {
@@ -840,9 +845,7 @@ namespace zmq {
   Initialize(Handle<Object> target) {
     HandleScope scope;
 
-    opts_int.insert(13); // ZMQ_RCVMORE
     opts_int.insert(14); // ZMQ_FD
-    opts_int.insert(15); // ZMQ_EVENTS
     opts_int.insert(16); // ZMQ_TYPE
     opts_int.insert(17); // ZMQ_LINGER
     opts_int.insert(18); // ZMQ_RECONNECT_IVL
@@ -868,21 +871,25 @@ namespace zmq {
 
     opts_int64.insert(3); // ZMQ_SWAP
     opts_int64.insert(8); // ZMQ_RATE
-    opts_int64.insert(9); // ZMQ_RECOVERY_IVL
     opts_int64.insert(10); // ZMQ_MCAST_LOOP
     opts_int64.insert(20); // ZMQ_RECOVERY_IVL_MSEC
     opts_int64.insert(22); // ZMQ_MAXMSGSIZE
 
     opts_uint64.insert(1); // ZMQ_HWM
     opts_uint64.insert(4); // ZMQ_AFFINITY
-    opts_uint64.insert(11); // ZMQ_SNDBUF
-    opts_uint64.insert(12); // ZMQ_RCVBUF
 
     opts_binary.insert(5); // ZMQ_IDENTITY
     opts_binary.insert(6); // ZMQ_SUBSCRIBE
     opts_binary.insert(7); // ZMQ_UNSUBSCRIBE
     opts_binary.insert(32); // ZMQ_LAST_ENDPOINT
     opts_binary.insert(38); // ZMQ_TCP_ACCEPT_FILTER
+
+    // transition types
+    opts_uint32.insert(15); // ZMQ_EVENTS  2.x uint32_t -> 3.x int
+    opts_int64.insert(13); // ZMQ_RCVMORE 2.x int64_t -> 3.x int
+    opts_int64.insert(9); // ZMQ_RECOVERY_IVL 2.x int64_t -> 3.x int
+    opts_uint64.insert(11); // ZMQ_SNDBUF 2.x uint64_t -> 3.x int
+    opts_uint64.insert(12); // ZMQ_RCVBUF 2.x uint64_t -> 3.x int
 
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
     NODE_DEFINE_CONSTANT(target, ZMQ_PUB);
