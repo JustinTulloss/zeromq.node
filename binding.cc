@@ -408,7 +408,7 @@ namespace zmq {
 
     if (opts_int.count(option)) {
       return socket->GetSockOpt<int>(option);
-    } else if(opts_int64.count(option)) {
+    } else if (opts_int64.count(option)) {
       return socket->GetSockOpt<int64_t>(option);
     } else if (opts_uint64.count(option)) {
       return socket->GetSockOpt<uint64_t>(option);
@@ -433,7 +433,7 @@ namespace zmq {
 
     if (opts_int.count(option)) {
       return socket->SetSockOpt<int>(option, args[1]);
-    } else if(opts_int64.count(option)) {
+    } else if (opts_int64.count(option)) {
       return socket->SetSockOpt<int64_t>(option, args[1]);
     } else if (opts_uint64.count(option)) {
       return socket->SetSockOpt<uint64_t>(option, args[1]);
