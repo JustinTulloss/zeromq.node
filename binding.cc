@@ -853,6 +853,8 @@ namespace zmq {
     opts_int.insert(25); // ZMQ_MULTICAST_HOPS
     opts_int.insert(27); // ZMQ_RCVTIMEO
     opts_int.insert(28); // ZMQ_SNDTIMEO
+    opts_int.insert(29); // ZMQ_RCVLABEL
+    opts_int.insert(30); // ZMQ_RCVCMD
     opts_int.insert(31); // ZMQ_IPV4ONLY
     opts_int.insert(33); // ZMQ_ROUTER_MANDATORY
     opts_int.insert(34); // ZMQ_TCP_KEEPALIVE
