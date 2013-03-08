@@ -1,7 +1,7 @@
 {
   'targets': [
     {
-      'target_name': 'binding',
+      'target_name': 'zmq',
       'sources': [ 'binding.cc' ],
       'include_dirs': ['windows/include'],
       'conditions': [
@@ -13,18 +13,18 @@
             'conditions': [
               ['target_arch=="ia32"', {
                 'libraries': [
-                  '<(PRODUCT_DIR)/../../windows/lib/x86/libzmq-v100-mt.lib',
+                  '<(PRODUCT_DIR)/../../windows/lib/x86/libzmq-v100-mt-3_2_2.lib',
                 ]
               },{
                 'libraries': [
-                  '<(PRODUCT_DIR)/../../windows/lib/x64/libzmq-v100-mt.lib',
+                  '<(PRODUCT_DIR)/../../windows/lib/x64/libzmq-v100-mt-3_2_2.lib',
                 ]
               }]
             ],
           },
           'msvs_settings': {
             'VCLinkerTool': {
-              'DelayLoadDLLs': ['libzmq-v100-mt.dll']
+              'DelayLoadDLLs': ['libzmq-v100-mt-3_2_2.dll']
             }
           },
         }, {

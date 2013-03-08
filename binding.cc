@@ -935,7 +935,7 @@ init(Handle<Object> target) {
     set_dll_directory =
           (SetDllDirectoryFunc)GetProcAddress(kernel32_dll, "SetDllDirectoryW");
     if (set_dll_directory) {
-      GetModuleFileNameW(GetModuleHandleW(L"binding.node"), path, MAX_PATH - 1);
+      GetModuleFileNameW(GetModuleHandleW(L"zmq.node"), path, MAX_PATH - 1);
       wcsncpy(pathDir, path, wcsrchr(path, '\\') - path);
       path[0] = '\0';
       pathDir[wcslen(pathDir)] = '\0';
@@ -947,11 +947,11 @@ init(Handle<Object> target) {
       _wfullpath(path, pathDir, MAX_PATH);
       set_dll_directory(path);
       caller.set_func(set_dll_directory);
-      LoadLibrary("libzmq-v100-mt");
+      LoadLibrary("libzmq-v100-mt-3_2_2");
     }
   }
 #endif
   zmq::Initialize(target);
 }
 
-NODE_MODULE(binding, init)
+NODE_MODULE(zmq, init)
