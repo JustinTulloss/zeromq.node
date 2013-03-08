@@ -37,7 +37,7 @@
 #define snprintf _snprintf_s
 #endif
 
-#define ZMQ_CAN_DISCONNECT (ZMQ_VERSION_MAJOR == 3 and ZMQ_VERSION_MINOR >= 2) or ZMQ_VERSION_MAJOR > 3
+#define ZMQ_CAN_DISCONNECT (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
 
 using namespace v8;
 using namespace node;
