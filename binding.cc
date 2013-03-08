@@ -50,6 +50,8 @@
   };
 #endif
 
+#define ZMQ_CAN_DISCONNECT (ZMQ_VERSION_MAJOR == 3 and ZMQ_VERSION_MINOR >= 2) or ZMQ_VERSION_MAJOR > 3
+
 using namespace v8;
 using namespace node;
 
@@ -109,6 +111,10 @@ namespace zmq {
       static Handle<Value> BindSync(const Arguments &args);
 
       static Handle<Value> Connect(const Arguments &args);
+      
+#if ZMQ_CAN_DISCONNECT
+      static Handle<Value> Disconnect(const Arguments &args);
+#endif
 
       class IncomingMessage;
       static Handle<Value> Recv(const Arguments &args);
@@ -240,6 +246,10 @@ namespace zmq {
     NODE_SET_PROTOTYPE_METHOD(t, "recv", Recv);
     NODE_SET_PROTOTYPE_METHOD(t, "send", Send);
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
+    
+#if ZMQ_CAN_DISCONNECT
+    NODE_SET_PROTOTYPE_METHOD(t, "disconnect", Disconnect);
+#endif
 
     target->Set(String::NewSymbol("Socket"), t->GetFunction());
 
@@ -406,8 +416,6 @@ namespace zmq {
     // FIXME: How to handle ZMQ_FD on Windows?
     switch (option) {
       case 1:
-      case 23:
-      case 24:
       case ZMQ_AFFINITY:
       case ZMQ_SNDBUF:
       case ZMQ_RCVBUF:
@@ -419,9 +427,14 @@ namespace zmq {
       case 10:
         return socket->GetSockOpt<int64_t>(option);
       case ZMQ_IDENTITY:
+#ifdef ZMQ_LAST_ENDPOINT
+      case ZMQ_LAST_ENDPOINT:
+#endif
         return socket->GetSockOpt<char*>(option);
       case ZMQ_EVENTS:
         return socket->GetSockOpt<uint32_t>(option);
+      case 23: /* ZMQ_SNDHWM */
+      case 24: /* ZMQ_RCVHWM */
       case ZMQ_FD:
       case ZMQ_TYPE:
       case ZMQ_LINGER:
@@ -451,8 +464,6 @@ namespace zmq {
 
     switch (option) {
       case 1:
-      case 23:
-      case 24:
       case ZMQ_AFFINITY:
       case ZMQ_SNDBUF:
       case ZMQ_RCVBUF:
@@ -462,6 +473,8 @@ namespace zmq {
       case ZMQ_RECOVERY_IVL:
       case 10:
         return socket->SetSockOpt<int64_t>(option, args[1]);
+      case 23: /* ZMQ_SNDHWM */
+      case 24: /* ZMQ_RCVHWM */
       case ZMQ_IDENTITY:
       case ZMQ_SUBSCRIBE:
       case ZMQ_UNSUBSCRIBE:
@@ -591,6 +604,24 @@ namespace zmq {
       return ThrowException(ExceptionFromError());
     return Undefined();
   }
+  
+#if ZMQ_CAN_DISCONNECT
+  Handle<Value>
+  Socket::Disconnect(const Arguments &args) {
+    HandleScope scope;
+    if (!args[0]->IsString()) {
+      return ThrowException(Exception::TypeError(
+        String::New("Address must be a string!")));
+    }
+
+    GET_SOCKET(args);
+
+    String::Utf8Value address(args[0]->ToString());
+    if (zmq_disconnect(socket->socket_, *address))
+      return ThrowException(ExceptionFromError());
+    return Undefined();
+  }
+#endif
 
   /*
    * An object that creates an empty ØMQ message, which can be used for
@@ -680,10 +711,10 @@ namespace zmq {
     IncomingMessage msg;
     #if ZMQ_VERSION_MAJOR == 2
       if (zmq_recv(socket->socket_, msg, flags) < 0)
-        return ThrowException(ExceptionFromError());        
+        return ThrowException(ExceptionFromError());
     #else
       if (zmq_recvmsg(socket->socket_, msg, flags) < 0)
-        return ThrowException(ExceptionFromError());        
+        return ThrowException(ExceptionFromError());
     #endif
     return scope.Close(msg.GetBuffer());
   }
@@ -859,8 +890,13 @@ namespace zmq {
   Initialize(Handle<Object> target) {
     HandleScope scope;
 
+    NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
     NODE_DEFINE_CONSTANT(target, ZMQ_PUB);
     NODE_DEFINE_CONSTANT(target, ZMQ_SUB);
+    #if ZMQ_VERSION_MAJOR == 3
+    NODE_DEFINE_CONSTANT(target, ZMQ_XPUB);
+    NODE_DEFINE_CONSTANT(target, ZMQ_XSUB);
+    #endif
     NODE_DEFINE_CONSTANT(target, ZMQ_REQ);
     NODE_DEFINE_CONSTANT(target, ZMQ_XREQ);
     NODE_DEFINE_CONSTANT(target, ZMQ_REP);
@@ -880,6 +916,11 @@ namespace zmq {
     #endif
     NODE_DEFINE_CONSTANT(target, ZMQ_AFFINITY);
     NODE_DEFINE_CONSTANT(target, ZMQ_IDENTITY);
+
+    #ifdef ZMQ_LAST_ENDPOINT
+    NODE_DEFINE_CONSTANT(target, ZMQ_LAST_ENDPOINT);
+    #endif
+
     NODE_DEFINE_CONSTANT(target, ZMQ_SUBSCRIBE);
     NODE_DEFINE_CONSTANT(target, ZMQ_UNSUBSCRIBE);
     NODE_DEFINE_CONSTANT(target, ZMQ_RATE);
