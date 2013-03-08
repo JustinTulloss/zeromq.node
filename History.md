@@ -8,6 +8,7 @@ Next
   * fixed: tests improved [qubyte, jeremybarnes, ronkorving]
   * fixed: Node v0.9.4+ compatibility [mscdex]
   * fixed: SNDHWM and RCVHWM options were given the wrong type [freehaha]
+  * removed: waf support [mscdex]
 
 2.2.0 / 2012-10-17
 ==================
