@@ -8,6 +8,11 @@ if (!semver.gte(zmq.version, '3.2.0')) {
   return;
 }
 
+if (semver.eq(zmq.version, '3.2.1')) {
+  console.warn('ZMQ_ROUTER_MANDATORY is broken in libzmq = 3.2.1');
+  return;
+}
+
 // should emit an error event on unroutable msgs if mandatory = 1 and error handler is set
 
 var sock = zmq.socket('router');
