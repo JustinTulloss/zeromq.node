@@ -86,7 +86,7 @@ if (semver.gte('3.2')) {
 }
 
 // 3.3 and above.
-if (semver.gte('3.3')) {
+if (semver.gte(zmq.version, '3.3.0')) {
   constants.concat([
     'ROUTER_RAW',
   ]);
