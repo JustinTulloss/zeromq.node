@@ -3,8 +3,8 @@ var zmq = require('../')
   , should = require('should')
   , semver = require('semver');
 
-if (!semver.gte(zmq.version, '3.2')) {
-  console.warn('Test requires libzmq >= 3.2');
+if (!semver.gte(zmq.version, '3.2.0')) {
+  console.warn('Test requires libzmq >= 3.2.0');
   return;
 }
 
