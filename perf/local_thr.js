@@ -31,7 +31,7 @@ function finish(){
   console.log('message size: %d [B]', message_size)
   console.log('message count: %d', message_count)
   console.log('mean throughput: %d [msg/s]', throughput.toFixed(0))
-  console.log('mean throughput: %d [Mb/s]', megabits.toFixed(0))
+  console.log('mean throughput: %d [Mbit/s]', megabits.toFixed(0))
   console.log('overall time: %d secs and %d nanoseconds', endtime[0], endtime[1])
   sub.close()
 }
