@@ -25,13 +25,13 @@ sub.on('message', function (data) {
 function finish(){
   var endtime = process.hrtime(timer)
   var millis = (endtime[0]*1000) + (endtime[1]/1000000)
-  var throughput = message_count / (millis/1000000)
+  var throughput = message_count / (millis / 1000)
   var megabits = (throughput * message_size * 8) / 1000000
 
   console.log('message size: %d [B]', message_size)
   console.log('message count: %d', message_count)
   console.log('mean throughput: %d [msg/s]', throughput.toFixed(0))
-  console.log('mean throughput: %d [Mb/s]', megabits.toFixed(0))
+  console.log('mean throughput: %d [Mbit/s]', megabits.toFixed(0))
   console.log('overall time: %d secs and %d nanoseconds', endtime[0], endtime[1])
   sub.close()
 }
