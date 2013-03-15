@@ -1,6 +1,6 @@
 {
   "name": "zmq",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Bindings for node.js to zeromq",
   "main": "index",
   "repository": {
@@ -37,11 +37,14 @@
     "Iskren Ivov Chernev <iskren.chernev@gmail.com>",
     "Seth Fitzsimmons",
     "Patrick Lucas",
-    "Alexander Simmerl",
+    "Alexander Simmerl (https://github.com/xla)",
     "Ian Babrou",
     "Niall O'Higgins",
-    "Brian White",
+    "Brian White (https://github.com/mscdex)",
+    "Mathieu D'Amours (https://github.com/matehat)",
     "Joshua Gourneau",
-    "Yaroslav Shirokov"
+    "Yaroslav Shirokov",
+    "Marc Harter (https://github.com/wavded)",
+    "John Sun (https://github.com/freehaha)"
   ]
 }

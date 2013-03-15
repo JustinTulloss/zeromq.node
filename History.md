@@ -1,5 +1,5 @@
-Next
-====
+2.3.0 / 2013-03-15
+==================
 
   * added: xpub/xsub socket types [xla]
   * added: support for zmq_disconnect [matehat]
