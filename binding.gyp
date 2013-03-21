@@ -3,9 +3,9 @@
     {
       'target_name': 'zmq',
       'sources': [ 'binding.cc' ],
-      'include_dirs': ['windows/include'],
       'conditions': [
         ['OS=="win"', {
+          'include_dirs': ['windows/include'],
           'link_settings': {
             'libraries': [
               'Delayimp.lib',
