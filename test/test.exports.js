@@ -26,6 +26,8 @@ var constants = [
   'IDENTITY',
   'SUBSCRIBE',
   'UNSUBSCRIBE',
+  'RCVTIMEO',
+  'SNDTIMEO',
   'RATE',
   'RECOVERY_IVL',
   'SNDBUF',
@@ -36,6 +38,7 @@ var constants = [
   'TYPE',
   'LINGER',
   'RECONNECT_IVL',
+  'RECONNECT_IVL_MAX',
   'BACKLOG',
   'POLLIN',
   'POLLOUT',
@@ -49,6 +52,7 @@ if (semver.satisfies(zmq.version, '2.x')) {
     'HWM',
     'SWAP',
     'MCAST_LOOP',
+    'ZMQ_RECOVERY_IVL_MSEC',
     'NOBLOCK'
   ]);
 }
@@ -59,14 +63,32 @@ if (semver.gte(zmq.version, '3.0.0')) {
     'XPUB',
     'XSUB',
     'SNDHWM',
-    'RCVHWM'
+    'RCVHWM',
+    'MAXMSGSIZE',
+    'ZMQ_MULTICAST_HOPS',
   ]);
 }
 
 // 3.2 and above.
 if (semver.gte(zmq.version, '3.2.0')) {
   constants.concat([
+    'IPV4ONLY',
+    'DELAY_ATTACH_ON_CONNECT',
+    'ROUTER_MANDATORY',
+    'XPUB_VERBOSE',
+    'TCP_KEEPALIVE',
+    'TCP_KEEPALIVE_IDLE',
+    'TCP_KEEPALIVE_CNT',
+    'TCP_KEEPALIVE_INTVL',
+    'TCP_ACCEPT_FILTER',
     'LAST_ENDPOINT'
+  ]);
+}
+
+// 3.3 and above.
+if (semver.gte(zmq.version, '3.3.0')) {
+  constants.concat([
+    'ROUTER_RAW',
   ]);
 }
 
