@@ -57,8 +57,8 @@ if (semver.satisfies(zmq.version, '2.x')) {
   ]);
 }
 
-// 3.x only.
-if (semver.satisfies(zmq.version, '3.x')) {
+// 3.0 and above.
+if (semver.gte(zmq.version, '3.0.0')) {
   constants.concat([
     'XPUB',
     'XSUB',
@@ -70,7 +70,7 @@ if (semver.satisfies(zmq.version, '3.x')) {
 }
 
 // 3.2 and above.
-if (semver.gte('3.2')) {
+if (semver.gte(zmq.version, '3.2.0')) {
   constants.concat([
     'IPV4ONLY',
     'DELAY_ATTACH_ON_CONNECT',

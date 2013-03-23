@@ -20,6 +20,6 @@ docclean:
 	rm -fr docs/index.{json,html}
 
 distclean:
-	node-waf distclean
+	node-gyp clean
 
 .PHONY: clean distclean test docs docclean
