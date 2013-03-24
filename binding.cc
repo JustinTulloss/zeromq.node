@@ -320,7 +320,7 @@ namespace zmq {
     // TODO error handling
     zmq_getsockopt(socket_, ZMQ_FD, &socket, &len);
     uv_poll_init_socket(uv_default_loop(), poll_handle_, socket);
-    uv_poll_start(poll_handle_, UV_READABLE, Socket::UV_PollCallback);
+    uv_poll_start(poll_handle_, UV_READABLE | UV_WRITABLE, Socket::UV_PollCallback);
   }
 
   Socket *
