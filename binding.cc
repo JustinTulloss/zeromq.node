@@ -135,6 +135,7 @@ namespace zmq {
       Persistent<Object> context_;
       void *socket_;
       uint8_t state_;
+      int32_t endpoints;
 
       bool IsReady();
       uv_poll_t *poll_handle_;
@@ -330,6 +331,8 @@ namespace zmq {
     context_ = Persistent<Object>::New(context->handle_);
     socket_ = zmq_socket(context->context_, type);
     state_ = STATE_READY;
+
+    endpoints = 0;
 
     poll_handle_ = new uv_poll_t;
 
@@ -527,8 +530,13 @@ namespace zmq {
     else argv[0] = Local<Value>::New(Undefined());
     Local<Function> cb = Local<Function>::New(state->cb);
 
-    ObjectWrap::Unwrap<Socket>(state->sock_obj)->state_ = STATE_READY;
+    Socket *socket = ObjectWrap::Unwrap<Socket>(state->sock_obj);
+    socket->state_ = STATE_READY;
     delete state;
+
+    if (socket->endpoints == 0)
+      socket->Ref();
+    socket->endpoints += 1;
 
     TryCatch try_catch;
     cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
@@ -554,6 +562,10 @@ namespace zmq {
 
     socket->state_ = STATE_READY;
 
+    if (socket->endpoints == 0)
+      socket->Ref();
+    socket->endpoints += 1;
+
     return Undefined();
   }
 
@@ -570,6 +582,11 @@ namespace zmq {
     String::Utf8Value address(args[0]->ToString());
     if (zmq_connect(socket->socket_, *address))
       return ThrowException(ExceptionFromError());
+
+    if (socket->endpoints == 0)
+      socket->Ref();
+    socket->endpoints += 1;
+
     return Undefined();
   }
   
@@ -587,6 +604,11 @@ namespace zmq {
     String::Utf8Value address(args[0]->ToString());
     if (zmq_disconnect(socket->socket_, *address))
       return ThrowException(ExceptionFromError());
+
+    socket->endpoints -= 1;
+    if (socket->endpoints == 0)
+      socket->Unref();
+
     return Undefined();
   }
 #endif
@@ -817,6 +839,7 @@ namespace zmq {
       state_ = STATE_CLOSED;
       context_.Dispose();
       context_.Clear();
+      this->Unref();
 
       uv_poll_stop(poll_handle_);
     }
