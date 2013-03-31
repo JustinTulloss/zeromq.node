@@ -839,7 +839,10 @@ namespace zmq {
       state_ = STATE_CLOSED;
       context_.Dispose();
       context_.Clear();
-      this->Unref();
+      
+      if (this->endpoints > 0)
+        this->Unref();
+      this->endpoints = 0;
 
       uv_poll_stop(poll_handle_);
     }
