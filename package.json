@@ -20,6 +20,7 @@
   "scripts": {
     "test": "make test"
   },
+  "keywords": ["zeromq", "zmq", "0mq", "ømq", "libzmq", "native", "binding", "addon"],
   "author": "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
   "contributors": [
     "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
@@ -45,6 +46,7 @@
     "Joshua Gourneau",
     "Yaroslav Shirokov",
     "Marc Harter (https://github.com/wavded)",
-    "John Sun (https://github.com/freehaha)"
+    "John Sun (https://github.com/freehaha)",
+    "Alexey Kupershtokh <alexey.kupershtokh@gmail.com>"
   ]
 }
