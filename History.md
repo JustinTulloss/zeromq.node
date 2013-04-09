@@ -1,3 +1,10 @@
+2.4.0 / 2013-04-09
+==================
+
+  * added: Windows support [mscdex]
+  * added: support for all options ever [AlexeyKupershtokh]
+  * fixed: prevent zeromq sockets from being destroyed by GC [AlexeyKupershtokh]
+
 2.3.0 / 2013-03-15
 ==================
 
