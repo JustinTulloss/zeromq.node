@@ -223,7 +223,9 @@ namespace zmq {
   Context::Context(int io_threads, int max_sockets) : ObjectWrap() {
     context_ = zmq_init(io_threads);
     if (!context_) throw std::runtime_error(ErrorMessage());
+#ifdef ZMQ_MAX_SOCKETS
     zmq_ctx_set(context_, ZMQ_MAX_SOCKETS, max_sockets);
+#endif
   }
 
   Context *
