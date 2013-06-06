@@ -32,7 +32,7 @@
           'cflags!': ['-fno-exceptions'],
           'cflags_cc!': ['-fno-exceptions'],
         }],
-        ['OS=="mac"', {
+        ['OS=="mac" or OS=="solaris"', {
           'xcode_settings': {
             'GCC_ENABLE_CPP_EXCEPTIONS': 'YES'
           },
