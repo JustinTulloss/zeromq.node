@@ -328,7 +328,7 @@ namespace zmq {
   }
 
   Socket::Socket(Context *context, int type) : ObjectWrap() {
-    context_ = Persistent<Object>::New(context->handle_);
+    context_ = Persistent<Object>::New(Isolate::GetCurrent(), context->handle_);
     socket_ = zmq_socket(context->context_, type);
     state_ = STATE_READY;
 
@@ -469,9 +469,9 @@ namespace zmq {
   struct Socket::BindState {
     BindState(Socket* sock_, Handle<Function> cb_, Handle<String> addr_)
           : addr(addr_) {
-      sock_obj = Persistent<Object>::New(sock_->handle_);
+      sock_obj = Persistent<Object>::New(Isolate::GetCurrent(), sock_->handle_);
       sock = sock_->socket_;
-      cb = Persistent<Function>::New(cb_);
+      cb = Persistent<Function>::New(Isolate::GetCurrent(), cb_);
       error = 0;
     }
 
@@ -642,12 +642,12 @@ namespace zmq {
 
       inline Local<Value> GetBuffer() {
         if (buf_.IsEmpty()) {
-          Buffer* buf_obj = Buffer::New(
+          Local<Object> buf_obj = Buffer::New(
             (char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_),
             FreeCallback, msgref_);
-          if (!buf_obj)
+          if (buf_obj.IsEmpty())
             return Local<Value>();
-          buf_ = Persistent<Object>::New(buf_obj->handle_);
+          buf_ = Persistent<Object>::New(Isolate::GetCurrent(), buf_obj);
         }
         return Local<Value>::New(buf_);
       }
@@ -741,8 +741,8 @@ namespace zmq {
           inline BufferReference(Handle<Object> buf) {
             // Keep the handle alive until zmq is done with the buffer
             noLongerNeeded_ = false;
-            buf_ = Persistent<Object>::New(buf);
-            buf_.MakeWeak(this, &WeakCheck);
+            buf_ = Persistent<Object>::New(Isolate::GetCurrent(), buf);
+            buf_.MakeWeak(Isolate::GetCurrent(), this, &WeakCheck);
           }
 
           inline ~BufferReference() {
@@ -758,12 +758,12 @@ namespace zmq {
           }
 
           // Called when V8 would like to GC buf_
-          static void WeakCheck(v8::Persistent<v8::Value> obj, void* data) {
-            if (((BufferReference*)data)->noLongerNeeded_) {
-              delete (BufferReference*)data;
+          static void WeakCheck(Isolate* isolate, Persistent<Object>* obj, BufferReference* data) {
+            if ((data)->noLongerNeeded_) {
+              delete data;
             } else {
               // Still in use, revive, prevent GC
-              obj.MakeWeak(data, &WeakCheck);
+              obj->MakeWeak(isolate, data, WeakCheck);
             }
           }
 
