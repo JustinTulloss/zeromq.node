@@ -763,7 +763,7 @@ namespace zmq {
               delete data;
             } else {
               // Still in use, revive, prevent GC
-              obj->MakeWeak(isolate, data, WeakCheck);
+              obj->MakeWeak(isolate, data, &WeakCheck);
             }
           }
 
