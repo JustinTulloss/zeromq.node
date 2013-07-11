@@ -38,10 +38,12 @@
           },
           # add macports include & lib dirs
           'include_dirs': [
+            '<!@(pkg-config libzmq --cflags-only-I | sed s/-I//g)',
             '/opt/local/include',
           ],
           'libraries': [
-            '-L/opt/local/lib'
+            '<!@(pkg-config libzmq --libs)',
+            '-L/opt/local/lib',
           ]
         }],
         ['OS=="linux"', {
