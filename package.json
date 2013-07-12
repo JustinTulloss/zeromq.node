@@ -7,6 +7,9 @@
     "type" : "git",
     "url" : "http://github.com/JustinTulloss/zeromq.node.git"
   },
+  "dependencies": {
+    "set-immediate" : "*"
+  },
   "devDependencies": {
     "should": "*",
     "batch": "*",
