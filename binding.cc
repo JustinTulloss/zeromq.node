@@ -293,10 +293,12 @@ namespace zmq {
 
   bool
   Socket::IsReady() {
-    zmq_pollitem_t items[1];
-    items[0].socket = socket_;
-    items[0].events = ZMQ_POLLIN;
-    return zmq_poll(items, 1, 0);
+    zmq_pollitem_t item = {socket_, 0, ZMQ_POLLIN, 0};
+    int rc = zmq_poll(&item, 1, 0);
+    if (rc < 0) {
+      throw std::runtime_error(ErrorMessage());
+    }
+    return item.revents & ZMQ_POLLIN;
   }
 
   void
@@ -328,7 +330,11 @@ namespace zmq {
   }
 
   Socket::Socket(Context *context, int type) : ObjectWrap() {
-    context_ = Persistent<Object>::New(context->handle_);
+    #if NODE_VERSION_AT_LEAST(0, 11, 3)
+      context_ = Persistent<Object>::New(Isolate::GetCurrent(), context->handle_);
+    #else
+      context_ = Persistent<Object>::New(context->handle_);
+    #endif
     socket_ = zmq_socket(context->context_, type);
     state_ = STATE_READY;
 
@@ -340,8 +346,11 @@ namespace zmq {
 
     uv_os_sock_t socket;
     size_t len = sizeof(uv_os_sock_t);
-    // TODO error handling
-    zmq_getsockopt(socket_, ZMQ_FD, &socket, &len);
+
+    if (zmq_getsockopt(socket_, ZMQ_FD, &socket, &len)) {
+      throw std::runtime_error(ErrorMessage());
+    }
+
     uv_poll_init_socket(uv_default_loop(), poll_handle_, socket);
     uv_poll_start(poll_handle_, UV_READABLE, Socket::UV_PollCallback);
   }
@@ -469,9 +478,17 @@ namespace zmq {
   struct Socket::BindState {
     BindState(Socket* sock_, Handle<Function> cb_, Handle<String> addr_)
           : addr(addr_) {
-      sock_obj = Persistent<Object>::New(sock_->handle_);
+      #if NODE_VERSION_AT_LEAST(0, 11, 3)
+        sock_obj = Persistent<Object>::New(Isolate::GetCurrent(), sock_->handle_);
+      #else
+        sock_obj = Persistent<Object>::New(sock_->handle_);
+      #endif
       sock = sock_->socket_;
-      cb = Persistent<Function>::New(cb_);
+      #if NODE_VERSION_AT_LEAST(0, 11, 3)
+        cb = Persistent<Function>::New(Isolate::GetCurrent(), cb_);
+      #else
+        cb = Persistent<Function>::New(cb_);
+      #endif
       error = 0;
     }
 
@@ -642,12 +659,24 @@ namespace zmq {
 
       inline Local<Value> GetBuffer() {
         if (buf_.IsEmpty()) {
-          Buffer* buf_obj = Buffer::New(
+          #if NODE_VERSION_AT_LEAST(0, 11, 3)
+            Local<Object> buf_obj = Buffer::New(
+          #else
+            Buffer* buf_obj = Buffer::New(
+          #endif
             (char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_),
             FreeCallback, msgref_);
-          if (!buf_obj)
+          #if NODE_VERSION_AT_LEAST(0, 11, 3)
+            if (buf_obj.IsEmpty())
+          #else
+            if (!buf_obj)
+          #endif
             return Local<Value>();
-          buf_ = Persistent<Object>::New(buf_obj->handle_);
+          #if NODE_VERSION_AT_LEAST(0, 11, 3)
+            buf_ = Persistent<Object>::New(Isolate::GetCurrent(), buf_obj);
+          #else
+            buf_ = Persistent<Object>::New(buf_obj->handle_);
+          #endif
         }
         return Local<Value>::New(buf_);
       }
@@ -741,8 +770,13 @@ namespace zmq {
           inline BufferReference(Handle<Object> buf) {
             // Keep the handle alive until zmq is done with the buffer
             noLongerNeeded_ = false;
-            buf_ = Persistent<Object>::New(buf);
-            buf_.MakeWeak(this, &WeakCheck);
+            #if NODE_VERSION_AT_LEAST(0, 11, 3)
+              buf_ = Persistent<Object>::New(Isolate::GetCurrent(), buf);
+              buf_.MakeWeak(Isolate::GetCurrent(), this, &WeakCheck);
+            #else
+              buf_ = Persistent<Object>::New(buf);
+              buf_.MakeWeak(this, &WeakCheck);
+            #endif
           }
 
           inline ~BufferReference() {
@@ -758,14 +792,25 @@ namespace zmq {
           }
 
           // Called when V8 would like to GC buf_
-          static void WeakCheck(v8::Persistent<v8::Value> obj, void* data) {
-            if (((BufferReference*)data)->noLongerNeeded_) {
-              delete (BufferReference*)data;
-            } else {
-              // Still in use, revive, prevent GC
-              obj.MakeWeak(data, &WeakCheck);
+          #if NODE_VERSION_AT_LEAST(0, 11, 3)
+            static void WeakCheck(Isolate* isolate, Persistent<Object>* obj, BufferReference* data) {
+              if ((data)->noLongerNeeded_) {
+                delete data;
+              } else {
+                // Still in use, revive, prevent GC
+                obj->MakeWeak(isolate, data, &WeakCheck);
+              }
             }
-          }
+          #else
+            static void WeakCheck(v8::Persistent<v8::Value> obj, void* data) {
+              if (((BufferReference*)data)->noLongerNeeded_) {
+                delete (BufferReference*)data;
+              } else {
+                // Still in use, revive, prevent GC
+                obj.MakeWeak(data, &WeakCheck);
+              }
+            }
+          #endif
 
         private:
           bool noLongerNeeded_;
