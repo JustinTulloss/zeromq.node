@@ -22,15 +22,27 @@ a.on('message', function(msg) {
   clearTimeout(timeout);
 });
 
-a.bind('tcp://127.0.0.1:5555', function() {});
+var bound = false;
 
-setTimeout(function() {
+a.bind('tcp://127.0.0.1:5555', function(e) {
+  if (e) {
+    throw e;
+  } else {
+    bound = true;
+  }
+});
+
+var interval = setInterval(function() {
   gc();
-  b.connect('tcp://127.0.0.1:5555');
-  b.send('hello');
+  if (bound) {
+    clearInterval(interval);
+    b.connect('tcp://127.0.0.1:5555');
+    b.send('hello');
+  }
 }, 100);
 
 // guard against hanging
 var timeout = setTimeout(function() {
-  throw new Error('Timeout');
-}, 1000);
+  clearInterval(interval);
+  throw new Error('Timeout\nBound: ' + bound);
+}, 5000);
