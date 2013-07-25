@@ -14,21 +14,19 @@ message.fill('h')
 
 var counter = 0
 
-var pub = zmq.socket('pub')
-pub.connect(connect_to)
+var sock = zmq.socket('push')
+//sock.setsockopt(zmq.ZMQ_SNDHWM, message_count);
+sock.connect(connect_to)
 
 function send(){
-  process.nextTick(function () {
-    pub.send(message)
+  for (var i = 0; i < message_count; i++) {
+    sock.send(message)
+  }
 
-    if (++counter < message_count)
-      send()
-    else
-      // all messages may not be received by local_thr if closed immediately
-      setTimeout(function () {
-        pub.close()
-      }, 1000);
-  })
+  // all messages may not be received by local_thr if closed immediately
+  setTimeout(function () {
+    sock.close()
+  }, 1000);
 }
 
 // because of what seems to be a bug in node-zmq, we would lose messages
