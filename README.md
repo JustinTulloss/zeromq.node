@@ -55,3 +55,37 @@ sock.on('message', function(msg){
   Test:
 
      $ make test
+
+## Running benchmarks
+
+Benchmarks are available in the `perf` directory, and have been implemented
+according to the zmq documentation:
+[How to run performance tests](http://www.zeromq.org/results:perf-howto)
+
+In the following examples, the arguments are respectively:
+- the host to connect to/bind on
+- message size (in bytes)
+- message count
+
+You can run a latency benchmark by running these two commands in two separate
+shells:
+
+```sh
+node ./local_lat.js tcp://127.0.0.1:5555 1 100000
+```
+
+```sh
+node ./remote_lat.js tcp://127.0.0.1:5555 1 100000
+```
+
+And you can run throughput tests by running these two commands in two
+separate shells:
+
+```sh
+node ./local_thr.js tcp://127.0.0.1:5555 1 100000
+```
+
+```sh
+node ./remote_thr.js tcp://127.0.0.1:5555 1 100000
+```
+
