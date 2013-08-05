@@ -293,12 +293,12 @@ namespace zmq {
 
   bool
   Socket::IsReady() {
-    zmq_pollitem_t item = {socket_, 0, ZMQ_POLLIN, 0};
+    zmq_pollitem_t item = {socket_, 0, ZMQ_POLLIN | ZMQ_POLLOUT, 0};
     int rc = zmq_poll(&item, 1, 0);
     if (rc < 0) {
       throw std::runtime_error(ErrorMessage());
     }
-    return item.revents & ZMQ_POLLIN;
+    return item.revents & (ZMQ_POLLIN | ZMQ_POLLOUT);
   }
 
   void
@@ -884,7 +884,7 @@ namespace zmq {
       state_ = STATE_CLOSED;
       context_.Dispose();
       context_.Clear();
-      
+
       if (this->endpoints > 0)
         this->Unref();
       this->endpoints = 0;
