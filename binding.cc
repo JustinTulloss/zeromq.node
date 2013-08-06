@@ -79,7 +79,7 @@ namespace zmq {
       virtual ~Context();
 
     private:
-      Context(int io_threads);
+      Context(int io_threads, int max_sockets);
       static Handle<Value> New(const Arguments& args);
       static Context* GetContext(const Arguments &args);
 
@@ -189,7 +189,7 @@ namespace zmq {
     assert(args.IsConstructCall());
 
     int io_threads = 1;
-    if (args.Length() == 1) {
+    if (args.Length() >= 1) {
       if (!args[0]->IsNumber()) {
         return ThrowException(Exception::TypeError(
           String::New("io_threads must be an integer")));
@@ -201,15 +201,31 @@ namespace zmq {
       }
     }
 
-    Context *context = new Context(io_threads);
+    int max_sockets = 1024;
+    if (args.Length() == 2) {
+          if (!args[1]->IsNumber()) {
+            return ThrowException(Exception::TypeError(
+              String::New("max_sockets must be an integer")));
+          }
+          max_sockets = (int) args[1]->ToInteger()->Value();
+          if (max_sockets < 1) {
+            return ThrowException(Exception::RangeError(
+              String::New("max_sockets must be a positive number")));
+          }
+        }
+
+    Context *context = new Context(io_threads, max_sockets);
     context->Wrap(args.This());
 
     return args.This();
   }
 
-  Context::Context(int io_threads) : ObjectWrap() {
+  Context::Context(int io_threads, int max_sockets) : ObjectWrap() {
     context_ = zmq_init(io_threads);
     if (!context_) throw std::runtime_error(ErrorMessage());
+#ifdef ZMQ_MAX_SOCKETS
+    zmq_ctx_set(context_, ZMQ_MAX_SOCKETS, max_sockets);
+#endif
   }
 
   Context *
