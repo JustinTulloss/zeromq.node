@@ -46,6 +46,16 @@
             '-L/opt/local/lib',
           ]
         }],
+        ['OS=="openbsd" or OS=="freebsd"', {
+          'include_dirs': [
+            '<!@(pkg-config libzmq --cflags-only-I | sed s/-I//g)',
+            '/usr/local/include',
+          ],
+          'libraries': [
+            '<!@(pkg-config libzmq --libs)',
+            '-L/usr/local/lib',
+          ]
+        }],
         ['OS=="linux"', {
           'cflags': [
             '<!(pkg-config libzmq --cflags 2>/dev/null || echo "")',
