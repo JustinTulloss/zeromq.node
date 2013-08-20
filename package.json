@@ -1,14 +1,14 @@
 {
   "name": "zmq",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "Bindings for node.js to zeromq",
   "main": "index",
   "repository": {
-    "type" : "git",
-    "url" : "http://github.com/JustinTulloss/zeromq.node.git"
+    "type": "git",
+    "url": "http://github.com/JustinTulloss/zeromq.node.git"
   },
   "dependencies": {
-    "set-immediate" : "*"
+    "set-immediate": "*"
   },
   "devDependencies": {
     "should": "*",
@@ -50,6 +50,10 @@
     "Yaroslav Shirokov",
     "Marc Harter (https://github.com/wavded)",
     "John Sun (https://github.com/freehaha)",
-    "Alexey Kupershtokh <alexey.kupershtokh@gmail.com>"
+    "Alexey Kupershtokh <alexey.kupershtokh@gmail.com>",
+    "Jon Gretar Borgthorsson (https://github.com/JonGretar)",
+    "Brian Lalor (https://github.com/blalor)",
+    "Benjamin Byholm (https://github.com/kkoopa)",
+    "Alejandro (https://github.com/Minjung)"
   ]
 }
