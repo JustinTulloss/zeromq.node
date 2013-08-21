@@ -47,6 +47,17 @@
             '-L/opt/local/lib',
           ]
         }],
+        ['OS=="openbsd" or OS=="freebsd"', {
+          'include_dirs': [
+            "<!(node -p -e \"require('path').dirname(require.resolve('nan'))\")",
+            '<!@(pkg-config libzmq --cflags-only-I | sed s/-I//g)',
+            '/usr/local/include',
+          ],
+          'libraries': [
+            '<!@(pkg-config libzmq --libs)',
+            '-L/usr/local/lib',
+          ]
+        }],
         ['OS=="linux"', {
           'include_dirs': ["<!(node -p -e \"require('path').dirname(require.resolve('nan'))\")"],
           'cflags': [
