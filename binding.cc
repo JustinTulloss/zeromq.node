@@ -368,7 +368,7 @@ namespace zmq {
   Handle<Value> Socket::SetSockOpt(int option, Handle<Value> wrappedValue) {
     if (!wrappedValue->IsNumber())
       return ThrowException(Exception::TypeError(
-          String::New("Value must be a buffer")));
+          String::New("Value must be an integer")));
     T value = (T) wrappedValue->ToInteger()->Value();
     if (zmq_setsockopt(socket_, option, &value, sizeof(T)) < 0)
       return ThrowException(ExceptionFromError());
