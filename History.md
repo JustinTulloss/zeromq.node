@@ -1,3 +1,8 @@
+2.5.1 / 2013-08-28
+==================
+
+  * Regression fix for IPC socket bind failure [christopherobin]
+
 2.5.0 / 2013-08-20
 ==================
 
