@@ -500,7 +500,6 @@ namespace zmq {
                   req,
                   UV_BindAsync,
                   (uv_after_work_cb)UV_BindAsyncAfter);
-    socket->state_ = STATE_BUSY;
 
     NanReturnUndefined();
   }
@@ -526,7 +525,6 @@ namespace zmq {
     Local<Function> cb = NanPersistentToLocal(state->cb);
 
     Socket *socket = ObjectWrap::Unwrap<Socket>(NanPersistentToLocal(state->sock_obj));
-    socket->state_ = STATE_READY;
     delete state;
 
     if (socket->endpoints == 0)
@@ -546,11 +544,8 @@ namespace zmq {
       return NanThrowTypeError("Address must be a string!");
     String::Utf8Value addr(args[0].As<String>());
     GET_SOCKET(args);
-    socket->state_ = STATE_BUSY;
     if (zmq_bind(socket->socket_, *addr) < 0)
       return NanThrowError(ErrorMessage());
-
-    socket->state_ = STATE_READY;
 
     if (socket->endpoints == 0)
       socket->Ref();

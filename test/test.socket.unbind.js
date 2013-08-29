@@ -12,18 +12,25 @@ var a = zmq.socket('dealer')
 
 var message_count = 0;
 
+a.bind('tcp://127.0.0.1:5420', function (err) {
+  if (err) throw err;
+  a.bind('tcp://127.0.0.1:5421', function (err) {
+    if (err) throw err;
+  });
+});
+
 a.on('bind', function(addr) {
-  if (addr === 'tcp://127.0.0.1:5555') {
-    b.connect('tcp://127.0.0.1:5555');
+  if (addr === 'tcp://127.0.0.1:5420') {
+    b.connect('tcp://127.0.0.1:5420');
     b.send('Hello from b.');
-  } else if (addr === 'tcp://127.0.0.1:5556') {
-    c.connect('tcp://127.0.0.1:5556');
+  } else if (addr === 'tcp://127.0.0.1:5421') {
+    c.connect('tcp://127.0.0.1:5421');
     c.send('Hello from c.');
   }
 });
 
 a.on('unbind', function(addr) {
-  if (addr === 'tcp://127.0.0.1:5555') {
+  if (addr === 'tcp://127.0.0.1:5420') {
     b.send('Error from b.');
     c.send('Messsage from c.');
     setTimeout(function () {
@@ -35,7 +42,7 @@ a.on('unbind', function(addr) {
 a.on('message', function(msg) {
   message_count++;
   if (msg.toString() === 'Hello from b.') {
-    a.unbind('tcp://127.0.0.1:5555');
+    a.unbind('tcp://127.0.0.1:5420');
   } else if (msg.toString() === 'Final message from c.') {
     message_count.should.equal(4);
     a.close();
@@ -44,15 +51,4 @@ a.on('message', function(msg) {
   } else if (msg.toString() === 'Error from b.') {
     throw Error('b should have been unbound');
   }
-});
-
-a.bind('tcp://127.0.0.1:5555', function (err) {
-  if (err) {
-    throw err;
-  }
-  a.bind('tcp://127.0.0.1:5556', function (err) {
-    if (err) {
-      throw err;
-    }
-  });
 });
