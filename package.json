@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "set-immediate": "*",
-    "nan": "~0.3.0"
+    "nan": "~0.4.0"
   },
   "devDependencies": {
     "should": "*",
