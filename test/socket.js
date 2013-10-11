@@ -79,11 +79,6 @@ describe('socket', function(){
       pull = zmq.socket('pull');
     });
 
-    afterEach(function(){
-      push.close();
-      pull.close();
-    });
-
     it('should support messages', function(done){
       var n = 0;
 
@@ -98,6 +93,8 @@ describe('socket', function(){
             break;
           case 2:
             msg.should.equal('buffer');
+            push.close();
+            pull.close();
             done();
             break;
         }
@@ -116,6 +113,8 @@ describe('socket', function(){
         msg1.toString().should.equal('string');
         msg2.toString().should.equal('15.99');
         msg3.toString().should.equal('buffer');
+        push.close();
+        pull.close();
         done();
       });
 
@@ -125,13 +124,15 @@ describe('socket', function(){
       });
     });
 
-    it('should support sndmore', function() {
+    it('should support sndmore', function(done){
       pull.on('message', function(a, b, c, d, e){
         a.toString().should.equal('tobi');
         b.toString().should.equal('loki');
         c.toString().should.equal('jane');
         d.toString().should.equal('luna');
         e.toString().should.equal('manny');
+        push.close();
+        pull.close();
         done();
       });
 
@@ -187,11 +188,6 @@ describe('socket', function(){
       sub = zmq.socket('sub');
     });
 
-    afterEach(function(){
-      sub.close();
-      pub.close();
-    });
-
     it('should support pub-sub', function(done){
       var n = 0;
 
@@ -207,6 +203,8 @@ describe('socket', function(){
             break;
           case 2:
             msg.toString().should.equal('baz');
+            sub.close();
+            pub.close();
             done();
             break;
         }
@@ -248,6 +246,8 @@ describe('socket', function(){
             break;
           case 1:
             msg.toString().should.equal('luna is cool too');
+            sub.close();
+            pub.close();
             done();
             break;
         }
