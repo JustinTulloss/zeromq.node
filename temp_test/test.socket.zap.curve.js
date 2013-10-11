@@ -1,6 +1,6 @@
 var should = require('should')
   , semver = require('semver')
-  , zmq = require('../');
+  , zmq = require('.');
   
 if (semver.gte(zmq.version, '4.0.0')) {
   var zap = require('./zap')

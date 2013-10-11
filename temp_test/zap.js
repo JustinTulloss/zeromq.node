@@ -2,7 +2,7 @@
 // not the ZAP protocol itself.  As long as the request is valid, this will 
 // authenticate it.
 
-var zmq = require('../');
+var zmq = require('.');
 
 module.exports.start = function() {
   var zap = zmq.socket('router');

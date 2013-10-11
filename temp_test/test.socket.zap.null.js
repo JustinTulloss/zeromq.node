@@ -1,10 +1,10 @@
 var should = require('should')
   , semver = require('semver')
-  , zmq = require('../');
+  , zmq = require('.');
   
 if (semver.gte(zmq.version, '4.0.0')) {
   var zap = require('./zap')
-  	, port = 'tcp://127.0.0.1:12346'
+  	, port = 'tcp://127.0.0.1:12345'
     , zapSocket = zap.start()
     , rep = zmq.socket('rep')
     , req = zmq.socket('req');
@@ -16,8 +16,7 @@ if (semver.gte(zmq.version, '4.0.0')) {
   });
 
   rep.zap_domain = "test";
-  rep.plain_server = 1;
-  rep.mechanism.should.eql(1);
+  rep.mechanism.should.eql(0);
 
   var timeout = setTimeout(function() {
     req.close();
@@ -27,10 +26,7 @@ if (semver.gte(zmq.version, '4.0.0')) {
   }, 1000);
 
   rep.bind(port, function(){
-    req.plain_username = "user";
-    req.plain_password = "pass";
-    req.mechanism.should.eql(1);
-
+    req.mechanism.should.eql(0);
     req.connect(port);
     req.send('hello');
     req.on('message', function(msg){

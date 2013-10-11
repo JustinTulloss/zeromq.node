@@ -1,4 +1,4 @@
-var zmq = require('../')
+var zmq = require('.')
   , should = require('should')
   , semver = require('semver');
 

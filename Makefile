@@ -2,12 +2,13 @@
 TESTS = $(wildcard test/test.*.js)
 DOX = ./node_modules/.bin/dox
 JADE = ./node_modules/.bin/jade
+MOCHA = ./node_modules/.bin/mocha
 
 build/Release/binding.node: binding.cc binding.gyp
 	npm install
 
 test:
-	@node test/run $(TESTS)
+	$(MOCHA) --expose-gc
 
 clean:
 	rm -fr build

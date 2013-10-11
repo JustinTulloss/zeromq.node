@@ -1,5 +1,5 @@
 
-var zmq = require('../')
+var zmq = require('.')
   , should = require('should');
 
 var push = zmq.socket('push')
