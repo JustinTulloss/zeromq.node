@@ -988,7 +988,7 @@ namespace zmq {
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
     NODE_DEFINE_CONSTANT(target, ZMQ_PUB);
     NODE_DEFINE_CONSTANT(target, ZMQ_SUB);
-    #if ZMQ_VERSION_MAJOR == 3
+    #if ZMQ_VERSION_MAJOR >= 3
     NODE_DEFINE_CONSTANT(target, ZMQ_XPUB);
     NODE_DEFINE_CONSTANT(target, ZMQ_XSUB);
     #endif
