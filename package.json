@@ -11,7 +11,7 @@
     "set-immediate": "*"
   },
   "devDependencies": {
-    "should": "*",
+    "should": "1.3.0",
     "batch": "*",
     "jade": "*",
     "dox": "*",
