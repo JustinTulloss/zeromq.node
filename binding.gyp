@@ -5,7 +5,7 @@
       'sources': [ 'binding.cc' ],
       'conditions': [
         ['OS=="win"', {
-          'include_dirs': ['windows/include'],
+          'include_dirs': ["<!(node -p -e \"require('path').dirname(require.resolve('nan'))\")", 'windows/include'],
           'link_settings': {
             'libraries': [
               'Delayimp.lib',
@@ -38,6 +38,7 @@
           },
           # add macports include & lib dirs
           'include_dirs': [
+            "<!(node -p -e \"require('path').dirname(require.resolve('nan'))\")",
             '<!@(pkg-config libzmq --cflags-only-I | sed s/-I//g)',
             '/opt/local/include',
           ],
@@ -48,6 +49,7 @@
         }],
         ['OS=="openbsd" or OS=="freebsd"', {
           'include_dirs': [
+            "<!(node -p -e \"require('path').dirname(require.resolve('nan'))\")",
             '<!@(pkg-config libzmq --cflags-only-I | sed s/-I//g)',
             '/usr/local/include',
           ],
@@ -57,6 +59,7 @@
           ]
         }],
         ['OS=="linux"', {
+          'include_dirs': ["<!(node -p -e \"require('path').dirname(require.resolve('nan'))\")"],
           'cflags': [
             '<!(pkg-config libzmq --cflags 2>/dev/null || echo "")',
           ],

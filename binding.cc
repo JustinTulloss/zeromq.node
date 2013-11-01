@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <stdexcept>
 #include <set>
+#include "nan.h"
 
 #ifdef _WIN32
 # define snprintf _snprintf_s
@@ -80,12 +81,10 @@ namespace zmq {
 
     private:
       Context(int io_threads);
-      static Handle<Value> New(const Arguments& args);
-      static Context* GetContext(const Arguments &args);
-
+      static NAN_METHOD(New);
+      static Context *GetContext(_NAN_METHOD_ARGS);
       void Close();
-      static Handle<Value> Close(const Arguments& args);
-
+      static NAN_METHOD(Close);
       void* context_;
   };
 
@@ -96,41 +95,35 @@ namespace zmq {
       void CallbackIfReady();
 
     private:
-      static Handle<Value> New(const Arguments &args);
+      static NAN_METHOD(New);
       Socket(Context *context, int type);
-      static Socket* GetSocket(const Arguments &args);
-
-      static Handle<Value> GetState(Local<String> p, const AccessorInfo& info);
-
+      static Socket* GetSocket(_NAN_METHOD_ARGS);
+      static NAN_GETTER(GetState);
       template<typename T>
       Handle<Value> GetSockOpt(int option);
       template<typename T>
       Handle<Value> SetSockOpt(int option, Handle<Value> wrappedValue);
-      static Handle<Value> GetSockOpt(const Arguments &args);
-      static Handle<Value> SetSockOpt(const Arguments &args);
+      static NAN_METHOD(GetSockOpt);
+      static NAN_METHOD(SetSockOpt);
 
       struct BindState;
-      static Handle<Value> Bind(const Arguments &args);
+      static NAN_METHOD(Bind);
 
       static void UV_BindAsync(uv_work_t* req);
       static void UV_BindAsyncAfter(uv_work_t* req);
 
-      static Handle<Value> BindSync(const Arguments &args);
-
-      static Handle<Value> Connect(const Arguments &args);
-      
+      static NAN_METHOD(BindSync);
+      static NAN_METHOD(Connect);
 #if ZMQ_CAN_DISCONNECT
-      static Handle<Value> Disconnect(const Arguments &args);
+      static NAN_METHOD(Disconnect);
 #endif
 
       class IncomingMessage;
-      static Handle<Value> Recv(const Arguments &args);
-
+      static NAN_METHOD(Recv);
       class OutgoingMessage;
-      static Handle<Value> Send(const Arguments &args);
-
+      static NAN_METHOD(Send);
       void Close();
-      static Handle<Value> Close(const Arguments &args);
+      static NAN_METHOD(Close);
 
       Persistent<Object> context_;
       void *socket_;
@@ -161,14 +154,14 @@ namespace zmq {
     return Exception::Error(String::New(ErrorMessage()));
   }
 
+
   /*
    * Context methods.
    */
 
   void
   Context::Initialize(v8::Handle<v8::Object> target) {
-    HandleScope scope;
-
+    NanScope();
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
     t->InstanceTemplate()->SetInternalFieldCount(1);
 
@@ -182,29 +175,22 @@ namespace zmq {
     Close();
   }
 
-  Handle<Value>
-  Context::New(const Arguments& args) {
-    HandleScope scope;
-
+  NAN_METHOD(Context::New) {
+    NanScope();
     assert(args.IsConstructCall());
-
     int io_threads = 1;
     if (args.Length() == 1) {
       if (!args[0]->IsNumber()) {
-        return ThrowException(Exception::TypeError(
-          String::New("io_threads must be an integer")));
+        return NanThrowTypeError("io_threads must be an integer");
       }
       io_threads = (int) args[0]->ToInteger()->Value();
       if (io_threads < 1) {
-        return ThrowException(Exception::RangeError(
-          String::New("io_threads must be a positive number")));
+        return NanThrowRangeError("io_threads must be a positive number");
       }
     }
-
     Context *context = new Context(io_threads);
     context->Wrap(args.This());
-
-    return args.This();
+    NanReturnValue(args.This());
   }
 
   Context::Context(int io_threads) : ObjectWrap() {
@@ -213,10 +199,9 @@ namespace zmq {
   }
 
   Context *
-  Context::GetContext(const Arguments &args) {
+  Context::GetContext(_NAN_METHOD_ARGS) {
     return ObjectWrap::Unwrap<Context>(args.This());
   }
-
 
   void
   Context::Close() {
@@ -226,11 +211,10 @@ namespace zmq {
     }
   }
 
-  Handle<Value>
-  Context::Close(const Arguments& args) {
-    HandleScope scope;
+  NAN_METHOD(Context::Close) {
+    NanScope();
     GetContext(args)->Close();
-    return Undefined();
+    NanReturnUndefined();
   }
 
   /*
@@ -239,12 +223,12 @@ namespace zmq {
 
   void
   Socket::Initialize(v8::Handle<v8::Object> target) {
-    HandleScope scope;
+    NanScope();
 
     Local<FunctionTemplate> t = FunctionTemplate::New(New);
     t->InstanceTemplate()->SetInternalFieldCount(1);
     t->InstanceTemplate()->SetAccessor(
-        String::NewSymbol("state"), GetState, NULL);
+      String::NewSymbol("state"), Socket::GetState);
 
     NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
     NODE_SET_PROTOTYPE_METHOD(t, "bindSync", BindSync);
@@ -254,41 +238,39 @@ namespace zmq {
     NODE_SET_PROTOTYPE_METHOD(t, "recv", Recv);
     NODE_SET_PROTOTYPE_METHOD(t, "send", Send);
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
-    
+
 #if ZMQ_CAN_DISCONNECT
     NODE_SET_PROTOTYPE_METHOD(t, "disconnect", Disconnect);
 #endif
 
     target->Set(String::NewSymbol("Socket"), t->GetFunction());
 
-    callback_symbol = NODE_PSYMBOL("onReady");
+    NanAssignPersistent(String, callback_symbol, String::NewSymbol("onReady"));
   }
 
   Socket::~Socket() {
     Close();
   }
 
-  Handle<Value>
-  Socket::New(const Arguments &args) {
-    HandleScope scope;
-
+  NAN_METHOD(Socket::New) {
+    NanScope();
     assert(args.IsConstructCall());
 
     if (args.Length() != 2) {
-      return ThrowException(Exception::Error(
-          String::New("Must pass a context and a type to constructor")));
+      return NanThrowError("Must pass a context and a type to constructor");
     }
+
     Context *context = ObjectWrap::Unwrap<Context>(args[0]->ToObject());
+
     if (!args[1]->IsNumber()) {
-      return ThrowException(Exception::TypeError(
-          String::New("Type must be an integer")));
+      return NanThrowTypeError("Type must be an integer");
     }
+
     int type = (int) args[1]->ToInteger()->Value();
 
     Socket *socket = new Socket(context, type);
     socket->Wrap(args.This());
-
-    return args.This();
+    NanReturnValue(args.This());
   }
 
   bool
@@ -304,16 +286,16 @@ namespace zmq {
   void
   Socket::CallbackIfReady() {
     if (this->IsReady()) {
-      HandleScope scope;
+      NanScope();
 
-      Local<Value> callback_v = this->handle_->Get(callback_symbol);
+      Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanPersistentToLocal(callback_symbol));
       if (!callback_v->IsFunction()) {
         return;
       }
 
       TryCatch try_catch;
 
-      callback_v.As<Function>()->Call(this->handle_, 0, NULL);
+      callback_v.As<Function>()->Call(NanObjectWrapHandle(this), 0, NULL);
 
       if (try_catch.HasCaught()) {
         FatalException(try_catch);
@@ -330,11 +312,7 @@ namespace zmq {
   }
 
   Socket::Socket(Context *context, int type) : ObjectWrap() {
-    #if NODE_VERSION_AT_LEAST(0, 11, 3)
-      context_ = Persistent<Object>::New(Isolate::GetCurrent(), context->handle_);
-    #else
-      context_ = Persistent<Object>::New(context->handle_);
-    #endif
+    NanAssignPersistent(Object, context_, NanObjectWrapHandle(context));
     socket_ = zmq_socket(context->context_, type);
     state_ = STATE_READY;
 
@@ -356,7 +334,7 @@ namespace zmq {
   }
 
   Socket *
-  Socket::GetSocket(const Arguments &args) {
+  Socket::GetSocket(_NAN_METHOD_ARGS) {
     return ObjectWrap::Unwrap<Socket>(args.This());
   }
 
@@ -364,19 +342,17 @@ namespace zmq {
    * This macro makes a call to GetSocket and checks the socket state. These two
    * things go hand in hand everywhere in our code.
    */
-  #define GET_SOCKET(args)                              \
-      Socket* socket = GetSocket(args);                 \
-      if (socket->state_ == STATE_CLOSED)               \
-          return ThrowException(Exception::TypeError(   \
-              String::New("Socket is closed")));        \
-      if (socket->state_ == STATE_BUSY)                 \
-          return ThrowException(Exception::TypeError(   \
-              String::New("Socket is busy")));
+  #define GET_SOCKET(args)                                      \
+      Socket* socket = GetSocket(args);                         \
+      if (socket->state_ == STATE_CLOSED)                       \
+          return NanThrowTypeError("Socket is closed");         \
+      if (socket->state_ == STATE_BUSY)                         \
+          return NanThrowTypeError("Socket is busy");
 
-  Handle<Value>
-  Socket::GetState(Local<String> p, const AccessorInfo& info) {
-    Socket* socket = ObjectWrap::Unwrap<Socket>(info.Holder());
-    return Integer::New(socket->state_);
+  NAN_GETTER(Socket::GetState) {
+    NanScope();
+    Socket* socket = ObjectWrap::Unwrap<Socket>(args.Holder());
+    NanReturnValue(Integer::New(socket->state_));
   }
 
   template<typename T>
@@ -392,7 +368,7 @@ namespace zmq {
   Handle<Value> Socket::SetSockOpt(int option, Handle<Value> wrappedValue) {
     if (!wrappedValue->IsNumber())
       return ThrowException(Exception::TypeError(
-        String::New("Value must be an integer")));
+          String::New("Value must be an integer")));
     T value = (T) wrappedValue->ToInteger()->Value();
     if (zmq_setsockopt(socket_, option, &value, sizeof(T)) < 0)
       return ThrowException(ExceptionFromError());
@@ -421,81 +397,68 @@ namespace zmq {
     return Undefined();
   }
 
-  Handle<Value> Socket::GetSockOpt(const Arguments &args) {
+  NAN_METHOD(Socket::GetSockOpt) {
+    NanScope();
     if (args.Length() != 1)
-      return ThrowException(Exception::Error(
-          String::New("Must pass an option")));
+      return NanThrowError("Must pass an option");
     if (!args[0]->IsNumber())
-      return ThrowException(Exception::TypeError(
-          String::New("Option must be an integer")));
+      return NanThrowTypeError("Option must be an integer");
     int64_t option = args[0]->ToInteger()->Value();
 
     GET_SOCKET(args);
 
     if (opts_int.count(option)) {
-      return socket->GetSockOpt<int>(option);
+      NanReturnValue(socket->GetSockOpt<int>(option));
     } else if (opts_uint32.count(option)) {
-      return socket->GetSockOpt<uint32_t>(option);
+      NanReturnValue(socket->GetSockOpt<uint32_t>(option));
     } else if (opts_int64.count(option)) {
-      return socket->GetSockOpt<int64_t>(option);
+      NanReturnValue(socket->GetSockOpt<int64_t>(option));
     } else if (opts_uint64.count(option)) {
-      return socket->GetSockOpt<uint64_t>(option);
+      NanReturnValue(socket->GetSockOpt<uint64_t>(option));
     } else if (opts_binary.count(option)) {
-      return socket->GetSockOpt<char*>(option);
+      NanReturnValue(socket->GetSockOpt<char*>(option));
     } else {
-      return ThrowException(Exception::Error(
-        String::New(zmq_strerror(EINVAL))));
+      return NanThrowError(zmq_strerror(EINVAL));
     }
   }
 
-  Handle<Value> Socket::SetSockOpt(const Arguments &args) {
+  NAN_METHOD(Socket::SetSockOpt) {
+    NanScope();
     if (args.Length() != 2)
-      return ThrowException(Exception::Error(
-        String::New("Must pass an option and a value")));
+      return NanThrowError("Must pass an option and a value");
     if (!args[0]->IsNumber())
-      return ThrowException(Exception::TypeError(
-          String::New("Option must be an integer")));
+       return NanThrowTypeError("Option must be an integer");
     int64_t option = args[0]->ToInteger()->Value();
-
     GET_SOCKET(args);
 
     if (opts_int.count(option)) {
-      return socket->SetSockOpt<int>(option, args[1]);
+      NanReturnValue(socket->SetSockOpt<int>(option, args[1]));
     } else if (opts_uint32.count(option)) {
-      return socket->SetSockOpt<uint32_t>(option, args[1]);
+      NanReturnValue(socket->SetSockOpt<uint32_t>(option, args[1]));
     } else if (opts_int64.count(option)) {
-      return socket->SetSockOpt<int64_t>(option, args[1]);
+      NanReturnValue(socket->SetSockOpt<int64_t>(option, args[1]));
     } else if (opts_uint64.count(option)) {
-      return socket->SetSockOpt<uint64_t>(option, args[1]);
+      NanReturnValue(socket->SetSockOpt<uint64_t>(option, args[1]));
     } else if (opts_binary.count(option)) {
-      return socket->SetSockOpt<char*>(option, args[1]);
+      NanReturnValue(socket->SetSockOpt<char*>(option, args[1]));
     } else {
-      return ThrowException(Exception::Error(
-        String::New(zmq_strerror(EINVAL))));
+      return NanThrowError(zmq_strerror(EINVAL));
     }
   }
 
   struct Socket::BindState {
     BindState(Socket* sock_, Handle<Function> cb_, Handle<String> addr_)
           : addr(addr_) {
-      #if NODE_VERSION_AT_LEAST(0, 11, 3)
-        sock_obj = Persistent<Object>::New(Isolate::GetCurrent(), sock_->handle_);
-      #else
-        sock_obj = Persistent<Object>::New(sock_->handle_);
-      #endif
+      NanAssignPersistent(Object, sock_obj, NanObjectWrapHandle(sock_));
       sock = sock_->socket_;
-      #if NODE_VERSION_AT_LEAST(0, 11, 3)
-        cb = Persistent<Function>::New(Isolate::GetCurrent(), cb_);
-      #else
-        cb = Persistent<Function>::New(cb_);
-      #endif
+      NanAssignPersistent(Function, cb, cb_);
       error = 0;
     }
 
     ~BindState() {
-      sock_obj.Dispose();
+      NanDispose(sock_obj);
       sock_obj.Clear();
-      cb.Dispose();
+      NanDispose(cb);
       cb.Clear();
     }
 
@@ -506,16 +469,13 @@ namespace zmq {
     int error;
   };
 
-  Handle<Value>
-  Socket::Bind(const Arguments &args) {
-    HandleScope scope;
+  NAN_METHOD(Socket::Bind) {
+    NanScope();
     if (!args[0]->IsString())
-      return ThrowException(Exception::TypeError(
-          String::New("Address must be a string!")));
-    Local<String> addr = args[0]->ToString();
+      return NanThrowTypeError("Address must be a string!");
+    Local<String> addr = args[0].As<String>();
     if (args.Length() > 1 && !args[1]->IsFunction())
-      return ThrowException(Exception::TypeError(
-        String::New("Provided callback must be a function")));
+      return NanThrowTypeError("Provided callback must be a function");
     Local<Function> cb = Local<Function>::Cast(args[1]);
 
     GET_SOCKET(args);
@@ -529,7 +489,7 @@ namespace zmq {
                   (uv_after_work_cb)UV_BindAsyncAfter);
     socket->state_ = STATE_BUSY;
 
-    return Undefined();
+    NanReturnUndefined();
   }
 
   void Socket::UV_BindAsync(uv_work_t* req) {
@@ -540,14 +500,19 @@ namespace zmq {
 
   void Socket::UV_BindAsyncAfter(uv_work_t* req) {
     BindState* state = static_cast<BindState*>(req->data);
-    HandleScope scope;
+    NanScope();
 
     Local<Value> argv[1];
-    if (state->error) argv[0] = Exception::Error(String::New(zmq_strerror(state->error)));
-    else argv[0] = Local<Value>::New(Undefined());
-    Local<Function> cb = Local<Function>::New(state->cb);
 
-    Socket *socket = ObjectWrap::Unwrap<Socket>(state->sock_obj);
+    if (state->error) {
+      argv[0] = Exception::Error(String::New(zmq_strerror(state->error)));
+    } else {
+      argv[0] = Local<Value>::New(Undefined());
+    }
+
+    Local<Function> cb = NanPersistentToLocal(state->cb);
+
+    Socket *socket = ObjectWrap::Unwrap<Socket>(NanPersistentToLocal(state->sock_obj));
     socket->state_ = STATE_READY;
     delete state;
 
@@ -562,71 +527,64 @@ namespace zmq {
     delete req;
   }
 
-  Handle<Value>
-  Socket::BindSync(const Arguments &args) {
-    HandleScope scope;
+  NAN_METHOD(Socket::BindSync) {
+    NanScope();
     if (!args[0]->IsString())
-      return ThrowException(Exception::TypeError(
-        String::New("Address must be a string!")));
-    String::Utf8Value addr(args[0]->ToString());
-
+      return NanThrowTypeError("Address must be a string!");
+    String::Utf8Value addr(args[0].As<String>());
     GET_SOCKET(args);
-
     socket->state_ = STATE_BUSY;
-
     if (zmq_bind(socket->socket_, *addr) < 0)
-      return ThrowException(ExceptionFromError());
+      return NanThrowError(ErrorMessage());
 
     socket->state_ = STATE_READY;
 
     if (socket->endpoints == 0)
       socket->Ref();
+
     socket->endpoints += 1;
 
-    return Undefined();
+    NanReturnUndefined();
   }
 
-  Handle<Value>
-  Socket::Connect(const Arguments &args) {
-    HandleScope scope;
+  NAN_METHOD(Socket::Connect) {
+    NanScope();
     if (!args[0]->IsString()) {
-      return ThrowException(Exception::TypeError(
-        String::New("Address must be a string!")));
+      return NanThrowTypeError("Address must be a string!");
     }
 
     GET_SOCKET(args);
 
-    String::Utf8Value address(args[0]->ToString());
+    String::Utf8Value address(args[0].As<String>());
     if (zmq_connect(socket->socket_, *address))
-      return ThrowException(ExceptionFromError());
+      return NanThrowError(ErrorMessage());
 
     if (socket->endpoints == 0)
       socket->Ref();
+
     socket->endpoints += 1;
 
-    return Undefined();
+    NanReturnUndefined();
   }
-  
+
 #if ZMQ_CAN_DISCONNECT
-  Handle<Value>
-  Socket::Disconnect(const Arguments &args) {
-    HandleScope scope;
+  NAN_METHOD(Socket::Disconnect) {
+    NanScope();
+
     if (!args[0]->IsString()) {
-      return ThrowException(Exception::TypeError(
-        String::New("Address must be a string!")));
+      return NanThrowTypeError("Address must be a string!");
     }
 
     GET_SOCKET(args);
 
-    String::Utf8Value address(args[0]->ToString());
+    String::Utf8Value address(args[0].As<String>());
     if (zmq_disconnect(socket->socket_, *address))
-      return ThrowException(ExceptionFromError());
-
+      return NanThrowError(ErrorMessage());
     socket->endpoints -= 1;
     if (socket->endpoints == 0)
       socket->Unref();
 
-    return Undefined();
+    NanReturnUndefined();
   }
 #endif
 
@@ -648,7 +606,7 @@ namespace zmq {
           delete msgref_;
           msgref_ = NULL;
         } else {
-          buf_.Dispose();
+          NanDispose(buf_);
           buf_.Clear();
         }
       };
@@ -659,26 +617,13 @@ namespace zmq {
 
       inline Local<Value> GetBuffer() {
         if (buf_.IsEmpty()) {
-          #if NODE_VERSION_AT_LEAST(0, 11, 3)
-            Local<Object> buf_obj = Buffer::New(
-          #else
-            Buffer* buf_obj = Buffer::New(
-          #endif
-            (char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_),
-            FreeCallback, msgref_);
-          #if NODE_VERSION_AT_LEAST(0, 11, 3)
-            if (buf_obj.IsEmpty())
-          #else
-            if (!buf_obj)
-          #endif
+          Local<Object> buf_obj = NanNewBufferHandle((char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_), FreeCallback, msgref_);
+          if (buf_obj.IsEmpty()) {
             return Local<Value>();
-          #if NODE_VERSION_AT_LEAST(0, 11, 3)
-            buf_ = Persistent<Object>::New(Isolate::GetCurrent(), buf_obj);
-          #else
-            buf_ = Persistent<Object>::New(buf_obj->handle_);
-          #endif
+          }
+          NanAssignPersistent(Object, buf_, buf_obj);
         }
-        return Local<Value>::New(buf_);
+        return NanPersistentToLocal(buf_);
       }
 
     private:
@@ -710,32 +655,29 @@ namespace zmq {
       MessageReference* msgref_;
   };
 
-  Handle<Value> Socket::Recv(const Arguments &args) {
-    HandleScope scope;
-
+  NAN_METHOD(Socket::Recv) {
+    NanScope();
     int flags = 0;
     int argc = args.Length();
     if (argc == 1) {
       if (!args[0]->IsNumber())
-        return ThrowException(Exception::TypeError(
-          String::New("Argument should be an integer")));
+        return NanThrowTypeError("Argument should be an integer");
       flags = args[0]->ToInteger()->Value();
+    } else if (argc != 0) {
+      return NanThrowTypeError("Only one argument at most was expected");
     }
-    else if (argc != 0)
-      return ThrowException(Exception::TypeError(
-        String::New("Only one argument at most was expected")));
 
     GET_SOCKET(args);
 
     IncomingMessage msg;
     #if ZMQ_VERSION_MAJOR == 2
       if (zmq_recv(socket->socket_, msg, flags) < 0)
-        return ThrowException(ExceptionFromError());
+        return NanThrowError(ErrorMessage());
     #else
       if (zmq_recvmsg(socket->socket_, msg, flags) < 0)
-        return ThrowException(ExceptionFromError());
+        return NanThrowError(ErrorMessage());
     #endif
-    return scope.Close(msg.GetBuffer());
+    NanReturnValue(msg.GetBuffer());
   }
 
   /*
@@ -770,17 +712,12 @@ namespace zmq {
           inline BufferReference(Handle<Object> buf) {
             // Keep the handle alive until zmq is done with the buffer
             noLongerNeeded_ = false;
-            #if NODE_VERSION_AT_LEAST(0, 11, 3)
-              buf_ = Persistent<Object>::New(Isolate::GetCurrent(), buf);
-              buf_.MakeWeak(Isolate::GetCurrent(), this, &WeakCheck);
-            #else
-              buf_ = Persistent<Object>::New(buf);
-              buf_.MakeWeak(this, &WeakCheck);
-            #endif
+            NanAssignPersistent(Object, buf_, buf);
+            NanMakeWeak(buf_, this, &WeakCheck);
           }
 
           inline ~BufferReference() {
-            buf_.Dispose();
+            NanDispose(buf_);
             buf_.Clear();
           }
 
@@ -791,26 +728,14 @@ namespace zmq {
             ((BufferReference*)message)->noLongerNeeded_ = true;
           }
 
-          // Called when V8 would like to GC buf_
-          #if NODE_VERSION_AT_LEAST(0, 11, 3)
-            static void WeakCheck(Isolate* isolate, Persistent<Object>* obj, BufferReference* data) {
-              if ((data)->noLongerNeeded_) {
-                delete data;
-              } else {
-                // Still in use, revive, prevent GC
-                obj->MakeWeak(isolate, data, &WeakCheck);
-              }
-            }
-          #else
-            static void WeakCheck(v8::Persistent<v8::Value> obj, void* data) {
-              if (((BufferReference*)data)->noLongerNeeded_) {
-                delete (BufferReference*)data;
-              } else {
-                // Still in use, revive, prevent GC
-                obj.MakeWeak(data, &WeakCheck);
-              }
-            }
-          #endif
+         static NAN_WEAK_CALLBACK(BufferReference*, WeakCheck) {
+           if (NAN_WEAK_CALLBACK_DATA(BufferReference*)->noLongerNeeded_) {
+             delete NAN_WEAK_CALLBACK_DATA(BufferReference*);
+           } else {
+             // Still in use, revive, prevent GC
+             NanMakeWeak(NAN_WEAK_CALLBACK_OBJECT, NAN_WEAK_CALLBACK_DATA(BufferReference*), &WeakCheck);
+           }
+         }
 
         private:
           bool noLongerNeeded_;
@@ -825,38 +750,34 @@ namespace zmq {
   // until zmq_send completes, possibly on another thread.
   // Do not modify or reuse any buffer passed to send.
   // This is bad, but allows us to send without copying.
-  Handle<Value> Socket::Send(const Arguments &args) {
-    HandleScope scope;
+  NAN_METHOD(Socket::Send) {
+    NanScope();
 
     int argc = args.Length();
     if (argc != 1 && argc != 2)
-      return ThrowException(Exception::TypeError(
-        String::New("Must pass a Buffer and optionally flags")));
+      return NanThrowTypeError("Must pass a Buffer and optionally flags");
     if (!Buffer::HasInstance(args[0]))
-        return ThrowException(Exception::TypeError(
-          String::New("First argument should be a Buffer")));
+        return NanThrowTypeError("First argument should be a Buffer");
     int flags = 0;
     if (argc == 2) {
       if (!args[1]->IsNumber())
-        return ThrowException(Exception::TypeError(
-          String::New("Second argument should be an integer")));
+        return NanThrowTypeError("Second argument should be an integer");
       flags = args[1]->ToInteger()->Value();
     }
 
     GET_SOCKET(args);
 
 #if 0  // zero-copy version, but doesn't properly pin buffer and so has GC issues
-    OutgoingMessage msg(args[0]->ToObject());
+    OutgoingMessage msg(args[0].As<Object>());
     if (zmq_send(socket->socket_, msg, flags) < 0)
-        return ThrowException(ExceptionFromError());
-
+        return NanThrowError(ErrorMessage());
 #else // copying version that has no GC issues
     zmq_msg_t msg;
-    Local<Object> buf = args[0]->ToObject();
+    Local<Object> buf = args[0].As<Object>();
     size_t len = Buffer::Length(buf);
     int res = zmq_msg_init_size(&msg, len);
     if (res != 0)
-      return ThrowException(ExceptionFromError());
+      return NanThrowError(ErrorMessage());
 
     char * cp = (char *)zmq_msg_data(&msg);
     const char * dat = Buffer::Data(buf);
@@ -864,14 +785,14 @@ namespace zmq {
 
     #if ZMQ_VERSION_MAJOR == 2
       if (zmq_send(socket->socket_, &msg, flags) < 0)
-        return ThrowException(ExceptionFromError());
+        return NanThrowError(ErrorMessage());
     #else
       if (zmq_sendmsg(socket->socket_, &msg, flags) < 0)
-        return ThrowException(ExceptionFromError());
+        return NanThrowError(ErrorMessage());
     #endif
 #endif // zero copy / copying version
 
-    return Undefined();
+    NanReturnUndefined();
   }
 
 
@@ -882,7 +803,7 @@ namespace zmq {
         throw std::runtime_error(ErrorMessage());
       socket_ = NULL;
       state_ = STATE_CLOSED;
-      context_.Dispose();
+      NanDispose(context_);
       context_.Clear();
 
       if (this->endpoints > 0)
@@ -893,12 +814,11 @@ namespace zmq {
     }
   }
 
-  Handle<Value>
-  Socket::Close(const Arguments &args) {
-    HandleScope scope;
+  NAN_METHOD(Socket::Close) {
+    NanScope();
     GET_SOCKET(args);
     socket->Close();
-    return Undefined();
+    NanReturnUndefined();
   }
 
   // Make zeromq versions less than 2.1.3 work by defining
@@ -912,22 +832,20 @@ namespace zmq {
    * Module functions.
    */
 
-  static Handle<Value>
-  ZmqVersion(const Arguments& args) {
-    HandleScope scope;
-
+   static NAN_METHOD(ZmqVersion) {
+    NanScope();
     int major, minor, patch;
     zmq_version(&major, &minor, &patch);
 
     char version_info[16];
     snprintf(version_info, 16, "%d.%d.%d", major, minor, patch);
 
-    return scope.Close(String::New(version_info));
+    NanReturnValue(String::New(version_info));
   }
 
   static void
   Initialize(Handle<Object> target) {
-    HandleScope scope;
+    NanScope();
 
     opts_int.insert(14); // ZMQ_FD
     opts_int.insert(16); // ZMQ_TYPE
