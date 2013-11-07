@@ -93,6 +93,7 @@ namespace zmq {
       static void Initialize(v8::Handle<v8::Object> target);
       virtual ~Socket();
       void CallbackIfReady();
+      void MonitorEvent(int event);
 
     private:
       static NAN_METHOD(New);
@@ -127,15 +128,22 @@ namespace zmq {
 
       Persistent<Object> context_;
       void *socket_;
+      void *monitor_socket_;
       uint8_t state_;
       int32_t endpoints;
 
       bool IsReady();
+      
       uv_poll_t *poll_handle_;
       static void UV_PollCallback(uv_poll_t* handle, int status, int events);
+      
+      uv_poll_t *monitor_handle_;
+      static void UV_MonitorCallback(uv_poll_t* handle, int status, int events);
   };
 
   Persistent<String> callback_symbol;
+  Persistent<String> monitor_symbol;
+  int monitors_count = 0;
 
   static void
   Initialize(Handle<Object> target);
@@ -246,6 +254,7 @@ namespace zmq {
     target->Set(String::NewSymbol("Socket"), t->GetFunction());
 
     NanAssignPersistent(String, callback_symbol, String::NewSymbol("onReady"));
+    NanAssignPersistent(String, monitor_symbol, String::NewSymbol("onMonitorEvent"));
   }
 
   Socket::~Socket() {
@@ -302,6 +311,28 @@ namespace zmq {
       }
     }
   }
+  
+  void
+  Socket::MonitorEvent(int event) {
+    if (this->IsReady()) {
+      NanScope();
+
+      Local<Value> argv[1];
+      argv[0] = Local<Value>::New(Integer::New(event));
+      Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanPersistentToLocal(monitor_symbol));
+      if (!callback_v->IsFunction()) {
+        return;
+      }
+
+      TryCatch try_catch;
+
+      callback_v.As<Function>()->Call(NanObjectWrapHandle(this), 1, argv);
+
+      if (try_catch.HasCaught()) {
+        FatalException(try_catch);
+      }
+    }
+  }
 
   void
   Socket::UV_PollCallback(uv_poll_t* handle, int status, int events) {
@@ -309,6 +340,25 @@ namespace zmq {
 
     Socket* s = static_cast<Socket*>(handle->data);
     s->CallbackIfReady();
+  }
+  
+  void
+  Socket::UV_MonitorCallback(uv_poll_t* handle, int status, int events) {
+    Socket* s = static_cast<Socket*>(handle->data);
+    zmq_msg_t msg;
+    
+    zmq_msg_init (&msg);
+    if(zmq_recvmsg (s->monitor_socket_, &msg, ZMQ_DONTWAIT) > 0)
+    {
+      zmq_event_t event;
+      memcpy (&event, zmq_msg_data (&msg), sizeof (zmq_event_t));
+      s->MonitorEvent(event.event);
+    }
+    else {
+      uv_poll_stop(handle);
+    }
+    
+    zmq_msg_close (&msg);
   }
 
   Socket::Socket(Context *context, int type) : ObjectWrap() {
@@ -331,6 +381,30 @@ namespace zmq {
 
     uv_poll_init_socket(uv_default_loop(), poll_handle_, socket);
     uv_poll_start(poll_handle_, UV_READABLE, Socket::UV_PollCallback);
+    
+    /*
+      Monitor part
+    */
+    char addr[255];
+    sprintf(addr, "%s%d", "inproc://monitor.req.", monitors_count);
+    if(zmq_socket_monitor(socket_, addr, ZMQ_EVENT_ALL) != -1)
+    {
+      monitor_socket_ = zmq_socket (context->context_, ZMQ_PAIR);
+      zmq_connect (monitor_socket_, addr);
+    
+      monitor_handle_ = new uv_poll_t;
+
+      monitor_handle_->data = this;
+
+      uv_os_sock_t monitor;
+
+      if (zmq_getsockopt(monitor_socket_, ZMQ_FD, &monitor, &len)) {
+        throw std::runtime_error(ErrorMessage());
+      }
+
+      uv_poll_init_socket(uv_default_loop(), monitor_handle_, monitor);
+      uv_poll_start(monitor_handle_, UV_READABLE, Socket::UV_MonitorCallback);
+    }
   }
 
   Socket *
