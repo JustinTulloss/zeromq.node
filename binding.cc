@@ -94,8 +94,9 @@ namespace zmq {
       static void Initialize(v8::Handle<v8::Object> target);
       virtual ~Socket();
       void CallbackIfReady();
+#if ZMQ_HAS_MONITOR
       void MonitorEvent(zmq_event_t event);
-
+#endif
     private:
       static NAN_METHOD(New);
       Socket(Context *context, int type);
@@ -312,7 +313,16 @@ namespace zmq {
       }
     }
   }
+
+  void
+  Socket::UV_PollCallback(uv_poll_t* handle, int status, int events) {
+    assert(status == 0);
+
+    Socket* s = static_cast<Socket*>(handle->data);
+    s->CallbackIfReady();
+  }
   
+#if ZMQ_HAS_MONITOR
   void
   Socket::MonitorEvent(zmq_event_t event) {
     if (this->IsReady()) {
@@ -340,15 +350,6 @@ namespace zmq {
   }
 
   void
-  Socket::UV_PollCallback(uv_poll_t* handle, int status, int events) {
-    assert(status == 0);
-
-    Socket* s = static_cast<Socket*>(handle->data);
-    s->CallbackIfReady();
-  }
-  
-#if ZMQ_HAS_MONITOR
-  void
   Socket::UV_MonitorCallback(uv_poll_t* handle, int status, int events) {
     Socket* s = static_cast<Socket*>(handle->data);
     zmq_msg_t msg;
@@ -367,6 +368,7 @@ namespace zmq {
     zmq_msg_close (&msg);
   }
 #endif
+  
   Socket::Socket(Context *context, int type) : ObjectWrap() {
     NanAssignPersistent(Object, context_, NanObjectWrapHandle(context));
     socket_ = zmq_socket(context->context_, type);
