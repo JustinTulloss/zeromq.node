@@ -13,15 +13,18 @@ rep.on('message', function(msg){
   rep.send('world');
 });
 
-rep.on('listen', function(){
+rep.on('listen', function(addr){
+  addr.toString().should.equal('tcp://127.0.0.1:5555');
   events.push('listen');
 });
 
-rep.on('accept', function(){
+rep.on('accept', function(addr){
+  addr.toString().should.equal('tcp://127.0.0.1:5555');
   events.push('accept');
 });
 
-rep.on('close', function(){
+rep.on('close', function(addr){
+  addr.toString().should.equal('tcp://127.0.0.1:5555');
   events.push('close');
   events.length.should.equal(3);
 });

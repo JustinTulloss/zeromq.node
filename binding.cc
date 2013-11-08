@@ -94,7 +94,7 @@ namespace zmq {
       static void Initialize(v8::Handle<v8::Object> target);
       virtual ~Socket();
       void CallbackIfReady();
-      void MonitorEvent(int event);
+      void MonitorEvent(zmq_event_t event);
 
     private:
       static NAN_METHOD(New);
@@ -314,12 +314,16 @@ namespace zmq {
   }
   
   void
-  Socket::MonitorEvent(int event) {
+  Socket::MonitorEvent(zmq_event_t event) {
     if (this->IsReady()) {
       NanScope();
 
-      Local<Value> argv[1];
-      argv[0] = Local<Value>::New(Integer::New(event));
+      Local<Value> argv[2];
+      argv[0] = Local<Value>::New(Integer::New(event.event));
+      
+      // Bit of a hack, but all events in the zmq_event_t union have the same layout so this will work for all event types.
+      argv[1] = Local<Value>::New(String::New(event.data.connected.addr));
+            
       Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanPersistentToLocal(monitor_symbol));
       if (!callback_v->IsFunction()) {
         return;
@@ -327,7 +331,7 @@ namespace zmq {
 
       TryCatch try_catch;
 
-      callback_v.As<Function>()->Call(NanObjectWrapHandle(this), 1, argv);
+      callback_v.As<Function>()->Call(NanObjectWrapHandle(this), 2, argv);
 
       if (try_catch.HasCaught()) {
         FatalException(try_catch);
@@ -354,7 +358,7 @@ namespace zmq {
     {
       zmq_event_t event;
       memcpy (&event, zmq_msg_data (&msg), sizeof (zmq_event_t));
-      s->MonitorEvent(event.event);
+      s->MonitorEvent(event);
     }
     else {
       uv_poll_stop(handle);
