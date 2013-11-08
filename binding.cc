@@ -74,7 +74,7 @@ namespace zmq {
 
   class Socket;
 
-  class Context : ObjectWrap {
+  class Context : public ObjectWrap {
     friend class Socket;
     public:
       static void Initialize(v8::Handle<v8::Object> target);
@@ -89,7 +89,7 @@ namespace zmq {
       void* context_;
   };
 
-  class Socket : ObjectWrap {
+  class Socket : public ObjectWrap {
     public:
       static void Initialize(v8::Handle<v8::Object> target);
       virtual ~Socket();
@@ -525,7 +525,7 @@ namespace zmq {
     Local<Function> cb = NanPersistentToLocal(state->cb);
 
     Socket *socket = ObjectWrap::Unwrap<Socket>(NanPersistentToLocal(state->sock_obj));
-    delete state;
+    socket->state_ = STATE_READY;
 
     if (socket->endpoints == 0)
       socket->Ref();
@@ -535,6 +535,7 @@ namespace zmq {
     cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
     if (try_catch.HasCaught()) FatalException(try_catch);
 
+    delete state;
     delete req;
   }
 
@@ -983,7 +984,7 @@ namespace zmq {
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_UNBIND);
     NODE_DEFINE_CONSTANT(target, ZMQ_PUB);
     NODE_DEFINE_CONSTANT(target, ZMQ_SUB);
-    #if ZMQ_VERSION_MAJOR == 3
+    #if ZMQ_VERSION_MAJOR >= 3
     NODE_DEFINE_CONSTANT(target, ZMQ_XPUB);
     NODE_DEFINE_CONSTANT(target, ZMQ_XSUB);
     #endif
