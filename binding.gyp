@@ -39,14 +39,16 @@
           'xcode_settings': {
             'GCC_ENABLE_CPP_EXCEPTIONS': 'YES'
           },
-          # add macports include & lib dirs
+          # add macports include & lib dirs, homebrew include & lib dirs
           'include_dirs': [
             '<!@(pkg-config libzmq --cflags-only-I | sed s/-I//g)',
             '/opt/local/include',
+            '/usr/local/include',
           ],
           'libraries': [
             '<!@(pkg-config libzmq --libs)',
             '-L/opt/local/lib',
+            '-L/usr/local/lib',
           ]
         }],
         ['OS=="openbsd" or OS=="freebsd"', {
