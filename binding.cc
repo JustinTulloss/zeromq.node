@@ -53,6 +53,7 @@
 #endif
 
 #define ZMQ_CAN_DISCONNECT (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
+#define ZMQ_CAN_UNBIND (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
 
 using namespace v8;
 using namespace node;
@@ -113,6 +114,14 @@ namespace zmq {
       static void UV_BindAsyncAfter(uv_work_t* req);
 
       static NAN_METHOD(BindSync);
+#if ZMQ_CAN_UNBIND
+      static NAN_METHOD(Unbind);
+
+      static void UV_UnbindAsync(uv_work_t* req);
+      static void UV_UnbindAsyncAfter(uv_work_t* req);
+
+      static NAN_METHOD(UnbindSync);
+#endif
       static NAN_METHOD(Connect);
 #if ZMQ_CAN_DISCONNECT
       static NAN_METHOD(Disconnect);
@@ -232,6 +241,10 @@ namespace zmq {
 
     NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
     NODE_SET_PROTOTYPE_METHOD(t, "bindSync", BindSync);
+#if ZMQ_CAN_UNBIND
+    NODE_SET_PROTOTYPE_METHOD(t, "unbind", Unbind);
+    NODE_SET_PROTOTYPE_METHOD(t, "unbindSync", UnbindSync);
+#endif
     NODE_SET_PROTOTYPE_METHOD(t, "connect", Connect);
     NODE_SET_PROTOTYPE_METHOD(t, "getsockopt", GetSockOpt);
     NODE_SET_PROTOTYPE_METHOD(t, "setsockopt", SetSockOpt);
@@ -487,7 +500,6 @@ namespace zmq {
                   req,
                   UV_BindAsync,
                   (uv_after_work_cb)UV_BindAsyncAfter);
-    socket->state_ = STATE_BUSY;
 
     NanReturnUndefined();
   }
@@ -533,11 +545,8 @@ namespace zmq {
       return NanThrowTypeError("Address must be a string!");
     String::Utf8Value addr(args[0].As<String>());
     GET_SOCKET(args);
-    socket->state_ = STATE_BUSY;
     if (zmq_bind(socket->socket_, *addr) < 0)
       return NanThrowError(ErrorMessage());
-
-    socket->state_ = STATE_READY;
 
     if (socket->endpoints == 0)
       socket->Ref();
@@ -546,6 +555,77 @@ namespace zmq {
 
     NanReturnUndefined();
   }
+
+#if ZMQ_CAN_UNBIND
+  NAN_METHOD(Socket::Unbind) {
+    NanScope();
+    if (!args[0]->IsString())
+      return NanThrowTypeError("Address must be a string!");
+    Local<String> addr = args[0].As<String>();
+    if (args.Length() > 1 && !args[1]->IsFunction())
+      return NanThrowTypeError("Provided callback must be a function");
+    Local<Function> cb = Local<Function>::Cast(args[1]);
+
+    GET_SOCKET(args);
+
+    BindState* state = new BindState(socket, cb, addr);
+    uv_work_t* req = new uv_work_t;
+    req->data = state;
+    uv_queue_work(uv_default_loop(),
+                  req,
+                  UV_UnbindAsync,
+                  (uv_after_work_cb)UV_UnbindAsyncAfter);
+    NanReturnUndefined();
+  }
+
+  void Socket::UV_UnbindAsync(uv_work_t* req) {
+    BindState* state = static_cast<BindState*>(req->data);
+    if (zmq_unbind(state->sock, *state->addr) < 0)
+        state->error = zmq_errno();
+  }
+
+  void Socket::UV_UnbindAsyncAfter(uv_work_t* req) {
+    BindState* state = static_cast<BindState*>(req->data);
+    NanScope();
+
+    Local<Value> argv[1];
+
+    if (state->error) {
+      argv[0] = Exception::Error(String::New(zmq_strerror(state->error)));
+    } else {
+      argv[0] = Local<Value>::New(Undefined());
+    }
+
+    Local<Function> cb = NanPersistentToLocal(state->cb);
+
+    Socket *socket = ObjectWrap::Unwrap<Socket>(NanPersistentToLocal(state->sock_obj));
+    delete state;
+
+    if (--socket->endpoints == 0)
+      socket->Unref();
+
+    TryCatch try_catch;
+    cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
+    if (try_catch.HasCaught()) FatalException(try_catch);
+
+    delete req;
+  }
+
+  NAN_METHOD(Socket::UnbindSync) {
+    NanScope();
+    if (!args[0]->IsString())
+      return NanThrowTypeError("Address must be a string!");
+    String::Utf8Value addr(args[0].As<String>());
+    GET_SOCKET(args);
+    if (zmq_unbind(socket->socket_, *addr) < 0)
+      return NanThrowError(ErrorMessage());
+
+    if (--socket->endpoints == 0)
+      socket->Unref();
+
+    NanReturnUndefined();
+  }
+#endif
 
   NAN_METHOD(Socket::Connect) {
     NanScope();
@@ -559,10 +639,8 @@ namespace zmq {
     if (zmq_connect(socket->socket_, *address))
       return NanThrowError(ErrorMessage());
 
-    if (socket->endpoints == 0)
+    if (socket->endpoints++ == 0)
       socket->Ref();
-
-    socket->endpoints += 1;
 
     NanReturnUndefined();
   }
@@ -580,8 +658,7 @@ namespace zmq {
     String::Utf8Value address(args[0].As<String>());
     if (zmq_disconnect(socket->socket_, *address))
       return NanThrowError(ErrorMessage());
-    socket->endpoints -= 1;
-    if (socket->endpoints == 0)
+    if (--socket->endpoints == 0)
       socket->Unref();
 
     NanReturnUndefined();
@@ -904,6 +981,7 @@ namespace zmq {
     #endif
 
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
+    NODE_DEFINE_CONSTANT(target, ZMQ_CAN_UNBIND);
     NODE_DEFINE_CONSTANT(target, ZMQ_PUB);
     NODE_DEFINE_CONSTANT(target, ZMQ_SUB);
     #if ZMQ_VERSION_MAJOR >= 3
