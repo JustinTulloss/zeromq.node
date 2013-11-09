@@ -599,7 +599,6 @@ namespace zmq {
     Local<Function> cb = NanPersistentToLocal(state->cb);
 
     Socket *socket = ObjectWrap::Unwrap<Socket>(NanPersistentToLocal(state->sock_obj));
-    delete state;
 
     if (--socket->endpoints == 0)
       socket->Unref();
@@ -608,6 +607,7 @@ namespace zmq {
     cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
     if (try_catch.HasCaught()) FatalException(try_catch);
 
+    delete state;
     delete req;
   }
 
