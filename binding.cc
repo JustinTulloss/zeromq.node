@@ -519,7 +519,7 @@ namespace zmq {
     if (state->error) {
       argv[0] = Exception::Error(String::New(zmq_strerror(state->error)));
     } else {
-      argv[0] = Local<Value>::New(Undefined());
+      argv[0] = NanNewLocal<Value>(Undefined());
     }
 
     Local<Function> cb = NanPersistentToLocal(state->cb);
@@ -593,7 +593,7 @@ namespace zmq {
     if (state->error) {
       argv[0] = Exception::Error(String::New(zmq_strerror(state->error)));
     } else {
-      argv[0] = Local<Value>::New(Undefined());
+      argv[0] = NanNewLocal<Value>(Undefined());
     }
 
     Local<Function> cb = NanPersistentToLocal(state->cb);

@@ -4,11 +4,11 @@
       'target_name': 'zmq',
       'sources': [ 'binding.cc' ],
       'include_dirs' : [
-        "<!(node -p -e \"require('path').relative('.', require('path').dirname(require.resolve('nan')))\")"
+        "<!(node -e \"require('nan')\")"
       ],
       'conditions': [
         ['OS=="win"', {
-          'include_dirs': ['windows/include'],
+          'include_dirs': ["<!(node -e \"require('nan')\")", 'windows/include'],
           'link_settings': {
             'libraries': [
               'Delayimp.lib',
@@ -41,6 +41,7 @@
           },
           # add macports include & lib dirs, homebrew include & lib dirs
           'include_dirs': [
+            "<!(node -e \"require('nan')\")",
             '<!@(pkg-config libzmq --cflags-only-I | sed s/-I//g)',
             '/opt/local/include',
             '/usr/local/include',
@@ -62,6 +63,7 @@
           ]
         }],
         ['OS=="linux"', {
+          'include_dirs': ["<!(node -e \"require('nan')\")"],
           'cflags': [
             '<!(pkg-config libzmq --cflags 2>/dev/null || echo "")',
           ],
