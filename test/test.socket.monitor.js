@@ -15,19 +15,19 @@ rep.on('message', function(msg){
 
 rep.on('listen', function(addr,iarg){
   console.log("listen %s,%d",addr,iarg);
-  addr.toString().should.equal('tcp://127.0.0.1:5555');
+  addr.toString().should.equal('tcp://127.0.0.1:5423');
   events.push('listen');
 });
 
 rep.on('accept', function(addr,iarg){
   console.log("accept %s,%d",addr,iarg);
-  addr.toString().should.equal('tcp://127.0.0.1:5555');
+  addr.toString().should.equal('tcp://127.0.0.1:5423');
   events.push('accept');
 });
 
 rep.on('disconnect', function(addr,iarg){
   console.log("disconnect %s,%d",addr, iarg);
-  addr.toString().should.equal('tcp://127.0.0.1:5555');
+  addr.toString().should.equal('tcp://127.0.0.1:5423');
   events.push('disconnect');
   events.length.should.equal(3);
 });
@@ -35,10 +35,10 @@ rep.on('disconnect', function(addr,iarg){
 /* enable monitoring for this socket */
 rep.monitor();
 
-rep.bind('tcp://127.0.0.1:5555');
+rep.bind('tcp://127.0.0.1:5423');
 
 rep.on('bind', function(){
-  req.connect('tcp://127.0.0.1:5555');
+  req.connect('tcp://127.0.0.1:5423');
   req.send('hello');
   req.on('message', function(msg){
     msg.should.be.an.instanceof(Buffer);
