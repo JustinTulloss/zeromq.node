@@ -45,6 +45,12 @@ rep.on('bind', function(){
     msg.toString().should.equal('world');
     req.close();
     rep.close();
+    /* wait a few for the close to reach us then
+     * unmonitor to release the handle
+     */
+    setTimeout((function() {
+      rep.unmonitor();
+    }), 500);
   });
 });
 

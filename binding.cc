@@ -147,6 +147,7 @@ namespace zmq {
       uv_idle_t *monitor_handle_;
       static void UV_MonitorCallback(uv_idle_t* handle, int status);
       static NAN_METHOD(Monitor);
+      static NAN_METHOD(Unmonitor);
 #endif
 
       bool IsReady();
@@ -272,6 +273,7 @@ namespace zmq {
 
 #if ZMQ_CAN_MONITOR
     NODE_SET_PROTOTYPE_METHOD(t, "monitor", Monitor);
+    NODE_SET_PROTOTYPE_METHOD(t, "unmonitor", Unmonitor);
     NanAssignPersistent(String, monitor_symbol, String::NewSymbol("onMonitorEvent"));
 #endif
 
@@ -385,16 +387,6 @@ namespace zmq {
         zmq_event_t event;
         memcpy (&event, zmq_msg_data (&msg), sizeof (zmq_event_t));
         s->MonitorEvent(event);
-
-        if (event.event == ZMQ_EVENT_CLOSED ||
-            event.event == ZMQ_EVENT_CLOSE_FAILED||
-            event.event == ZMQ_EVENT_DISCONNECTED)
-        {
-          if (zmq_close(s->monitor_socket_) < 0)
-            throw std::runtime_error(ErrorMessage());
-          s->monitor_socket_ = NULL;
-          uv_idle_stop(s->monitor_handle_);
-        }
       }
       else {
         uv_idle_stop(s->monitor_handle_);
@@ -836,6 +828,17 @@ namespace zmq {
       uv_idle_start(socket->monitor_handle_, Socket::UV_MonitorCallback);
     }
 
+    NanReturnUndefined();
+  }
+
+  NAN_METHOD(Socket::Unmonitor) {
+    NanScope();
+    Socket* socket = GetSocket(args);                         \
+    if (zmq_close(socket->monitor_socket_) < 0)
+      throw std::runtime_error(ErrorMessage());
+    uv_idle_stop(socket->monitor_handle_);
+    socket->monitor_handle_ = NULL;
+    socket->monitor_socket_ = NULL;
     NanReturnUndefined();
   }
 #endif
