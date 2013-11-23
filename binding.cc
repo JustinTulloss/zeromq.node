@@ -350,11 +350,11 @@ namespace zmq {
       NanScope();
 
       Local<Value> argv[3];
-      argv[0] = Local<Value>::New(Integer::New(event.event));
+      argv[0] = NanNewLocal<Value>(Integer::New(event.event));
 
       // Bit of a hack, but all events in the zmq_event_t union have the same layout so this will work for all event types.
-      argv[1] = Local<Value>::New(String::New(event.data.connected.addr));
-      argv[2] = Local<Value>::New(Number::New(event.data.connected.fd));
+      argv[1] = NanNewLocal<Value>(String::New(event.data.connected.addr));
+      argv[2] = NanNewLocal<Value>(Number::New(event.data.connected.fd));
 
       Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanPersistentToLocal(monitor_symbol));
       if (!callback_v->IsFunction()) {
