@@ -1,4 +1,3 @@
-
 var zmq = require('../')
   , should = require('should');
 
@@ -14,15 +13,15 @@ var message_count = 0;
 
 a.bind('tcp://127.0.0.1:5420', function (err) {
   if (err) throw err;
-  a.bind('tcp://127.0.0.1:5421', function (err) {
-    if (err) throw err;
-  });
 });
 
 a.on('bind', function(addr) {
   if (addr === 'tcp://127.0.0.1:5420') {
-    b.connect('tcp://127.0.0.1:5420');
-    b.send('Hello from b.');
+    a.bind('tcp://127.0.0.1:5421', function (err) {
+      if (err) throw err;
+      b.connect('tcp://127.0.0.1:5420');
+      b.send('Hello from b.');
+    });
   } else if (addr === 'tcp://127.0.0.1:5421') {
     c.connect('tcp://127.0.0.1:5421');
     c.send('Hello from c.');
