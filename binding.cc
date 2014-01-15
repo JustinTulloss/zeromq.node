@@ -469,9 +469,9 @@ namespace zmq {
     }
 
     ~BindState() {
-      NanDispose(sock_obj);
+      NanDisposePersistent(sock_obj);
       sock_obj.Clear();
-      NanDispose(cb);
+      NanDisposePersistent(cb);
       cb.Clear();
     }
 
@@ -683,7 +683,7 @@ namespace zmq {
           delete msgref_;
           msgref_ = NULL;
         } else {
-          NanDispose(buf_);
+          NanDisposePersistent(buf_);
           buf_.Clear();
         }
       };
@@ -794,7 +794,7 @@ namespace zmq {
           }
 
           inline ~BufferReference() {
-            NanDispose(buf_);
+            NanDisposePersistent(buf_);
             buf_.Clear();
           }
 
@@ -880,7 +880,7 @@ namespace zmq {
         throw std::runtime_error(ErrorMessage());
       socket_ = NULL;
       state_ = STATE_CLOSED;
-      NanDispose(context_);
+      NanDisposePersistent(context_);
       context_.Clear();
 
       if (this->endpoints > 0)
