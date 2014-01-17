@@ -5,6 +5,12 @@ var zmq = require('../')
 var rep = zmq.socket('rep')
   , req = zmq.socket('req');
 
+/* no test if monitor is not available */
+if (!zmq.ZMQ_CAN_MONITOR) {
+  console.log("monitoring not enabled skipping test");
+  process.exit();
+}
+
 var events = [];
 
 rep.on('message', function(msg){
