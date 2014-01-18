@@ -19,21 +19,21 @@ rep.on('message', function(msg){
   rep.send('world');
 });
 
-rep.on('listen', function(addr,iarg){
-  console.log("listen %s,%d",addr,iarg);
-  addr.toString().should.equal('tcp://127.0.0.1:5423');
+rep.on('listen', function(event_value, event_endpoint_addr){
+  console.log("listen %s,%d",event_endpoint_addr,event_value);
+  event_endpoint_addr.toString().should.equal('tcp://127.0.0.1:5423');
   events.push('listen');
 });
 
-rep.on('accept', function(addr,iarg){
-  console.log("accept %s,%d",addr,iarg);
-  addr.toString().should.equal('tcp://127.0.0.1:5423');
+rep.on('accept', function(event_value, event_endpoint_addr){
+  console.log("accept %s,%d",event_endpoint_addr,event_value);
+  event_endpoint_addr.toString().should.equal('tcp://127.0.0.1:5423');
   events.push('accept');
 });
 
-rep.on('disconnect', function(addr,iarg){
-  console.log("disconnect %s,%d",addr, iarg);
-  addr.toString().should.equal('tcp://127.0.0.1:5423');
+rep.on('disconnect', function(event_value, event_endpoint_addr){
+  console.log("disconnect %s,%d",event_endpoint_addr, event_value);
+  event_endpoint_addr.toString().should.equal('tcp://127.0.0.1:5423');
   events.push('disconnect');
   events.length.should.equal(3);
 });
