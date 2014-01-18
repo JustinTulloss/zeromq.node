@@ -397,7 +397,7 @@ namespace zmq {
         // get our next frame it has our address and safely copy to our buffer
         zmq_msg_init (&msg2);
 	assert (zmq_msg_more(&msg1) != 0);
-	assert (zmq_recvmsg (s->monitor_socket_, &msg2, 0) > 0);
+	assert (zmq_recvmsg (s->monitor_socket_, &msg2, 0) != -1);
 
         // protect from overflow
         size_t len = zmq_msg_size(&msg2);
