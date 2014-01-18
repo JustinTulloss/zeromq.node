@@ -396,17 +396,17 @@ namespace zmq {
 
         // get our next frame it may have the target address and safely copy to our buffer
         zmq_msg_init (&msg2);
-	assert (zmq_msg_more(&msg1) != 0);
-	assert (zmq_recvmsg (s->monitor_socket_, &msg2, 0) != -1);
+        assert (zmq_msg_more(&msg1) != 0);
+        assert (zmq_recvmsg (s->monitor_socket_, &msg2, 0) != -1);
 
         // protect from overflow
         size_t len = zmq_msg_size(&msg2);
-	// MIN message size and buffer size with null padding
-	len = len < sizeof(event_endpoint)-1 ? len : sizeof(event_endpoint)-1;
-	memcpy(event_endpoint, zmq_msg_data(&msg2), len);
+        // MIN message size and buffer size with null padding
+        len = len < sizeof(event_endpoint)-1 ? len : sizeof(event_endpoint)-1;
+        memcpy(event_endpoint, zmq_msg_data(&msg2), len);
 
-	// null terminate our string
-	event_endpoint[len]=0;
+        // null terminate our string
+        event_endpoint[len]=0;
 #else
         // Bit of a hack, but all events in the zmq_event_t union have the same layout so this will work for all event types.
         event_value = event.data.connected.fd;
