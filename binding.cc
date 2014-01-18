@@ -400,8 +400,9 @@ namespace zmq {
 	assert (zmq_recvmsg (s->monitor_socket_, &msg2, 0) > 0);
 
         // protect from overflow
-        const size_t len = zmq_msg_size(&msg2);
-	len = MIN(len,sizeof(event_endpoint)-1);
+        size_t len = zmq_msg_size(&msg2);
+	// MIN message size and buffer size with null padding
+	len = len < sizeof(event_endpoint)-1 ? len : sizeof(event_endpoint)-1;
 	memcpy(event_endpoint, zmq_msg_data(&msg2), len);
 
 	// null terminate our string
