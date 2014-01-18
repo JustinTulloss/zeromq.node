@@ -394,7 +394,7 @@ namespace zmq {
         zmq_msg_t msg2; /* 4.x has 2 messages per event */
         event_value = event.value;
 
-        // get our next frame it has our address and safely copy to our buffer
+        // get our next frame it may have the target address and safely copy to our buffer
         zmq_msg_init (&msg2);
 	assert (zmq_msg_more(&msg1) != 0);
 	assert (zmq_recvmsg (s->monitor_socket_, &msg2, 0) != -1);
