@@ -54,6 +54,7 @@
 
 #define ZMQ_CAN_DISCONNECT (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
 #define ZMQ_CAN_UNBIND (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
+#define ZMQ_CAN_MONITOR (ZMQ_VERSION > 30201)
 
 using namespace v8;
 using namespace node;
@@ -94,6 +95,9 @@ namespace zmq {
       static void Initialize(v8::Handle<v8::Object> target);
       virtual ~Socket();
       void CallbackIfReady();
+#if ZMQ_CAN_MONITOR
+      void MonitorEvent(uint16_t event_id, int32_t event_value, char *endpoint);
+#endif
 
     private:
       static NAN_METHOD(New);
@@ -138,6 +142,13 @@ namespace zmq {
       void *socket_;
       uint8_t state_;
       int32_t endpoints;
+#if ZMQ_CAN_MONITOR
+      void *monitor_socket_;
+      uv_idle_t *monitor_handle_;
+      static void UV_MonitorCallback(uv_idle_t* handle, int status);
+      static NAN_METHOD(Monitor);
+      static NAN_METHOD(Unmonitor);
+#endif
 
       bool IsReady();
       uv_poll_t *poll_handle_;
@@ -145,6 +156,10 @@ namespace zmq {
   };
 
   Persistent<String> callback_symbol;
+#if ZMQ_CAN_MONITOR
+  Persistent<String> monitor_symbol;
+  int monitors_count = 0;
+#endif
 
   static void
   Initialize(Handle<Object> target);
@@ -256,6 +271,12 @@ namespace zmq {
     NODE_SET_PROTOTYPE_METHOD(t, "disconnect", Disconnect);
 #endif
 
+#if ZMQ_CAN_MONITOR
+    NODE_SET_PROTOTYPE_METHOD(t, "monitor", Monitor);
+    NODE_SET_PROTOTYPE_METHOD(t, "unmonitor", Unmonitor);
+    NanAssignPersistent(String, monitor_symbol, String::NewSymbol("onMonitorEvent"));
+#endif
+
     target->Set(String::NewSymbol("Socket"), t->GetFunction());
 
     NanAssignPersistent(String, callback_symbol, String::NewSymbol("onReady"));
@@ -323,6 +344,87 @@ namespace zmq {
     Socket* s = static_cast<Socket*>(handle->data);
     s->CallbackIfReady();
   }
+
+#if ZMQ_CAN_MONITOR
+  void
+  Socket::MonitorEvent(uint16_t event_id, int32_t event_value, char *event_endpoint) {
+      NanScope();
+
+      Local<Value> argv[3];
+      argv[0] = NanNewLocal<Value>(Integer::New(event_id));
+      argv[1] = NanNewLocal<Value>(Integer::New(event_value));
+      argv[2] = NanNewLocal<Value>(String::New(event_endpoint));
+
+      Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanPersistentToLocal(monitor_symbol));
+      if (!callback_v->IsFunction()) {
+        return;
+      }
+
+      TryCatch try_catch;
+
+      callback_v.As<Function>()->Call(NanObjectWrapHandle(this), 3, argv);
+
+      if (try_catch.HasCaught()) {
+        FatalException(try_catch);
+      }
+  }
+
+  void
+  Socket::UV_MonitorCallback(uv_idle_t* handle, int status) {
+    NanScope();
+    Socket* s = static_cast<Socket*>(handle->data);
+    zmq_msg_t msg1; /* 3.x has 1 message per event */
+
+    zmq_pollitem_t item;
+    item.socket = s->monitor_socket_;
+    item.events = ZMQ_POLLIN;
+
+    if (zmq_poll(&item, 1, 0)) {
+      zmq_msg_init (&msg1);
+      if (zmq_recvmsg (s->monitor_socket_, &msg1, ZMQ_DONTWAIT) > 0) {
+        zmq_event_t event;
+        char event_endpoint[1025];
+        uint16_t event_id;
+        int32_t event_value;
+        memcpy (&event, zmq_msg_data (&msg1), sizeof (zmq_event_t));
+
+        event_id = event.event;
+
+#if ZMQ_VERSION_MAJOR >= 4
+        zmq_msg_t msg2; /* 4.x has 2 messages per event */
+        event_value = event.value;
+
+        // get our next frame it may have the target address and safely copy to our buffer
+        zmq_msg_init (&msg2);
+        assert (zmq_msg_more(&msg1) != 0);
+        assert (zmq_recvmsg (s->monitor_socket_, &msg2, 0) != -1);
+
+        // protect from overflow
+        size_t len = zmq_msg_size(&msg2);
+        // MIN message size and buffer size with null padding
+        len = len < sizeof(event_endpoint)-1 ? len : sizeof(event_endpoint)-1;
+        memcpy(event_endpoint, zmq_msg_data(&msg2), len);
+
+        // null terminate our string
+        event_endpoint[len]=0;
+#else
+        // Bit of a hack, but all events in the zmq_event_t union have the same layout so this will work for all event types.
+        event_value = event.data.connected.fd;
+        snprintf(event_endpoint, sizeof(event_endpoint), "%s", event.data.connected.addr);
+#endif
+
+        s->MonitorEvent(event_id, event_value, event_endpoint);
+      }
+      else {
+        uv_idle_stop(s->monitor_handle_);
+      }
+
+      zmq_msg_close (&msg1);
+    }
+
+
+  }
+#endif
 
   Socket::Socket(Context *context, int type) : ObjectWrap() {
     NanAssignPersistent(Object, context_, NanObjectWrapHandle(context));
@@ -741,6 +843,41 @@ namespace zmq {
       MessageReference* msgref_;
   };
 
+#if ZMQ_CAN_MONITOR
+  NAN_METHOD(Socket::Monitor) {
+    NanScope();
+    GET_SOCKET(args);
+    char addr[255];
+    Context *context = ObjectWrap::Unwrap<Context>(NanPersistentToLocal(socket->context_));
+    sprintf(addr, "%s%d", "inproc://monitor.req.", monitors_count++);
+
+    if(zmq_socket_monitor(socket->socket_, addr, ZMQ_EVENT_ALL) != -1) {
+      socket->monitor_socket_ = zmq_socket (context->context_, ZMQ_PAIR);
+      zmq_connect (socket->monitor_socket_, addr);
+
+      socket->monitor_handle_ = new uv_idle_t;
+
+      socket->monitor_handle_->data = socket;
+
+      uv_idle_init(uv_default_loop(), socket->monitor_handle_);
+      uv_idle_start(socket->monitor_handle_, Socket::UV_MonitorCallback);
+    }
+
+    NanReturnUndefined();
+  }
+
+  NAN_METHOD(Socket::Unmonitor) {
+    NanScope();
+    Socket* socket = GetSocket(args);                         \
+    if (zmq_close(socket->monitor_socket_) < 0)
+      throw std::runtime_error(ErrorMessage());
+    uv_idle_stop(socket->monitor_handle_);
+    socket->monitor_handle_ = NULL;
+    socket->monitor_socket_ = NULL;
+    NanReturnUndefined();
+  }
+#endif
+
   NAN_METHOD(Socket::Recv) {
     NanScope();
     int flags = 0;
@@ -991,6 +1128,7 @@ namespace zmq {
 
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_UNBIND);
+    NODE_DEFINE_CONSTANT(target, ZMQ_CAN_MONITOR);
     NODE_DEFINE_CONSTANT(target, ZMQ_PUB);
     NODE_DEFINE_CONSTANT(target, ZMQ_SUB);
     #if ZMQ_VERSION_MAJOR >= 3

@@ -45,4 +45,4 @@ var interval = setInterval(function() {
 var timeout = setTimeout(function() {
   clearInterval(interval);
   throw new Error('Timeout\nBound: ' + bound);
-}, 5000);
+}, 15000);
