@@ -1,7 +1,7 @@
 2.6.0 / 2014-01-23
 ==================
 
-  * Monitor support [f34rdotcom]
+  * Monitor support [f34rdotcom, dr-fozzy]
   * Unbind sypport [kkoopa]
   * Node 0.11.9 compatibility [kkoopa]
   * Support for ZMQ 4 [atrniv]
