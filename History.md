@@ -1,3 +1,14 @@
+2.6.0 / 2014-01-23
+==================
+
+  * Monitor support [f34rdotcom]
+  * Unbind sypport [kkoopa]
+  * Node 0.11.9 compatibility [kkoopa]
+  * Support for ZMQ 4 [atrniv]
+  * Fixed memory leak [utvara]
+  * OSX Homebrew support [jwalton]
+  * Fix unit tests [ryanlelek]
+
 2.5.1 / 2013-08-28
 ==================
 
