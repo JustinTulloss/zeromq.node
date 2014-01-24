@@ -1040,7 +1040,7 @@ namespace zmq {
       this->endpoints = 0;
 
       uv_poll_stop(poll_handle_);
-      uv_close(poll_handle_, on_uv_close);
+      uv_close((uv_handle_t*)poll_handle_, on_uv_close);
     }
   }
 
