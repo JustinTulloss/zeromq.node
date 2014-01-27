@@ -1019,6 +1019,12 @@ namespace zmq {
   }
 
 
+  static void
+  on_uv_close(uv_handle_t *handle)
+  {
+    delete handle;
+  }
+
   void
   Socket::Close() {
     if (socket_) {
@@ -1034,6 +1040,7 @@ namespace zmq {
       this->endpoints = 0;
 
       uv_poll_stop(poll_handle_);
+      uv_close((uv_handle_t*)poll_handle_, on_uv_close);
     }
   }
 
