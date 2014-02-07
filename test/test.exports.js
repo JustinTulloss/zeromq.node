@@ -66,6 +66,10 @@ if (semver.gte(zmq.version, '3.0.0')) {
     'RCVHWM',
     'MAXMSGSIZE',
     'ZMQ_MULTICAST_HOPS',
+    'TCP_KEEPALIVE',
+    'TCP_KEEPALIVE_CNT',
+    'TCP_KEEPALIVE_IDLE',
+    'TCP_KEEPALIVE_INTVL'
   ]);
 }
 
