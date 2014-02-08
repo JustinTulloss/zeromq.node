@@ -1133,6 +1133,18 @@ namespace zmq {
     opts_uint64.insert(12); // ZMQ_RCVBUF 2.x uint64_t
     #endif
 
+    #if ZMQ_VERSION_MAJOR >= 4
+    opts_int.insert(43); // ZMQ_MECHANISM
+    opts_int.insert(44); // ZMQ_PLAIN_SERVER
+    opts_binary.insert(45); // ZMQ_PLAIN_USERNAME
+    opts_binary.insert(46); // ZMQ_PLAIN_PASSWORD
+    opts_int.insert(47); // ZMQ_CURVE_SERVER
+    opts_binary.insert(48); // ZMQ_CURVE_PUBLICKEY
+    opts_binary.insert(49); // ZMQ_CURVE_SECRETKEY
+    opts_binary.insert(50); // ZMQ_CURVE_SERVERKEY
+    opts_binary.insert(55); // ZMQ_ZAP_DOMAIN
+    #endif
+
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_UNBIND);
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_MONITOR);
