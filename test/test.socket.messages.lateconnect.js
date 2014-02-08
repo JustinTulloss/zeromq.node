@@ -1,4 +1,3 @@
-
 var zmq = require('../')
   , should = require('should')
   , semver = require('semver');
@@ -29,7 +28,7 @@ setTimeout(function () {
   n.should.equal(3);
 }, 1*1000);
 
-if (semver.satisfies(zmq.version, '3.x')) {
+if (semver.satisfies(zmq.version, '>=3.x')) {
   push.setsockopt(zmq.ZMQ_SNDHWM, 1);
   pull.setsockopt(zmq.ZMQ_RCVHWM, 1);
 } else if (semver.satisfies(zmq.version, '2.x')) {

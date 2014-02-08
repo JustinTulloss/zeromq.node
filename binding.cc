@@ -106,8 +106,8 @@ namespace zmq {
       static Socket* GetSocket(_NAN_METHOD_ARGS);
       static NAN_GETTER(GetState);
 
-      static Handle<Value> GetPending(Local<String> p, const AccessorInfo& info);
-      static void SetPending(Local<String> p, Local<Value> v, const AccessorInfo& info);
+      static NAN_GETTER(GetPending);
+      static NAN_SETTER(SetPending);
 
       template<typename T>
       Handle<Value> GetSockOpt(int option);
@@ -325,7 +325,7 @@ namespace zmq {
     if (rc < 0) {
       throw std::runtime_error(ErrorMessage());
     }
-    return item.revents & (ZMQ_POLLIN);
+    return item.revents & item.events;
   }
 
   void
@@ -482,20 +482,20 @@ namespace zmq {
     NanReturnValue(Integer::New(socket->state_));
   }
 
-  Handle<Value>
-  Socket::GetPending(Local<String> p, const AccessorInfo& info) {
-    Socket* socket = ObjectWrap::Unwrap<Socket>(info.Holder());
-    return Integer::New(socket->pending_);
+  NAN_GETTER(Socket::GetPending) {
+    NanScope();
+    Socket* socket = ObjectWrap::Unwrap<Socket>(args.Holder());
+    NanReturnValue(Integer::New(socket->pending_));
   }
 
-  void
-  Socket::SetPending(Local<String> p, Local<Value> v, const AccessorInfo& info) {
-    if (!v->IsNumber())
-      ThrowException(Exception::TypeError(
-          String::New("Pending must be an integer")));
+  NAN_SETTER(Socket::SetPending) {
+    NanScope();
+    if (!value->IsNumber()) {
+      NanThrowTypeError("Pending must be an integer");
+    }
 
-    Socket* socket = ObjectWrap::Unwrap<Socket>(info.Holder());
-    socket->pending_ = v->Int32Value();
+    Socket* socket = ObjectWrap::Unwrap<Socket>(args.Holder());
+    socket->pending_ = value->Int32Value();
   }
 
   template<typename T>
