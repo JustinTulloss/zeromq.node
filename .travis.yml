@@ -2,9 +2,18 @@ env:
  - ZMQ="git://github.com/zeromq/zeromq2-x.git"
  - ZMQ="git://github.com/zeromq/zeromq3-x.git -b v3.1.0"
  - ZMQ="git://github.com/zeromq/zeromq3-x.git -b v3.2.4"
- - ZMQ="git://github.com/zeromq/zeromq4-x.git -b v4.0.3"
+ - ZMQ="git://github.com/zeromq/zeromq4-x.git -b v4.0.3" SODIUM="git://github.com/jedisct1/libsodium.git -b 0.4.5"
 before_install:
  - sudo apt-get install uuid-dev
+ - if [ -n "$SODIUM" ]; then 
+ -  git clone --depth 1 $SODIUM libsodium
+ -  cd libsodium
+ -  ./autogen.sh
+ -  ./configure
+ -  make
+ -  sudo make install
+ -  cd ../
+ - fi
  - git clone --depth 1 $ZMQ zmqlib
  - cd zmqlib
  - ./autogen.sh
