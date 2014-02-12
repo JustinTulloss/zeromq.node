@@ -1100,6 +1100,7 @@ namespace zmq {
     opts_int.insert(40); // ZMQ_XPUB_VERBOSE
     opts_int.insert(41); // ZMQ_ROUTER_RAW
     opts_int.insert(42); // ZMQ_IPV6
+    opts_int.insert(56); // ZMQ_ROUTER_HANDOVER
 
     opts_int64.insert(3); // ZMQ_SWAP
     opts_int64.insert(8); // ZMQ_RATE
