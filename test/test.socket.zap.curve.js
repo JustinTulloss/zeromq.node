@@ -8,6 +8,13 @@ if (semver.gte(zmq.version, '4.0.0')) {
     , zapSocket = zap.start()
     , rep = zmq.socket('rep')
     , req = zmq.socket('req');
+	
+  try {
+    rep.curve_server = 0;
+  } catch(e) {
+    console.log("libsoduim seems to be missing; skipping curve test");
+    process.exit(0);
+  }
 
   var serverPublicKey = new Buffer('7f188e5244b02bf497b86de417515cf4d4053ce4eb977aee91a55354655ec33a', 'hex')
     , serverPrivateKey = new Buffer('1f5d3873472f95e11f4723d858aaf0919ab1fb402cb3097742c606e61dd0d7d8', 'hex')
