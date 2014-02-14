@@ -102,8 +102,13 @@ namespace zmq {
     private:
       static NAN_METHOD(New);
       Socket(Context *context, int type);
+
       static Socket* GetSocket(_NAN_METHOD_ARGS);
       static NAN_GETTER(GetState);
+
+      static NAN_GETTER(GetPending);
+      static NAN_SETTER(SetPending);
+
       template<typename T>
       Handle<Value> GetSockOpt(int option);
       template<typename T>
@@ -140,6 +145,7 @@ namespace zmq {
 
       Persistent<Object> context_;
       void *socket_;
+      int32_t pending_;
       uint8_t state_;
       int32_t endpoints;
 #if ZMQ_CAN_MONITOR
@@ -253,6 +259,8 @@ namespace zmq {
     t->InstanceTemplate()->SetInternalFieldCount(1);
     t->InstanceTemplate()->SetAccessor(
       String::NewSymbol("state"), Socket::GetState);
+    t->InstanceTemplate()->SetAccessor(
+      String::NewSymbol("pending"), GetPending, SetPending);
 
     NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
     NODE_SET_PROTOTYPE_METHOD(t, "bindSync", BindSync);
@@ -310,11 +318,14 @@ namespace zmq {
   bool
   Socket::IsReady() {
     zmq_pollitem_t item = {socket_, 0, ZMQ_POLLIN, 0};
+    if (pending_ > 0)
+      item.events |= ZMQ_POLLOUT;
+
     int rc = zmq_poll(&item, 1, 0);
     if (rc < 0) {
       throw std::runtime_error(ErrorMessage());
     }
-    return item.revents & (ZMQ_POLLIN);
+    return item.revents & item.events;
   }
 
   void
@@ -429,6 +440,7 @@ namespace zmq {
   Socket::Socket(Context *context, int type) : ObjectWrap() {
     NanAssignPersistent(Object, context_, NanObjectWrapHandle(context));
     socket_ = zmq_socket(context->context_, type);
+    pending_ = 0;
     state_ = STATE_READY;
 
     endpoints = 0;
@@ -468,6 +480,22 @@ namespace zmq {
     NanScope();
     Socket* socket = ObjectWrap::Unwrap<Socket>(args.Holder());
     NanReturnValue(Integer::New(socket->state_));
+  }
+
+  NAN_GETTER(Socket::GetPending) {
+    NanScope();
+    Socket* socket = ObjectWrap::Unwrap<Socket>(args.Holder());
+    NanReturnValue(Integer::New(socket->pending_));
+  }
+
+  NAN_SETTER(Socket::SetPending) {
+    NanScope();
+    if (!value->IsNumber()) {
+      NanThrowTypeError("Pending must be an integer");
+    }
+
+    Socket* socket = ObjectWrap::Unwrap<Socket>(args.Holder());
+    socket->pending_ = value->Int32Value();
   }
 
   template<typename T>
