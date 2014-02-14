@@ -340,7 +340,7 @@ namespace zmq {
 
       TryCatch try_catch;
 
-      callback_v.As<Function>()->Call(NanObjectWrapHandle(this), 0, NULL);
+      MakeCallback(NanObjectWrapHandle(this), callback_v.As<Function>(), 0, NULL);
 
       if (try_catch.HasCaught()) {
         FatalException(try_catch);
@@ -373,7 +373,7 @@ namespace zmq {
 
       TryCatch try_catch;
 
-      callback_v.As<Function>()->Call(NanObjectWrapHandle(this), 3, argv);
+      MakeCallback(NanObjectWrapHandle(this), callback_v.As<Function>(), 3, argv);
 
       if (try_catch.HasCaught()) {
         FatalException(try_catch);
@@ -663,7 +663,7 @@ namespace zmq {
     socket->endpoints += 1;
 
     TryCatch try_catch;
-    cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
+    MakeCallback(v8::Context::GetCurrent()->Global(), cb, 1, argv);
     if (try_catch.HasCaught()) FatalException(try_catch);
 
     delete state;
@@ -740,7 +740,7 @@ namespace zmq {
       socket->Unref();
 
     TryCatch try_catch;
-    cb->Call(v8::Context::GetCurrent()->Global(), 1, argv);
+    MakeCallback(v8::Context::GetCurrent()->Global(), cb, 1, argv);
     if (try_catch.HasCaught()) FatalException(try_catch);
 
     delete state;
