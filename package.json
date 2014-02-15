@@ -8,7 +8,6 @@
     "url": "http://github.com/JustinTulloss/zeromq.node.git"
   },
   "dependencies": {
-    "set-immediate": "*",
     "nan": "~0.8.0",
     "bindings": "~1.1.1"
   },
