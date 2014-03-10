@@ -1037,8 +1037,11 @@ namespace zmq {
     #if ZMQ_VERSION_MAJOR == 2
       if (zmq_send(socket->socket_, &msg, flags) < 0)
         return NanThrowError(ErrorMessage());
-    #else
+    #elif ZMQ_VERSION_MAJOR == 3
       if (zmq_sendmsg(socket->socket_, &msg, flags) < 0)
+        return NanThrowError(ErrorMessage());
+    #else
+      if (zmq_msg_send(&msg, socket->socket_, flags) < 0)
         return NanThrowError(ErrorMessage());
     #endif
 #endif // zero copy / copying version
