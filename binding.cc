@@ -285,7 +285,7 @@ namespace zmq {
     NanAssignPersistent(String, monitor_symbol, String::NewSymbol("onMonitorEvent"));
 #endif
 
-    target->Set(String::NewSymbol("Socket"), t->GetFunction());
+    target->Set(String::NewSymbol("SocketBinding"), t->GetFunction());
 
     NanAssignPersistent(String, callback_symbol, String::NewSymbol("onReady"));
   }
