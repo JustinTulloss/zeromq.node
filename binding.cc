@@ -333,7 +333,7 @@ namespace zmq {
     if (this->IsReady()) {
       NanScope();
 
-      Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanPersistentToLocal(callback_symbol));
+      Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanNew(callback_symbol));
       if (!callback_v->IsFunction()) {
         return;
       }
@@ -360,7 +360,7 @@ namespace zmq {
       argv[1] = NanNew<Integer>(event_value);
       argv[2] = NanNew<String>(event_endpoint);
 
-      Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanPersistentToLocal(monitor_symbol));
+      Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanNew(monitor_symbol));
       if (!callback_v->IsFunction()) {
         return;
       }
@@ -645,9 +645,9 @@ namespace zmq {
       argv[0] = NanNew(NanUndefined());
     }
 
-    Local<Function> cb = NanPersistentToLocal(state->cb);
+    Local<Function> cb = NanNew(state->cb);
 
-    Socket *socket = ObjectWrap::Unwrap<Socket>(NanPersistentToLocal(state->sock_obj));
+    Socket *socket = ObjectWrap::Unwrap<Socket>(NanNew(state->sock_obj));
     socket->state_ = STATE_READY;
 
     if (socket->endpoints == 0)
@@ -721,9 +721,9 @@ namespace zmq {
       argv[0] = NanNew(NanUndefined());
     }
 
-    Local<Function> cb = NanPersistentToLocal(state->cb);
+    Local<Function> cb = NanNew(state->cb);
 
-    Socket *socket = ObjectWrap::Unwrap<Socket>(NanPersistentToLocal(state->sock_obj));
+    Socket *socket = ObjectWrap::Unwrap<Socket>(NanNew(state->sock_obj));
     socket->state_ = STATE_READY;
 
     if (--socket->endpoints == 0)
@@ -826,7 +826,7 @@ namespace zmq {
           }
           NanAssignPersistent(buf_, buf_obj);
         }
-        return NanPersistentToLocal(buf_);
+        return NanNew(buf_);
       }
 
     private:
@@ -863,7 +863,7 @@ namespace zmq {
     NanScope();
     GET_SOCKET(args);
     char addr[255];
-    Context *context = ObjectWrap::Unwrap<Context>(NanPersistentToLocal(socket->context_));
+    Context *context = ObjectWrap::Unwrap<Context>(NanNew(socket->context_));
     sprintf(addr, "%s%d", "inproc://monitor.req.", monitors_count++);
 
     if(zmq_socket_monitor(socket->socket_, addr, ZMQ_EVENT_ALL) != -1) {
