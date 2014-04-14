@@ -2,7 +2,7 @@
 ==================
 
   * Monitor support [f34rdotcom, dr-fozzy]
-  * Unbind sypport [kkoopa]
+  * Unbind support [kkoopa]
   * Node 0.11.9 compatibility [kkoopa]
   * Support for ZMQ 4 [atrniv]
   * Fixed memory leak [utvara]
