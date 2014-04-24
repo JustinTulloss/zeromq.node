@@ -1,6 +1,6 @@
 {
   "name": "zmq",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "Bindings for node.js to zeromq",
   "main": "index",
   "repository": {
