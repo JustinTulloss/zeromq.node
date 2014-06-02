@@ -8,7 +8,7 @@ build/Release/binding.node: binding.cc binding.gyp
 	npm install
 
 test:
-	$(MOCHA) --expose-gc -d
+	$(MOCHA) --expose-gc
 
 clean:
 	rm -fr build
