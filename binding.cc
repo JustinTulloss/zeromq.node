@@ -197,7 +197,7 @@ namespace zmq {
 
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
 
-    target->Set(NanSymbol("Context"), t->GetFunction());
+    target->Set(NanNew("Context"), t->GetFunction());
   }
 
 
@@ -258,9 +258,9 @@ namespace zmq {
     Local<FunctionTemplate> t = NanNew<FunctionTemplate>(New);
     t->InstanceTemplate()->SetInternalFieldCount(1);
     t->InstanceTemplate()->SetAccessor(
-      NanSymbol("state"), Socket::GetState);
+      NanNew("state"), Socket::GetState);
     t->InstanceTemplate()->SetAccessor(
-      NanSymbol("pending"), GetPending, SetPending);
+      NanNew("pending"), GetPending, SetPending);
 
     NODE_SET_PROTOTYPE_METHOD(t, "bind", Bind);
     NODE_SET_PROTOTYPE_METHOD(t, "bindSync", BindSync);
@@ -282,12 +282,12 @@ namespace zmq {
 #if ZMQ_CAN_MONITOR
     NODE_SET_PROTOTYPE_METHOD(t, "monitor", Monitor);
     NODE_SET_PROTOTYPE_METHOD(t, "unmonitor", Unmonitor);
-    NanAssignPersistent(monitor_symbol, NanSymbol("onMonitorEvent"));
+    NanAssignPersistent(monitor_symbol, NanNew("onMonitorEvent"));
 #endif
 
-    target->Set(NanSymbol("SocketBinding"), t->GetFunction());
+    target->Set(NanNew("SocketBinding"), t->GetFunction());
 
-    NanAssignPersistent(callback_symbol, NanSymbol("onReady"));
+    NanAssignPersistent(callback_symbol, NanNew("onReady"));
   }
 
   Socket::~Socket() {
@@ -640,9 +640,9 @@ namespace zmq {
     Local<Value> argv[1];
 
     if (state->error) {
-      argv[0] = Exception::Error(NanNew<String>(zmq_strerror(state->error)));
+      argv[0] = NanError(zmq_strerror(state->error));
     } else {
-      argv[0] = NanNew(NanUndefined());
+      argv[0] = NanUndefined();
     }
 
     Local<Function> cb = NanNew(state->cb);
@@ -716,9 +716,9 @@ namespace zmq {
     Local<Value> argv[1];
 
     if (state->error) {
-      argv[0] = Exception::Error(NanNew<String>(zmq_strerror(state->error)));
+      argv[0] = NanError(zmq_strerror(state->error));
     } else {
-      argv[0] = NanNew(NanUndefined());
+      argv[0] = NanUndefined();
     }
 
     Local<Function> cb = NanNew(state->cb);
@@ -875,7 +875,7 @@ namespace zmq {
       socket->monitor_handle_->data = socket;
 
       uv_idle_init(uv_default_loop(), socket->monitor_handle_);
-      uv_idle_start(socket->monitor_handle_, Socket::UV_MonitorCallback);
+      uv_idle_start(socket->monitor_handle_, reinterpret_cast<uv_idle_cb>(Socket::UV_MonitorCallback));
     }
 
     NanReturnUndefined();
@@ -950,7 +950,7 @@ namespace zmq {
           inline BufferReference(Handle<Object> buf) {
             // Keep the handle alive until zmq is done with the buffer
             noLongerNeeded_ = false;
-            NanMakeWeakPersistent(buf, this, &WeakCheck<Object, BufferReference>);
+            NanMakeWeakPersistent(buf, this, &WeakCheck);
           }
 
           // Called by zmq when the message has been sent.
@@ -963,7 +963,6 @@ namespace zmq {
          NAN_WEAK_CALLBACK(WeakCheck) {
            if (data.GetParameter()->noLongerNeeded_) {
              delete data.GetParameter();
-             data.Dispose();
            } else {
              data.Revive();
            }
