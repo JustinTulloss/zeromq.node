@@ -1,8 +1,19 @@
+2.7.0 / 2014-04-24
+==================
+
+  * Fixed memory leak when closing socket [rasky]
+  * Fixed high water mark [soplwang, kkoopa]
+  * Added socket opts for zeromq 4.x security mechanisms [msealand]
+  * Use MakeCallback [kkoopa]
+  * Remove useless setImmediate [kkoopa]
+  * Use `zmq_msg_send` for ZMQ >= 4.0 [kkoopa]
+  * Expose the Socket class as zmq.Socket [tcr]
+
 2.6.0 / 2014-01-23
 ==================
 
   * Monitor support [f34rdotcom, dr-fozzy]
-  * Unbind sypport [kkoopa]
+  * Unbind support [kkoopa]
   * Node 0.11.9 compatibility [kkoopa]
   * Support for ZMQ 4 [atrniv]
   * Fixed memory leak [utvara]

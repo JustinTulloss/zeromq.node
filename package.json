@@ -1,6 +1,6 @@
 {
   "name": "zmq",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "Bindings for node.js to zeromq",
   "main": "index",
   "repository": {
@@ -8,7 +8,7 @@
     "url": "http://github.com/JustinTulloss/zeromq.node.git"
   },
   "dependencies": {
-    "nan": "~0.8.0",
+    "nan": "~1.2.0",
     "bindings": "~1.1.1"
   },
   "devDependencies": {
