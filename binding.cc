@@ -150,8 +150,8 @@ namespace zmq {
       int32_t endpoints;
 #if ZMQ_CAN_MONITOR
       void *monitor_socket_;
-      uv_idle_t *monitor_handle_;
-      static void UV_MonitorCallback(uv_idle_t* handle, int status);
+      uv_timer_t *monitor_handle_;
+      static void UV_MonitorCallback(uv_timer_t* handle, int status);
       static NAN_METHOD(Monitor);
       static NAN_METHOD(Unmonitor);
 #endif
@@ -369,7 +369,7 @@ namespace zmq {
   }
 
   void
-  Socket::UV_MonitorCallback(uv_idle_t* handle, int status) {
+  Socket::UV_MonitorCallback(uv_timer_t* handle, int status) {
     NanScope();
     Socket* s = static_cast<Socket*>(handle->data);
     zmq_msg_t msg1; /* 3.x has 1 message per event */
@@ -415,7 +415,7 @@ namespace zmq {
         s->MonitorEvent(event_id, event_value, event_endpoint);
       }
       else {
-        uv_idle_stop(s->monitor_handle_);
+        uv_timer_stop(s->monitor_handle_);
       }
 
       zmq_msg_close (&msg1);
@@ -861,6 +861,17 @@ namespace zmq {
 #if ZMQ_CAN_MONITOR
   NAN_METHOD(Socket::Monitor) {
     NanScope();
+    int64_t timer_interval = 10; // default to 10ms interval
+
+    if (args.Length() == 1) {
+      if (!args[0]->IsUndefined()) {
+        if (!args[0]->IsNumber())
+          return NanThrowTypeError("Option must be an integer");
+        timer_interval = args[0]->ToInteger()->Value();
+        if (timer_interval <= 0)
+          return NanThrowTypeError("Option must be a positive integer");
+      }
+    }
     GET_SOCKET(args);
     char addr[255];
     Context *context = ObjectWrap::Unwrap<Context>(NanNew(socket->context_));
@@ -870,12 +881,12 @@ namespace zmq {
       socket->monitor_socket_ = zmq_socket (context->context_, ZMQ_PAIR);
       zmq_connect (socket->monitor_socket_, addr);
 
-      socket->monitor_handle_ = new uv_idle_t;
+      socket->monitor_handle_ = new uv_timer_t;
 
       socket->monitor_handle_->data = socket;
 
-      uv_idle_init(uv_default_loop(), socket->monitor_handle_);
-      uv_idle_start(socket->monitor_handle_, reinterpret_cast<uv_idle_cb>(Socket::UV_MonitorCallback));
+      uv_timer_init(uv_default_loop(), socket->monitor_handle_);
+      uv_timer_start(socket->monitor_handle_, reinterpret_cast<uv_timer_cb>(Socket::UV_MonitorCallback), timer_interval, timer_interval);
     }
 
     NanReturnUndefined();
@@ -886,7 +897,7 @@ namespace zmq {
     Socket* socket = GetSocket(args);                         \
     if (zmq_close(socket->monitor_socket_) < 0)
       throw std::runtime_error(ErrorMessage());
-    uv_idle_stop(socket->monitor_handle_);
+    uv_timer_stop(socket->monitor_handle_);
     socket->monitor_handle_ = NULL;
     socket->monitor_socket_ = NULL;
     NanReturnUndefined();
