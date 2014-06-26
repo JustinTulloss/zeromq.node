@@ -381,17 +381,16 @@ namespace zmq {
     if (zmq_poll(&item, 1, 0)) {
       zmq_msg_init (&msg1);
       if (zmq_recvmsg (s->monitor_socket_, &msg1, ZMQ_DONTWAIT) > 0) {
-        zmq_event_t event;
         char event_endpoint[1025];
         uint16_t event_id;
         int32_t event_value;
-        memcpy (&event, zmq_msg_data (&msg1), sizeof (zmq_event_t));
-
-        event_id = event.event;
 
 #if ZMQ_VERSION_MAJOR >= 4
+        uint8_t *data = (uint8_t *) zmq_msg_data (&msg1);
+        event_id = *(uint16_t *) (data);
+        event_value = *(uint32_t *) (data + 2); 
+
         zmq_msg_t msg2; /* 4.x has 2 messages per event */
-        event_value = event.value;
 
         // get our next frame it may have the target address and safely copy to our buffer
         zmq_msg_init (&msg2);
@@ -407,6 +406,11 @@ namespace zmq {
         // null terminate our string
         event_endpoint[len]=0;
 #else
+        // monitoring on zmq < 4 used zmq_event_t
+        zmq_event_t event;
+        memcpy (&event, zmq_msg_data (&msg1), sizeof (zmq_event_t));
+        event_id = event.event;
+
         // Bit of a hack, but all events in the zmq_event_t union have the same layout so this will work for all event types.
         event_value = event.data.connected.fd;
         snprintf(event_endpoint, sizeof(event_endpoint), "%s", event.data.connected.addr);
