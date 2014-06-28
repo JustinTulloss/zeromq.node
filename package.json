@@ -16,7 +16,8 @@
     "batch": "*",
     "jade": "*",
     "dox": "*",
-    "semver": "*"
+    "semver": "*",
+    "mocha": "~1.13.0"
   },
   "engines": {
     "node": ">=0.7.9"
@@ -55,6 +56,7 @@
     "Jon Gretar Borgthorsson (https://github.com/JonGretar)",
     "Brian Lalor (https://github.com/blalor)",
     "Benjamin Byholm (https://github.com/kkoopa)",
-    "Alejandro (https://github.com/Minjung)"
+    "Alejandro (https://github.com/Minjung)",
+    "Eli Skeggs <skeggse@gmail.com> (https://github.com/skeggse)"
   ]
 }
