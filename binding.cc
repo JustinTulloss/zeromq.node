@@ -55,6 +55,7 @@
 #define ZMQ_CAN_DISCONNECT (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
 #define ZMQ_CAN_UNBIND (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
 #define ZMQ_CAN_MONITOR (ZMQ_VERSION > 30201)
+#define ZMQ_CAN_SET_CTX (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
 
 using namespace v8;
 using namespace node;
@@ -87,6 +88,11 @@ namespace zmq {
       static Context *GetContext(_NAN_METHOD_ARGS);
       void Close();
       static NAN_METHOD(Close);
+#if ZMQ_CAN_SET_CTX
+      static NAN_METHOD(GetOpt);
+      static NAN_METHOD(SetOpt);
+#endif
+
       void* context_;
   };
 
@@ -196,6 +202,10 @@ namespace zmq {
     t->InstanceTemplate()->SetInternalFieldCount(1);
 
     NODE_SET_PROTOTYPE_METHOD(t, "close", Close);
+#if ZMQ_CAN_SET_CTX
+    NODE_SET_PROTOTYPE_METHOD(t, "setOpt", SetOpt);
+    NODE_SET_PROTOTYPE_METHOD(t, "getOpt", GetOpt);
+#endif
 
     target->Set(NanNew("Context"), t->GetFunction());
   }
@@ -247,6 +257,35 @@ namespace zmq {
     NanReturnUndefined();
   }
 
+#if ZMQ_CAN_SET_CTX
+  NAN_METHOD(Context::SetOpt) {
+    NanScope();
+    if (args.Length() != 2)
+      return NanThrowError("Must pass an option and a value");
+    if (!args[0]->IsNumber() || !args[1]->IsNumber())
+      return NanThrowTypeError("Arguments must be numbers");
+    int64_t option = args[0]->ToInteger()->Value();
+    int64_t value = args[1]->ToInteger()->Value();
+
+    Context *context = GetContext(args);
+    if (zmq_ctx_set(context->context_, option, value) < 0)
+      return NanThrowError(ExceptionFromError());
+    NanReturnUndefined();
+  }
+
+  NAN_METHOD(Context::GetOpt) {
+    NanScope();
+    if (args.Length() != 1)
+      return NanThrowError("Must pass an option");
+    if (!args[0]->IsNumber())
+      return NanThrowTypeError("Option must be an integer");
+    int64_t option = args[0]->ToInteger()->Value();
+
+    Context *context = GetContext(args);
+    int value = zmq_ctx_get(context->context_, option);
+    NanReturnValue(NanNew<Integer>(value));
+  }
+#endif
   /*
    * Socket methods.
    */
@@ -1172,6 +1211,7 @@ namespace zmq {
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_UNBIND);
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_MONITOR);
+    NODE_DEFINE_CONSTANT(target, ZMQ_CAN_SET_CTX);
     NODE_DEFINE_CONSTANT(target, ZMQ_PUB);
     NODE_DEFINE_CONSTANT(target, ZMQ_SUB);
     #if ZMQ_VERSION_MAJOR >= 3
