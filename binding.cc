@@ -264,8 +264,8 @@ namespace zmq {
       return NanThrowError("Must pass an option and a value");
     if (!args[0]->IsNumber() || !args[1]->IsNumber())
       return NanThrowTypeError("Arguments must be numbers");
-    int64_t option = args[0]->ToInteger()->Value();
-    int64_t value = args[1]->ToInteger()->Value();
+    int option = args[0]->ToInt32()->Value();
+    int value = args[1]->ToInt32()->Value();
 
     Context *context = GetContext(args);
     if (zmq_ctx_set(context->context_, option, value) < 0)
@@ -279,7 +279,7 @@ namespace zmq {
       return NanThrowError("Must pass an option");
     if (!args[0]->IsNumber())
       return NanThrowTypeError("Option must be an integer");
-    int64_t option = args[0]->ToInteger()->Value();
+    int option = args[0]->ToInt32()->Value();
 
     Context *context = GetContext(args);
     int value = zmq_ctx_get(context->context_, option);
