@@ -42,6 +42,10 @@ sock.on('message', function(msg){
 });
 ```
 
+## Docs
+
+Can be found [here](http://htmlpreview.github.io/?https://github.com/JustinTulloss/zeromq.node/blob/master/docs/index.html).
+
 ## Running tests
 
   Install dev deps:
