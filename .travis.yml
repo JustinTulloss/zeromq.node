@@ -5,13 +5,13 @@ env:
  - ZMQ="git://github.com/zeromq/zeromq4-x.git -b v4.0.3" SODIUM="git://github.com/jedisct1/libsodium.git -b 0.4.5"
 before_install:
  - sudo apt-get install uuid-dev
- - '[ -n "$SODIUM"] && git clone --depth 1 $SODIUM libsodium'
- - '[ -n "$SODIUM"] && cd libsodium'
- - '[ -n "$SODIUM"] && ./autogen.sh'
- - '[ -n "$SODIUM"] && ./configure'
- - '[ -n "$SODIUM"] && make'
- - '[ -n "$SODIUM"] && sudo make install'
- - '[ -n "$SODIUM"] && cd ..'
+ - '[ -n "$SODIUM" ] && git clone --depth 1 $SODIUM libsodium'
+ - '[ -n "$SODIUM" ] && cd libsodium'
+ - '[ -n "$SODIUM" ] && ./autogen.sh'
+ - '[ -n "$SODIUM" ] && ./configure'
+ - '[ -n "$SODIUM" ] && make'
+ - '[ -n "$SODIUM" ] && sudo make install'
+ - '[ -n "$SODIUM" ] && cd ..'
  - git clone --depth 1 $ZMQ zmqlib
  - cd zmqlib
  - ./autogen.sh
