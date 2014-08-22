@@ -43,6 +43,15 @@ describe('socket.router', function(){
       (function(){
         sock.send([envelope, '']);
       }).should.throw('No route to host');
+
+      (function(){
+        sock.send([envelope, '']);
+      }).should.throw('No route to host');
+
+      (function(){
+        sock.send([envelope, '']);
+      }).should.throw('No route to host');
+
       sock.close();
     })();
 
