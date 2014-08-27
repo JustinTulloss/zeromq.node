@@ -1,3 +1,15 @@
+2.8.0 / 2014-08-27
+==================
+
+  * Fixed: monitor API would keep CPU busy at 100% [f34rdotcom]
+  * Fixed: an exception during flush could render a socket unusable [ronkorving]
+  * Fixed: Travis changed behavior and broke our tests [ronkorving]
+  * Code cleanup [kkoopa and ronkorving]
+  * Removed legacy nextTick event emission during flush [utvara and ronkorving]
+  * Context API added: setMaxThreads, getMaxThreads, setMaxSockets, getMaxSockets [yoneal]
+  * Changed unit test suite to Mocha [skeggse and yoneal]
+  * NAN updated to ~1.3.0 [kkoopa]
+
 2.7.0 / 2014-04-24
 ==================
 
