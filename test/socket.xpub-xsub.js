@@ -8,17 +8,17 @@ describe('socket.xpub-xsub', function () {
     beforeEach(function () {
         pub = zmq.socket('pub');
         sub = zmq.socket('sub');
-		xpub = zmq.socket('xpub');
-		xsub = zmq.socket('xsub');
     });
     
-    it('should support pub-sub tracing and filtering', function (done) {
-        var n = 0;
-		
+    it('should support pub-sub tracing and filtering', function (done) {    	
 		if (!semver.gte(zmq.version, '3.1.0')) {
 			done();
 			return console.warn('Test requires libzmq >= 3.1.0');
 		}
+		
+		var n = 0;
+		xpub = zmq.socket('xpub');
+		xsub = zmq.socket('xsub');
 
 		pub.bindSync('tcp://*:5556');	
 		xsub.connect('tcp://127.0.0.1:5556');
