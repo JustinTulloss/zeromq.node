@@ -18,18 +18,15 @@ describe('socket.xpub-xsub', function () {
 		pub.bindSync('tcp://*:5556');	
 		xsub.connect('tcp://127.0.0.1:5556');
 		xpub.bindSync('tcp://*:5555'); 		
-        sub.connect('tcp://127.0.0.1:5555'); // connect to the xpub
+        sub.connect('tcp://127.0.0.1:5555');
         
         sub.on('message', function (msg) {
             msg.should.be.an.instanceof(Buffer);
-
             switch (n++) {
                 case 0:
-                    console.log('first message');
                     msg.toString().should.equal('js is cool');
                     break;
                 case 1:
-                    console.log('second message');
                     msg.toString().should.equal('luna is cool too');
                     break;
             }
@@ -49,14 +46,14 @@ describe('socket.xpub-xsub', function () {
         
         setTimeout(function () {
             sub.unsubscribe('luna');
-        }, 500);
+        }, 300);
     });
 
     XSubXPubProxy = function (xsub, xpub, done) {
         var n = 0;
 
         xsub.on('message', function (msg) {
-            xpub.send(msg); // Just re-send message out on the xpub, so subscribers can receive it
+            xpub.send(msg); // Forward message using the xpub so subscribers can receive it
         });
         
         xpub.on('message', function (msg) {
@@ -69,11 +66,9 @@ describe('socket.xpub-xsub', function () {
                 case 'subscribe':
                     switch (n++) {
                         case 0:
-                            console.log('subscribe js');
                             channel.should.equal('js');
                             break;
                         case 1:
-                            console.log('subscribe luna');
                             channel.should.equal('luna');
                             break;
                     }
@@ -81,7 +76,6 @@ describe('socket.xpub-xsub', function () {
                 case 'unsubscribe':
                     switch (n++) {
                         case 2:
-                            console.log('unsubscribe luna');
                             channel.should.equal('luna');
                             sub.close();
                             pub.close();
@@ -93,8 +87,7 @@ describe('socket.xpub-xsub', function () {
                     break;
             }
             
-            xsub.send(msg); // Just re-send message out on the xsub so the publisher knows it has a subscriber 
+            xsub.send(msg); // Forward message using the xsub so the publisher knows it has a subscriber 
         });
     }
-
 });
