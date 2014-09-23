@@ -14,6 +14,11 @@ describe('socket.xpub-xsub', function () {
     
     it('should support pub-sub tracing and filtering', function (done) {
         var n = 0;
+		
+		if (!semver.gte(zmq.version, '3.1.0')) {
+			done();
+			return console.warn('Test requires libzmq >= 3.1.0');
+		}
 
 		pub.bindSync('tcp://*:5556');	
 		xsub.connect('tcp://127.0.0.1:5556');
