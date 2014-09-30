@@ -4,7 +4,7 @@
 
 var zmq = require('../');
 
-module.exports.start = function() {
+module.exports.start = function(count) {
   var zap = zmq.socket('router');
   zap.on('message', function() {
     var data = Array.prototype.slice.call(arguments);
@@ -41,6 +41,6 @@ module.exports.start = function() {
     ]));
   });
   
-  zap.bindSync("inproc://zeromq.zap.01");
+  zap.bindSync("inproc://zeromq.zap.01."+count);
   return zap;
 }

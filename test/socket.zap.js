@@ -5,10 +5,11 @@ var zmq = require('..')
 describe('socket.zap', function(){
 
   var zap = require('./zap')
-  , zapSocket, rep, req;
+  , zapSocket, rep, req, count = 0;
 
   beforeEach(function(){
-    zapSocket = zap.start();
+    count++;
+    zapSocket = zap.start(count);
     rep = zmq.socket('rep');
     req = zmq.socket('req');
   });
