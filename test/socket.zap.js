@@ -7,7 +7,8 @@ describe('socket.zap', function(){
   var zap = require('./zap')
   , zapSocket, rep, req, count = 0;
 
-  beforeEach(function(count++){
+  beforeEach(function(){
+    count++;
     zapSocket = zap.start(count);
     rep = zmq.socket('rep');
     req = zmq.socket('req');
