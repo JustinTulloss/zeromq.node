@@ -32,7 +32,7 @@ describe('socket.pub-sub', function(){
       }
     });
 
-    var addr = "inproc://stuff";
+    var addr = "inproc://stuff_ssps";
 
     sub.bind(addr, function(){
       pub.connect(addr);
@@ -75,8 +75,8 @@ describe('socket.pub-sub', function(){
       }
     });
 
-    sub.bind('inproc://stuff', function(){
-      pub.connect('inproc://stuff');
+    sub.bind('inproc://stuff_sspsf', function(){
+      pub.connect('inproc://stuff_sspsf');
 
       // See comments on pub-sub test.
 
