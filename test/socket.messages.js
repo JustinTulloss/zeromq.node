@@ -31,8 +31,8 @@ describe('socket.messages', function(){
       }
     });
 
-    pull.bind('inproc://stuff', function(){
-      push.connect('inproc://stuff');
+    pull.bind('inproc://stuff_ssm', function(){
+      push.connect('inproc://stuff_ssm');
       push.send('string');
       push.send(15.99);
       push.send(new Buffer('buffer'));
@@ -49,8 +49,8 @@ describe('socket.messages', function(){
       done();
     });
 
-    pull.bind('inproc://stuff', function(){
-      push.connect('inproc://stuff');
+    pull.bind('inproc://stuff_ssmm', function(){
+      push.connect('inproc://stuff_ssmm');
       push.send(['string', 15.99, new Buffer('buffer')]);
     });
   });
@@ -67,8 +67,8 @@ describe('socket.messages', function(){
       done();
     });
 
-    pull.bind('inproc://stuff', function(){
-      push.connect('inproc://stuff');
+    pull.bind('inproc://stuff_sss', function(){
+      push.connect('inproc://stuff_sss');
       push.send(['tobi', 'loki'], zmq.ZMQ_SNDMORE);
       push.send(['jane', 'luna'], zmq.ZMQ_SNDMORE);
       push.send('manny');
