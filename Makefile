@@ -8,7 +8,7 @@ build/Release/binding.node: binding.cc binding.gyp
 	npm install
 
 test:
-	$(MOCHA) --expose-gc --slow 2000 --timeout 10000
+	$(MOCHA) --expose-gc --slow 2000 --timeout 600000
 
 clean:
 	rm -fr build
