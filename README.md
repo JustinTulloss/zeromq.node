@@ -18,7 +18,7 @@ producer.js:
 var zmq = require('zmq')
   , sock = zmq.socket('push');
 
-sock.bindSync('tcp://127.0.0.1:3000');
+sock.connect('tcp://127.0.0.1:3000');
 console.log('Producer bound to port 3000');
 
 setInterval(function(){
@@ -34,7 +34,7 @@ worker.js:
 var zmq = require('zmq')
   , sock = zmq.socket('pull');
 
-sock.connect('tcp://127.0.0.1:3000');
+sock.bindSync('tcp://127.0.0.1:3000');
 console.log('Worker connected to port 3000');
 
 sock.on('message', function(msg){
