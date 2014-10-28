@@ -6,7 +6,22 @@
 
 ## Installation
 
-[Install zmq package](http://www.zeromq.org/intro:get-the-software) first.
+First make sure [ZeroMQ is installed](http://www.zeromq.org/intro:get-the-software).
+This module is compatible with ZeroMQ versions 2, 3 and 4. The installation
+process varies by platform, but headers are mandatory. Most Linux distributions
+provide these headers with `-devel` packages like `zeromq-devel` or
+`zeromq3-devel`. Homebrew for OS X provides versions 4 and 3 with packages
+`zeromq` and `zeromq3`, respectively. A
+[Chris Lea PPA](https://launchpad.net/~chris-lea/+archive/ubuntu/zeromq)
+is available for Debian-like users who want a version newer than currently
+provided by their distribution. Windows is supported but not actively
+maintained.
+
+Note: For zap support with versions >=4 you need to have libzmq built and linked
+against libsodium. Check the Travis configuration for a list of what is tested
+and therefore known to work.
+
+With ZeroMQ headers installed, you can install and use this module:
 
     $ npm install zmq
 
