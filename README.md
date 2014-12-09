@@ -25,11 +25,12 @@ With ZeroMQ headers installed, you can install and use this module:
 
     $ npm install zmq
 
-## Example
+## Examples
 
-producer.js:
+1. Push/Pull
 
 ```js
+// producer.js
 var zmq = require('zmq')
   , sock = zmq.socket('push');
 
@@ -42,10 +43,8 @@ setInterval(function(){
 }, 500);
 ```
 
-worker.js:
-
 ```js
-
+// worker.js
 var zmq = require('zmq')
   , sock = zmq.socket('pull');
 
@@ -54,6 +53,36 @@ console.log('Worker connected to port 3000');
 
 sock.on('message', function(msg){
   console.log('work: %s', msg.toString());
+});
+```
+
+2. Pub/Sub
+
+```js
+// pubber.js
+var zmq = require('zmq')
+  , sock = zmq.socket('pub');
+
+sock.bindSync('tcp://127.0.0.1:3000');
+console.log('Publisher bound to port 3000');
+
+setInterval(function(){
+  console.log('sending a multipart message envelope');
+  sock.send(['kitty cats', 'meow!']);
+}, 500);
+```
+
+```js
+// subber.js
+var zmq = require('zmq')
+  , sock = zmq.socket('sub');
+
+sock.connect('tcp://127.0.0.1:3000');
+sock.subscribe('kitty cats');
+console.log('Subscriber connected to port 3000');
+
+sock.on('message', function(topic, message) {
+  console.log('received a message related to: ', topic, 'containing message: ', message);
 });
 ```
 
