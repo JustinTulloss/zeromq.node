@@ -27,7 +27,7 @@ With ZeroMQ headers installed, you can install and use this module:
 
 ## Examples
 
-1. Push/Pull
+### Push/Pull
 
 ```js
 // producer.js
@@ -56,7 +56,7 @@ sock.on('message', function(msg){
 });
 ```
 
-2. Pub/Sub
+### Pub/Sub
 
 ```js
 // pubber.js
