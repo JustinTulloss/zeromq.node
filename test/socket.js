@@ -44,4 +44,10 @@ describe('socket', function(){
     sock.close();
   });
 
+  it('should accept an optional context', function() {
+    var ctx = new zmq.Context(1),
+        socket = zmq.socket(ctx, 'req');
+    socket.close.should.be.a.Function;
+  });
+
 });
