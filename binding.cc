@@ -27,6 +27,7 @@
 #include <node_buffer.h>
 #include <zmq.h>
 #include <assert.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +35,8 @@
 #include <stdexcept>
 #include <set>
 #include "nan.h"
+
+#define FAILURE 1
 
 #ifdef _WIN32
 # define snprintf _snprintf_s
@@ -473,6 +476,12 @@ namespace zmq {
     socket_ = zmq_socket(context->context_, type);
     pending_ = 0;
     state_ = STATE_READY;
+
+    if (NULL == socket_) {
+      int e = zmq_errno();
+      fprintf(stderr, "Could not create socket: zmq_errno=%d zmq_strerror='%s'\n", e, zmq_strerror(e));
+      exit(FAILURE);
+    }
 
     endpoints = 0;
 
