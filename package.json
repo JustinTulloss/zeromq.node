@@ -14,8 +14,6 @@
   "devDependencies": {
     "should": "2.1.x",
     "batch": "*",
-    "jade": "*",
-    "dox": "*",
     "semver": "*",
     "mocha": "~1.13.0"
   },
