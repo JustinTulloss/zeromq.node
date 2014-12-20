@@ -13,12 +13,12 @@
   },
   "devDependencies": {
     "should": "2.1.x",
-    "batch": "*",
-    "semver": "*",
+    "batch": "~0.5.1",
+    "semver": "~4.1.1",
     "mocha": "~1.13.0"
   },
   "engines": {
-    "node": ">=0.7.9"
+    "node": ">=0.8"
   },
   "scripts": {
     "test": "make test"
