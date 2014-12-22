@@ -13,7 +13,6 @@
   },
   "devDependencies": {
     "should": "2.1.x",
-    "batch": "~0.5.1",
     "semver": "~4.1.1",
     "mocha": "~1.13.0"
   },
