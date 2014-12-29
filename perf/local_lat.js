@@ -17,5 +17,9 @@ rep.bindSync(bind_to);
 rep.on('message', function (data) {
   assert.equal(data.length, message_size, 'message-size did not match');
   rep.send(data);
-  if (++counter === roundtrip_count) rep.close();
+  if (++counter === roundtrip_count){ 
+    setTimeout( function(){ 
+      rep.close();
+    }, 1000); 
+  }
 })
