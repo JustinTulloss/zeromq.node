@@ -1,3 +1,12 @@
+2.9.0 / 2015-01-05
+==================
+
+  * More unit tests [bluebery and reqshark]
+  * More reliable testing [f34rdotcom and kkoopa]
+  * Improved ReadMe [dminkovsky and skibz]
+  * Support for zmq_proxy sockets [reqshark]
+  * Removed "docs" and related deps in favor of ReadMe [reqshark]
+
 2.8.0 / 2014-08-27
 ==================
 
