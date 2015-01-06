@@ -36,8 +36,6 @@
 #include <set>
 #include "nan.h"
 
-#define FAILURE 1
-
 #ifdef _WIN32
 # define snprintf _snprintf_s
   typedef BOOL (WINAPI* SetDllDirectoryFunc)(wchar_t *lpPathName);
@@ -478,9 +476,8 @@ namespace zmq {
     state_ = STATE_READY;
 
     if (NULL == socket_) {
-      int e = zmq_errno();
-      fprintf(stderr, "Could not create socket: zmq_errno=%d zmq_strerror='%s'\n", e, zmq_strerror(e));
-      exit(FAILURE);
+      NanThrowError(ErrorMessage());
+      return;
     }
 
     endpoints = 0;
