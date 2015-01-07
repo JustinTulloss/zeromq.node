@@ -45,13 +45,18 @@ describe('socket', function(){
   });
 
   it('should throw a javascript error if it hits the system file descriptor limit', function() {
+    var i, socks = [], numSocks = 10000;
     function hitlimit() {
-      var socks = [];
-      for (var i = 0; i < 10000; i++) {
+      for (i = 0; i < numSocks; i++) {
         socks.push(zmq.socket('router'));
       }
     }
     hitlimit.should['throw'];
+    for (i = 0; i < numSocks; i++) {
+      if (socks[i]) {
+        socks[i].close();
+      }
+    }
   });
 
 });
