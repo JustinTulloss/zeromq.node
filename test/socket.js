@@ -52,7 +52,7 @@ describe('socket', function(){
       }
     }
     hitlimit.should['throw'];
-    for (i = 0; i < numSocks; i++) {
+    for (i = 0; i < socks.length; i++) {
       if (socks[i]) {
         socks[i].close();
       }
