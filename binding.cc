@@ -27,6 +27,7 @@
 #include <node_buffer.h>
 #include <zmq.h>
 #include <assert.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -473,6 +474,11 @@ namespace zmq {
     socket_ = zmq_socket(context->context_, type);
     pending_ = 0;
     state_ = STATE_READY;
+
+    if (NULL == socket_) {
+      NanThrowError(ErrorMessage());
+      return;
+    }
 
     endpoints = 0;
 
