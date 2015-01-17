@@ -537,7 +537,7 @@ namespace zmq {
       NanThrowError(ExceptionFromError());
       return NanUndefined();
     }
-    return NanNew<Integer>(value);
+    return NanNew<Number>(value);
   }
 
   template<typename T>
