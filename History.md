@@ -1,3 +1,11 @@
+2.10.0 / 2015-01-22
+===================
+
+  * Added ZMQ_STREAM socket type [reqshark]
+  * Update NAN to io.js compatible 1.5.0 [kkoopa]
+  * Hitting open file descriptor limit now throws an error during zmq.socket() [briansorahan]
+  * More reliable benchmarking [maxired]
+
 2.9.0 / 2015-01-05
 ==================
 
