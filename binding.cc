@@ -360,10 +360,16 @@ namespace zmq {
     zmq_pollitem_t item = {socket_, 0, ZMQ_POLLIN, 0};
     if (pending_ > 0)
       item.events |= ZMQ_POLLOUT;
-
-    int rc = zmq_poll(&item, 1, 0);
-    if (rc < 0) {
-      throw std::runtime_error(ErrorMessage());
+    while(true) {
+      int rc = zmq_poll(&item, 1, 0);
+      if(rc < 0){
+        if(zmq_errno()==EINTR){
+          continue;
+        }
+        throw std::runtime_error(ErrorMessage());
+      } else {
+        break;
+      }
     }
     return item.revents & item.events;
   }
@@ -539,9 +545,16 @@ namespace zmq {
   Handle<Value> Socket::GetSockOpt(int option) {
     T value = 0;
     size_t len = sizeof(T);
-    if (zmq_getsockopt(socket_, option, &value, &len) < 0) {
-      NanThrowError(ExceptionFromError());
-      return NanUndefined();
+    while(true) {
+      int rc = zmq_getsockopt(socket_, option, &value, &len);
+      if ( rc < 0 && zmq_errno()==EINTR) {
+        continue;
+      } else if (rc<0) {
+        NanThrowError(ExceptionFromError());
+        return NanUndefined();
+      } else {
+        break;
+      }
     }
     return NanNew<Number>(value);
   }
@@ -968,13 +981,22 @@ namespace zmq {
     GET_SOCKET(args);
 
     IncomingMessage msg;
+    while(true){
+      int rc;
     #if ZMQ_VERSION_MAJOR == 2
-      if (zmq_recv(socket->socket_, msg, flags) < 0)
-        return NanThrowError(ErrorMessage());
+      rc = zmq_recv(socket->socket_, msg, flags);
     #else
-      if (zmq_recvmsg(socket->socket_, msg, flags) < 0)
-        return NanThrowError(ErrorMessage());
+      rc = zmq_recvmsg(socket->socket_, msg, flags);
     #endif
+      if(rc < 0){
+        if(zmq_errno()==EINTR){
+          continue;
+        }
+        return NanThrowError(ErrorMessage());
+      } else {
+        break;
+      }
+    }
     NanReturnValue(msg.GetBuffer());
   }
 
@@ -1072,17 +1094,24 @@ namespace zmq {
     char * cp = (char *)zmq_msg_data(&msg);
     const char * dat = Buffer::Data(buf);
     std::copy(dat, dat + len, cp);
-
+    while(true) {
+      int rc;
     #if ZMQ_VERSION_MAJOR == 2
-      if (zmq_send(socket->socket_, &msg, flags) < 0)
-        return NanThrowError(ErrorMessage());
+      rc = zmq_send(socket->socket_, &msg, flags);
     #elif ZMQ_VERSION_MAJOR == 3
-      if (zmq_sendmsg(socket->socket_, &msg, flags) < 0)
-        return NanThrowError(ErrorMessage());
+      rc = zmq_sendmsg(socket->socket_, &msg, flags);
     #else
-      if (zmq_msg_send(&msg, socket->socket_, flags) < 0)
-        return NanThrowError(ErrorMessage());
+      rc = zmq_msg_send(&msg, socket->socket_, flags);
     #endif
+      if(rc < 0){
+        if(zmq_errno()==EINTR){
+          continue;
+        }
+        return NanThrowError(ErrorMessage());
+      } else {
+        break;
+      }
+    }
 #endif // zero copy / copying version
 
     NanReturnUndefined();
