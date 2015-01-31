@@ -133,3 +133,5 @@ node ./local_thr.js tcp://127.0.0.1:5555 1 100000
 node ./remote_thr.js tcp://127.0.0.1:5555 1 100000
 ```
 
+Running `make perf` will run the commands listed above.
+
