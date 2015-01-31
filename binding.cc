@@ -360,10 +360,10 @@ namespace zmq {
     zmq_pollitem_t item = {socket_, 0, ZMQ_POLLIN, 0};
     if (pending_ > 0)
       item.events |= ZMQ_POLLOUT;
-    while(true) {
+    while (true) {
       int rc = zmq_poll(&item, 1, 0);
-      if(rc < 0){
-        if(zmq_errno()==EINTR){
+      if (rc < 0) {
+        if (zmq_errno()==EINTR) {
           continue;
         }
         throw std::runtime_error(ErrorMessage());
@@ -545,11 +545,12 @@ namespace zmq {
   Handle<Value> Socket::GetSockOpt(int option) {
     T value = 0;
     size_t len = sizeof(T);
-    while(true) {
+    while (true) {
       int rc = zmq_getsockopt(socket_, option, &value, &len);
-      if ( rc < 0 && zmq_errno()==EINTR) {
-        continue;
-      } else if (rc<0) {
+      if (rc < 0) {
+        if(zmq_errno()==EINTR) {
+          continue;
+        }
         NanThrowError(ExceptionFromError());
         return NanUndefined();
       } else {
@@ -981,15 +982,15 @@ namespace zmq {
     GET_SOCKET(args);
 
     IncomingMessage msg;
-    while(true){
+    while (true) {
       int rc;
     #if ZMQ_VERSION_MAJOR == 2
       rc = zmq_recv(socket->socket_, msg, flags);
     #else
       rc = zmq_recvmsg(socket->socket_, msg, flags);
     #endif
-      if(rc < 0){
-        if(zmq_errno()==EINTR){
+      if (rc < 0) {
+        if (zmq_errno()==EINTR) {
           continue;
         }
         return NanThrowError(ErrorMessage());
@@ -1094,7 +1095,7 @@ namespace zmq {
     char * cp = (char *)zmq_msg_data(&msg);
     const char * dat = Buffer::Data(buf);
     std::copy(dat, dat + len, cp);
-    while(true) {
+    while (true) {
       int rc;
     #if ZMQ_VERSION_MAJOR == 2
       rc = zmq_send(socket->socket_, &msg, flags);
@@ -1103,8 +1104,8 @@ namespace zmq {
     #else
       rc = zmq_msg_send(&msg, socket->socket_, flags);
     #endif
-      if(rc < 0){
-        if(zmq_errno()==EINTR){
+      if (rc < 0){
+        if (zmq_errno()==EINTR) {
           continue;
         }
         return NanThrowError(ErrorMessage());
