@@ -30,7 +30,7 @@ describe('socket.zap', function(){
     try {
       rep.curve_server = 0;
     } catch(e) {
-      console.log("libsoduim seems to be missing; skipping curve test");
+      console.log("libsodium seems to be missing; skipping curve test");
       done();
       return;
     }
