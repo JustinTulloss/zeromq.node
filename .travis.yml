@@ -20,10 +20,17 @@ before_install:
  - sudo make install
  - sudo /sbin/ldconfig
  - cd ..
+ - rm -rf ~/.nvm && rm -rf ~/.npm
+ - git clone https://github.com/creationix/nvm.git ~/.nvm
+ - source ~/.nvm/nvm.sh
+ - nvm i 0.8 && nvm i 0.10 && nvm i 0.12 && nvm i iojs
 language: node_js
-node_js:
- - "0.8"
- - "0.10"
- - "0.12"
- - "iojs"
-script: travis_retry npm test
+script:
+ - nvm use 0.8 && make
+ - travis_retry npm test && make clean
+ - nvm use 0.10 && make
+ - travis_retry npm test && make clean
+ - nvm use 0.12 && make
+ - travis_retry npm test && make clean
+ - nvm use iojs && make
+ - travis_retry npm test
