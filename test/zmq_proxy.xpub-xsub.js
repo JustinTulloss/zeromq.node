@@ -2,7 +2,7 @@ var zmq = require('..')
   , should = require('should')
   , semver = require('semver');
 
-var addr = 'tcp://127.0.0.1:5'
+var addr = 'tcp://127.0.0.1:'
 
 var version = semver.gte(zmq.version, '3.1.0');
 
@@ -163,5 +163,7 @@ describe('proxy.xpub-xsub', function() {
 });
 
 function port(){
-  return Math.floor(Math.random()*10000)
+  do p = Math.floor(Math.random()*100000)
+  while( p < 3000 || p > 65000)
+  return p
 }
