@@ -163,6 +163,7 @@ describe('proxy.xpub-xsub', function() {
 });
 
 function port(){
+  var p;
   do p = Math.floor(Math.random()*100000)
   while( p < 3000 || p > 65000)
   return p
