@@ -1,5 +1,10 @@
 var zmq = require('..')
-  , should = require('should');
+  , should = require('should')
+  , semver = require('semver');
+
+if (!semver.gte(process.version, '0.10.0')) {
+  return console.warn('Test requires Node >= 0.10.0');
+}
 
 describe('ReadableSocket', function () {
   it('should expose ReadableSocket', function () {
