@@ -21,6 +21,11 @@ describe('ReadableSocket', function () {
   it('should support sub, xsub and pull socket type', function () {
     ['sub', 'xsub', 'pull'].forEach(function (type) {
       (function () {
+        // check for supported types, xsub not supported in 0mq 2-x
+        if (!zmq.types[type]) {
+          return;
+        }
+
         var sock = new zmq.ReadableSocket(type);
       }).should.not.throw();
     });
