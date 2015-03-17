@@ -18,7 +18,7 @@ describe('ReadableStream', function () {
   it('should not support pub, xpub, req, xreq, rep, xrep, push, dealer, router, pair, stream socket type', function() {
     ['pub', 'xpub', 'req', 'xreq', 'rep', 'xrep', 'push', 'dealer', 'router', 'pair', 'stream'].forEach(function(type) {
       (function() {
-        var sock = zmq.createSocket(type),
+        var sock = zmq.createSocket(type, { autoFlush: false }),
           stream = zmq.createReadableStream(sock);
       }).should.throw();
     });
@@ -32,7 +32,7 @@ describe('ReadableStream', function () {
           return;
         }
 
-        var sock = zmq.createSocket(type),
+        var sock = zmq.createSocket(type, { autoFlush: false }),
           stream = zmq.createReadableStream(sock);
       }).should.not.throw();
     });
@@ -40,7 +40,7 @@ describe('ReadableStream', function () {
 
   it('should emit data received trough the socket', function (done) {
     var sender = zmq.socket('push')
-      , receiver = zmq.createSocket('pull')
+      , receiver = zmq.createSocket('pull', { autoFlush: false })
       , stream = zmq.createReadableStream(receiver);
 
     receiver.bind('inproc://ReadableStreamTest');
