@@ -80,11 +80,11 @@ describe('socket.push-pull', function(){
 
     var n = 0;
 
-    checkNoMessages = function (msg){
+    function checkNoMessages(msg){
       should.not.exist(msg);
     }
 
-    checkMessages = function (msg){
+    function checkMessages(msg){
       msg.should.be.an.instanceof(Buffer);
       switch (n++) {
         case 0:
