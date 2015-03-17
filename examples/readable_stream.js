@@ -39,7 +39,7 @@ if (cluster.isMaster) {
 } else {
   //subscriber = receive only
 
-  var socket = zmq.createReadableSocket('pull');
+  var socket = zmq.createSocket('pull', { autoFlush: false });
   socket.identity = 'subscriber' + process.pid;
   socket.connect(port);
 
