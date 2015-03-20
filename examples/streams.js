@@ -18,7 +18,8 @@ if (cluster.isMaster) {
 
   //publisher = send only
 
-  var socket = zmq.socket('push');
+  var socket = zmq.socket('push', { autoFlush: false });
+  var stream = zmq.createWritableStream(socket, {highWaterMark: 100});
 
   socket.identity = 'publisher' + process.pid;
 
@@ -33,7 +34,7 @@ if (cluster.isMaster) {
         , value = Math.random()*1000;
 
       console.log(socket.identity + ': sent ' + symbol + ' ' + value);
-      socket.send([symbol, value]);
+      stream.write([symbol, value]);
     }, 100);
   });
 } else {
