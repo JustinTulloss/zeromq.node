@@ -11,17 +11,8 @@ describe('ReadableStream', function () {
     zmq.ReadableStream.should.exist;
   });
 
-  it('should expose createReadableStream', function () {
-    zmq.createReadableStream.should.exist;
-  });
-
-  it('should not support pub, xpub, req, xreq, rep, xrep, push, dealer, router, pair, stream socket type', function() {
-    ['pub', 'xpub', 'req', 'xreq', 'rep', 'xrep', 'push', 'dealer', 'router', 'pair', 'stream'].forEach(function(type) {
-      (function() {
-        var sock = zmq.createSocket(type, { autoFlush: false }),
-          stream = zmq.createReadableStream(sock);
-      }).should.throw();
-    });
+  it('should expose createStream', function () {
+    zmq.createStream.should.exist;
   });
 
   it('should support sub, xsub and pull socket type', function() {
@@ -33,7 +24,7 @@ describe('ReadableStream', function () {
         }
 
         var sock = zmq.createSocket(type, { autoFlush: false }),
-          stream = zmq.createReadableStream(sock);
+          stream = zmq.createStream(sock);
       }).should.not.throw();
     });
   });
@@ -41,7 +32,7 @@ describe('ReadableStream', function () {
   it('should emit data received trough the socket', function (done) {
     var sender = zmq.socket('push')
       , receiver = zmq.createSocket('pull', { autoFlush: false })
-      , stream = zmq.createReadableStream(receiver);
+      , stream = zmq.createStream(receiver);
 
     receiver.bind('inproc://ReadableStreamTest');
 

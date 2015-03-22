@@ -19,7 +19,7 @@ if (cluster.isMaster) {
   //publisher = send only
 
   var socket = zmq.socket('push', { autoFlush: false });
-  var stream = zmq.createWritableStream(socket, {highWaterMark: 100});
+  var stream = zmq.createStream(socket, {highWaterMark: 100});
 
   socket.identity = 'publisher' + process.pid;
 
@@ -44,7 +44,7 @@ if (cluster.isMaster) {
   socket.identity = 'subscriber' + process.pid;
   socket.connect(port);
 
-  var stream = zmq.createReadableStream(socket, {highWaterMark: 100});
+  var stream = zmq.createStream(socket, {highWaterMark: 100});
 
   console.log('connected!');
 
