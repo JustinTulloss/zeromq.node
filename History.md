@@ -1,3 +1,12 @@
+2.11.0 / 2015-03-31
+===================
+
+  * Added pause() and resume() APIs on sockets to allow backpressure [philip1986]
+  * Elegant handling of EINTR return codes [hurricaneLTG]
+  * Small performance improvements in send() and internal flush methods [ronkorving]
+  * Updated test suite to cover io.js and Node 0.12 (removed 0.11) [ronkorving]
+  * Added "make perf" for easy benchmarking [ronkorving]
+
 2.10.0 / 2015-01-22
 ===================
 
