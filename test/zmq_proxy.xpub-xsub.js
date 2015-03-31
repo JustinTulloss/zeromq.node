@@ -2,10 +2,7 @@ var zmq = require('..')
   , should = require('should')
   , semver = require('semver');
 
-var addr = 'tcp://127.0.0.1'
-  , frontendAddr = addr+':5507'
-  , backendAddr = addr+':5508'
-  , captureAddr = addr+':5509';
+var addr = 'tcp://127.0.0.1:'
 
 var version = semver.gte(zmq.version, '3.1.0');
 
@@ -22,6 +19,10 @@ describe('proxy.xpub-xsub', function() {
 
     var sub = zmq.socket('sub');
     var pub = zmq.socket('pub');
+
+    var frontendAddr = addr + port()
+    var backendAddr = addr + port()
+    var captureAddr = addr + port()
 
     sub.subscribe('');
     sub.on('message',function (msg) {
@@ -67,6 +68,10 @@ describe('proxy.xpub-xsub', function() {
 
     var sub = zmq.socket('sub');
     var pub = zmq.socket('pub');
+
+    var frontendAddr = addr + port()
+    var backendAddr = addr + port()
+    var captureAddr = addr + port()
 
     sub.subscribe('');
     sub.on('message', function (msg) {
@@ -126,6 +131,9 @@ describe('proxy.xpub-xsub', function() {
     var sub = zmq.socket('sub');
     var pub = zmq.socket('pub');
 
+    var frontendAddr = addr + port()
+    var backendAddr = addr + port()
+
     frontend.bindSync(frontendAddr);
     backend.bindSync(backendAddr);
 
@@ -153,3 +161,10 @@ describe('proxy.xpub-xsub', function() {
     }
   })
 });
+
+function port(){
+  var p;
+  do p = Math.floor(Math.random()*100000)
+  while( p < 3000 || p > 65000)
+  return p
+}

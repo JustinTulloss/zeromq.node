@@ -10,6 +10,7 @@ test:
 
 clean:
 	rm -fr build
+	rm -rf node_modules
 
 distclean:
 	node-gyp clean
