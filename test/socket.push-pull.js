@@ -39,7 +39,7 @@ describe('socket.push-pull', function(){
   });
 
 
-  it('should not emit messages after pasue()', function(done){
+  it('should not emit messages after pause()', function(done){
       var push = zmq.socket('push')
         , pull = zmq.socket('pull');
 
