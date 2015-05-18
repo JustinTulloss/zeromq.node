@@ -160,6 +160,7 @@ namespace zmq {
 #if ZMQ_CAN_MONITOR
       void *monitor_socket_;
       uv_timer_t *monitor_handle_;
+      int64_t timer_interval_;
       static void UV_MonitorCallback(uv_timer_t* handle, int status);
       static NAN_METHOD(Monitor);
       static NAN_METHOD(Unmonitor);
@@ -428,6 +429,7 @@ namespace zmq {
     item.socket = s->monitor_socket_;
     item.events = ZMQ_POLLIN;
 
+    bool reload_timer = true;
     while (zmq_poll(&item, 1, 0)) {
       zmq_msg_init (&msg1);
       if (zmq_recvmsg (s->monitor_socket_, &msg1, ZMQ_DONTWAIT) > 0) {
@@ -458,6 +460,8 @@ namespace zmq {
         len = len < sizeof(event_endpoint)-1 ? len : sizeof(event_endpoint)-1;
         memcpy(event_endpoint, zmq_msg_data(&msg2), len);
 
+        // TODO: Are we missing a call to "zmq_msg_close(&msg2)" here ?????
+
         // null terminate our string
         event_endpoint[len]=0;
 #else
@@ -472,15 +476,18 @@ namespace zmq {
 #endif
 
         s->MonitorEvent(event_id, event_value, event_endpoint);
+        zmq_msg_close (&msg1);
       }
       else {
-        uv_timer_stop(s->monitor_handle_);
+        reload_timer = false;
+        zmq_msg_close (&msg1);
+        break;
       }
-
-      zmq_msg_close (&msg1);
     }
 
-
+    if (reload_timer) {
+      uv_timer_start(s->monitor_handle_, reinterpret_cast<uv_timer_cb>(Socket::UV_MonitorCallback), s->timer_interval_, 0);
+    }
   }
 #endif
 
@@ -952,13 +959,13 @@ namespace zmq {
     if(zmq_socket_monitor(socket->socket_, addr, ZMQ_EVENT_ALL) != -1) {
       socket->monitor_socket_ = zmq_socket (context->context_, ZMQ_PAIR);
       zmq_connect (socket->monitor_socket_, addr);
-
+      socket->timer_interval_ = timer_interval;
       socket->monitor_handle_ = new uv_timer_t;
 
       socket->monitor_handle_->data = socket;
 
       uv_timer_init(uv_default_loop(), socket->monitor_handle_);
-      uv_timer_start(socket->monitor_handle_, reinterpret_cast<uv_timer_cb>(Socket::UV_MonitorCallback), timer_interval, timer_interval);
+      uv_timer_start(socket->monitor_handle_, reinterpret_cast<uv_timer_cb>(Socket::UV_MonitorCallback), timer_interval, 0);
     }
 
     NanReturnUndefined();
