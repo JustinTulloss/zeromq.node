@@ -428,7 +428,7 @@ namespace zmq {
     item.socket = s->monitor_socket_;
     item.events = ZMQ_POLLIN;
 
-    if (zmq_poll(&item, 1, 0)) {
+    while (zmq_poll(&item, 1, 0)) {
       zmq_msg_init (&msg1);
       if (zmq_recvmsg (s->monitor_socket_, &msg1, ZMQ_DONTWAIT) > 0) {
         char event_endpoint[1025];
@@ -446,11 +446,11 @@ namespace zmq {
         zmq_msg_init (&msg2);
         if (zmq_msg_more(&msg1) == 0) {
           NanThrowError(ExceptionFromError());
-          return;
+          continue;
         }
         if (zmq_recvmsg (s->monitor_socket_, &msg2, 0) == -1) {
           NanThrowError(ExceptionFromError());
-          return;
+          continue;
         }
         // protect from overflow
         size_t len = zmq_msg_size(&msg2);
