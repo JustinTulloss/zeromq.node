@@ -26,6 +26,7 @@
 #include <node_version.h>
 #include <node_buffer.h>
 #include <zmq.h>
+#include <zmq_utils.h>
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -1180,6 +1181,26 @@ namespace zmq {
     NanReturnValue(NanNew<String>(version_info));
   }
 
+#if ZMQ_VERSION_MAJOR >= 4
+   static NAN_METHOD(ZmqCurveKeypair) {
+    NanScope();
+
+    char public_key [41];
+    char secret_key [41];
+
+    int rc = zmq_curve_keypair( public_key, secret_key);
+    if (rc < 0) {
+      return NanThrowError("zmq_curve_keypair operation failed. Method support in libzmq v4+ -with-libsodium.");
+    }
+
+    Local<Object> obj = NanNew<Object>();
+    obj->Set(NanNew<String>("public"), NanNew<String>(public_key));
+    obj->Set(NanNew<String>("secret"), NanNew<String>(secret_key));
+
+    NanReturnValue(obj);
+  }
+#endif
+
   static void
   Initialize(Handle<Object> target) {
     NanScope();
@@ -1289,6 +1310,9 @@ namespace zmq {
     NODE_DEFINE_CONSTANT(target, STATE_CLOSED);
 
     NODE_SET_METHOD(target, "zmqVersion", ZmqVersion);
+    #if ZMQ_VERSION_MAJOR >= 4
+    NODE_SET_METHOD(target, "zmqCurveKeypair", ZmqCurveKeypair);
+    #endif
 
     Context::Initialize(target);
     Socket::Initialize(target);
