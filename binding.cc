@@ -161,6 +161,7 @@ namespace zmq {
       void *monitor_socket_;
       uv_timer_t *monitor_handle_;
       int64_t timer_interval_;
+      int64_t num_of_events_;
       static void UV_MonitorCallback(uv_timer_t* handle, int status);
       static NAN_METHOD(Monitor);
       static NAN_METHOD(Unmonitor);
@@ -430,7 +431,8 @@ namespace zmq {
     item.events = ZMQ_POLLIN;
 
     bool reload_timer = true;
-    while (zmq_poll(&item, 1, 0)) {
+    int64_t ittr = 0;
+    while ((s->num_of_events_ == 0 || s->num_of_events_ > ittr++) && zmq_poll(&item, 1, 0)) {
       zmq_msg_init (&msg1);
       if (zmq_recvmsg (s->monitor_socket_, &msg1, ZMQ_DONTWAIT) > 0) {
         char event_endpoint[1025];
@@ -941,8 +943,9 @@ namespace zmq {
   NAN_METHOD(Socket::Monitor) {
     NanScope();
     int64_t timer_interval = 10; // default to 10ms interval
+    int64_t num_of_events = 1; // default is 1 event per interval
 
-    if (args.Length() == 1) {
+    if (args.Length() > 0) {
       if (!args[0]->IsUndefined()) {
         if (!args[0]->IsNumber())
           return NanThrowTypeError("Option must be an integer");
@@ -951,6 +954,17 @@ namespace zmq {
           return NanThrowTypeError("Option must be a positive integer");
       }
     }
+
+    if (args.Length() > 1) {
+      if (!args[1]->IsUndefined()) {
+        if (!args[1]->IsNumber())
+          return NanThrowTypeError("numOfEvents must be an integer");
+        num_of_events = args[1]->ToInteger()->Value();
+        if (num_of_events < 0)
+          return NanThrowTypeError("numOfEvents should be no less than zero");
+      }
+    }
+
     GET_SOCKET(args);
     char addr[255];
     Context *context = ObjectWrap::Unwrap<Context>(NanNew(socket->context_));
@@ -960,8 +974,8 @@ namespace zmq {
       socket->monitor_socket_ = zmq_socket (context->context_, ZMQ_PAIR);
       zmq_connect (socket->monitor_socket_, addr);
       socket->timer_interval_ = timer_interval;
+      socket->num_of_events_ = num_of_events;
       socket->monitor_handle_ = new uv_timer_t;
-
       socket->monitor_handle_->data = socket;
 
       uv_timer_init(uv_default_loop(), socket->monitor_handle_);
