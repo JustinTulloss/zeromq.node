@@ -1,3 +1,9 @@
+2.11.1 / 2015-05-21
+===================
+
+  * io.js 2.x compatible [transcranial]
+  * replaced asserts with proper exceptions [reqshark]
+
 2.11.0 / 2015-03-31
 ===================
 
