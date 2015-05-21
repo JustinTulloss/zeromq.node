@@ -448,21 +448,18 @@ namespace zmq {
 
         // get our next frame it may have the target address and safely copy to our buffer
         zmq_msg_init (&msg2);
-        if (zmq_msg_more(&msg1) == 0) {
+        if (zmq_msg_more(&msg1) == 0 || zmq_recvmsg (s->monitor_socket_, &msg2, 0) == -1) {
           NanThrowError(ExceptionFromError());
+          zmq_msg_close(&msg2);
           continue;
         }
-        if (zmq_recvmsg (s->monitor_socket_, &msg2, 0) == -1) {
-          NanThrowError(ExceptionFromError());
-          continue;
-        }
-        // protect from overflow
+        
+	// protect from overflow
         size_t len = zmq_msg_size(&msg2);
         // MIN message size and buffer size with null padding
         len = len < sizeof(event_endpoint)-1 ? len : sizeof(event_endpoint)-1;
         memcpy(event_endpoint, zmq_msg_data(&msg2), len);
-
-        // TODO: Are we missing a call to "zmq_msg_close(&msg2)" here ?????
+        zmq_msg_close(&msg2);
 
         // null terminate our string
         event_endpoint[len]=0;
@@ -945,24 +942,20 @@ namespace zmq {
     int64_t timer_interval = 10; // default to 10ms interval
     int64_t num_of_events = 1; // default is 1 event per interval
 
-    if (args.Length() > 0) {
-      if (!args[0]->IsUndefined()) {
-        if (!args[0]->IsNumber())
-          return NanThrowTypeError("Option must be an integer");
-        timer_interval = args[0]->ToInteger()->Value();
-        if (timer_interval <= 0)
-          return NanThrowTypeError("Option must be a positive integer");
-      }
+    if (args.Length() > 0 && !args[0]->IsUndefined()) {
+      if (!args[0]->IsNumber())
+        return NanThrowTypeError("Option must be an integer");
+      timer_interval = args[0]->ToInteger()->Value();
+      if (timer_interval <= 0)
+        return NanThrowTypeError("Option must be a positive integer");
     }
 
-    if (args.Length() > 1) {
-      if (!args[1]->IsUndefined()) {
-        if (!args[1]->IsNumber())
-          return NanThrowTypeError("numOfEvents must be an integer");
-        num_of_events = args[1]->ToInteger()->Value();
-        if (num_of_events < 0)
-          return NanThrowTypeError("numOfEvents should be no less than zero");
-      }
+    if (args.Length() > 1 && !args[1]->IsUndefined()) {
+      if (!args[1]->IsNumber())
+        return NanThrowTypeError("numOfEvents must be an integer");
+      num_of_events = args[1]->ToInteger()->Value();
+      if (num_of_events < 0)
+        return NanThrowTypeError("numOfEvents should be no less than zero");
     }
 
     GET_SOCKET(args);
