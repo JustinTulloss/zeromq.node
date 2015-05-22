@@ -20,7 +20,7 @@
     "node": ">=0.8"
   },
   "scripts": {
-    "test": "make test"
+    "test": "mocha --expose-gc --slow 2000 --timeout 600000"
   },
   "keywords": ["zeromq", "zmq", "0mq", "ømq", "libzmq", "native", "binding", "addon"],
   "author": "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
