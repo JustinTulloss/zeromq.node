@@ -23,6 +23,7 @@
     "test": "mocha --expose-gc --slow 2000 --timeout 600000"
   },
   "keywords": ["zeromq", "zmq", "0mq", "ømq", "libzmq", "native", "binding", "addon"],
+  "license": "MIT",
   "author": "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
   "contributors": [
     "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
