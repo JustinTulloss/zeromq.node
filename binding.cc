@@ -37,6 +37,7 @@
 #include "nan.h"
 
 #ifdef _WIN32
+# include <delayimp.h>
 # define snprintf _snprintf_s
   typedef BOOL (WINAPI* SetDllDirectoryFunc)(wchar_t *lpPathName);
   class SetDllDirectoryCaller {
@@ -1324,7 +1325,8 @@ init(Handle<Object> target) {
       _wfullpath(path, pathDir, MAX_PATH);
       set_dll_directory(path);
       caller.set_func(set_dll_directory);
-      LoadLibrary("libzmq-v100-mt-3_2_2");
+      assert (!FAILED(__HrLoadAllImportsForDll("libzmq-v100-mt-4_0_4.dll")) &&
+          "delayload error");
     }
   }
 #endif

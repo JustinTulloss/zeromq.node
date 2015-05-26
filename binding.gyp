@@ -8,6 +8,7 @@
       ],
       'conditions': [
         ['OS=="win"', {
+          'win_delay_load_hook': 'true',
           'include_dirs': ['windows/include'],
           'link_settings': {
             'libraries': [
@@ -16,18 +17,18 @@
             'conditions': [
               ['target_arch=="ia32"', {
                 'libraries': [
-                  '<(PRODUCT_DIR)/../../windows/lib/x86/libzmq-v100-mt-3_2_2.lib',
+                  '<(PRODUCT_DIR)/../../windows/lib/x86/libzmq-v100-mt-4_0_4.lib',
                 ]
               },{
                 'libraries': [
-                  '<(PRODUCT_DIR)/../../windows/lib/x64/libzmq-v100-mt-3_2_2.lib',
+                  '<(PRODUCT_DIR)/../../windows/lib/x64/libzmq-v100-mt-4_0_4.lib',
                 ]
               }]
             ],
           },
           'msvs_settings': {
             'VCLinkerTool': {
-              'DelayLoadDLLs': ['libzmq-v100-mt-3_2_2.dll']
+              'DelayLoadDLLs': ['libzmq-v100-mt-4_0_4.dll']
             }
           },
         }, {
