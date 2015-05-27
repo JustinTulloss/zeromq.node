@@ -1022,7 +1022,10 @@ namespace zmq {
 
   NAN_METHOD(Socket::Unmonitor) {
     NanScope();
-    GET_SOCKET(args);
+    
+    // We can't use the GET_SOCKET macro here as it requries the socket to be open,
+    // which might not always be the case
+    Socket* socket = GetSocket(args);
     socket->Unmonitor();
     NanReturnUndefined();
   }
