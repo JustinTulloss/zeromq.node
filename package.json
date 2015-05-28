@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "nan": "~1.8.4",
-    "bindings": "~1.1.1"
+    "bindings": "~1.2.1"
   },
   "devDependencies": {
     "should": "2.1.x",
@@ -55,6 +55,7 @@
     "Brian Lalor (https://github.com/blalor)",
     "Benjamin Byholm (https://github.com/kkoopa)",
     "Alejandro (https://github.com/Minjung)",
-    "Eli Skeggs <skeggse@gmail.com> (https://github.com/skeggse)"
+    "Eli Skeggs <skeggse@gmail.com> (https://github.com/skeggse)",
+    "Bent Cardan <bent@nothingsatisfies.com> (https://github.com/reqshark)"
   ]
 }

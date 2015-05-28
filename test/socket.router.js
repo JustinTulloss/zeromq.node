@@ -17,13 +17,15 @@ describe('socket.router', function(){
     }
 
     var envelope = '12384982398293';
+    var errMsg = 'No route to host';
+    if (require('os').platform() == 'win32') errMsg = 'Unknown error';
 
     // should emit an error event on unroutable msgs if mandatory = 1 and error handler is set
 
     (function(){
       var sock = zmq.socket('router');
       sock.on('error', function(err){
-        err.message.should.equal('No route to host');
+        err.message.should.equal(errMsg);
         sock.close();
         if (++complete === 2) done();
       });
@@ -42,15 +44,15 @@ describe('socket.router', function(){
 
       (function(){
         sock.send([envelope, '']);
-      }).should.throw('No route to host');
+      }).should.throw(errMsg);
 
       (function(){
         sock.send([envelope, '']);
-      }).should.throw('No route to host');
+      }).should.throw(errMsg);
 
       (function(){
         sock.send([envelope, '']);
-      }).should.throw('No route to host');
+      }).should.throw(errMsg);
 
       sock.close();
     })();
@@ -63,7 +65,7 @@ describe('socket.router', function(){
       (function(){
         sock.send([envelope, '']);
         sock.close();
-      }).should.not.throw('No route to host');
+      }).should.not.throw(errMsg);
     })();
     if (++complete === 2) done();
   });

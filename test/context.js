@@ -22,9 +22,10 @@ describe('context', function() {
       done();
       return console.warn('Test requires libzmq >= 3.2.0');
     }
+    var currMaxSockets = zmq.Context.getMaxSockets();
     zmq.Context.setMaxSockets(256);
     zmq.Context.getMaxSockets().should.equal(256);
-    zmq.Context.setMaxSockets(1024);
+    zmq.Context.setMaxSockets(currMaxSockets);
     done();
   });
 
