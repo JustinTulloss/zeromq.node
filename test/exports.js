@@ -8,6 +8,20 @@ describe('exports', function(){
     semver.valid(zmq.version).should.be.ok;
   });
 
+  it('should generate valid curve keypair', function(done) {
+    if (!semver.gte(zmq.version, '4.0.0')) {
+      done();
+      return console.warn('Test requires libzmq >= 4 compiled with libsodium');
+    }
+    var curve = zmq.curveKeypair();
+    should.exist(curve);
+    should.exist(curve.public);
+    should.exist(curve.secret);
+    curve.public.length.should.equal(40);
+    curve.secret.length.should.equal(40);
+    done();
+  }); 
+
   it('should export socket types and options', function(){
     // All versions.
     var constants = [
