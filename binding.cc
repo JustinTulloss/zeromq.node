@@ -411,15 +411,15 @@ namespace zmq {
   Socket::MonitorEvent(uint16_t event_id, int32_t event_value, char *event_endpoint) {
     NanScope();
 
-    Local<Value> argv[3];
-    argv[0] = NanNew<Integer>(event_id);
-    argv[1] = NanNew<Integer>(event_value);
-    argv[2] = NanNew<String>(event_endpoint);
-
     Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanNew(monitor_symbol));
     if (!callback_v->IsFunction()) {
       return;
     }
+
+    Local<Value> argv[3];
+    argv[0] = NanNew<Integer>(event_id);
+    argv[1] = NanNew<Integer>(event_value);
+    argv[2] = NanNew<String>(event_endpoint);
 
     NanMakeCallback(NanObjectWrapHandle(this), callback_v.As<Function>(), 3, argv);
   }
@@ -428,13 +428,13 @@ namespace zmq {
   Socket::MonitorError(const char *error_msg) {
     NanScope();
 
-    Local<Value> argv[1];
-    argv[0] = NanNew<String>(error_msg);
-
     Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanNew(monitor_error));
     if (!callback_v->IsFunction()) {
       return;
     }
+
+    Local<Value> argv[1];
+    argv[0] = NanNew<String>(error_msg);
 
     NanMakeCallback(NanObjectWrapHandle(this), callback_v.As<Function>(), 1, argv);
   }
