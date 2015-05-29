@@ -1013,6 +1013,10 @@ namespace zmq {
       return;
     }
 
+    // Passing NULL as addr will tell zmq to stop monitor
+    zmq_socket_monitor(this->socket_, NULL, ZMQ_EVENT_ALL);
+
+    // Close the monitor socket and stop timer
     if (zmq_close(this->monitor_socket_) < 0)
       throw std::runtime_error(ErrorMessage());
     uv_timer_stop(this->monitor_handle_);
