@@ -1,3 +1,6 @@
+os:
+ - linux
+ - osx
 env:
  - ZMQ="git://github.com/zeromq/zeromq2-x.git"
  - ZMQ="git://github.com/zeromq/zeromq3-x.git -b v3.1.0"
