@@ -503,11 +503,12 @@ namespace zmq {
       }
     }
 
-    // If there was no error we reset the monitor timer, otherwise raise the monitor error event and stop the monitor
-    if (error == NULL) {
+    // If there was no error and we still monitor we reset the monitor timer
+    if (error == NULL && s->monitor_handle_ != NULL) {
       uv_timer_start(s->monitor_handle_, reinterpret_cast<uv_timer_cb>(Socket::UV_MonitorCallback), s->timer_interval_, 0);
     }
-    else {
+    // If error raise the monitor error event and stop the monitor
+    else if (error != NULL) {
       s->Unmonitor();
       s->MonitorError(error);
     }
