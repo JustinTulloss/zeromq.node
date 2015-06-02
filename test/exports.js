@@ -9,7 +9,7 @@ describe('exports', function(){
   });
 
   it('should generate valid curve keypair', function(done) {
-    if (!semver.gte(zmq.version, '4.0.0')) {
+    if (!semver.gte(zmq.version,'4.0.0') || require('os').platform() == 'win32'){
       done();
       return console.warn('Test requires libzmq >= 4 compiled with libsodium');
     }

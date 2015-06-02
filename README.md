@@ -1,12 +1,24 @@
-[![Build Status](https://travis-ci.org/JustinTulloss/zeromq.node.png)](https://travis-ci.org/JustinTulloss/zeromq.node)
+# zmq &nbsp;&nbsp;[![Build Status](https://travis-ci.org/JustinTulloss/zeromq.node.png)](https://travis-ci.org/JustinTulloss/zeromq.node) &nbsp;[![Build status](https://ci.appveyor.com/api/projects/status/n0h0sjs127eadfuo/branch/windowsbuild?svg=true)](https://ci.appveyor.com/project/reqshark/zeromq-node)
 
-# node-zeromq
-
-  [ØMQ](http://www.zeromq.org/) bindings for node.js.
+[ØMQ](http://www.zeromq.org/) bindings for node.js.
 
 ## Installation
 
-First make sure [ZeroMQ is installed](http://www.zeromq.org/intro:get-the-software).
+### on Windows:
+First install [Visual Studio](https://www.visualstudio.com/) and either
+[Node.js](https://nodejs.org/download/) or [io.js](https://iojs.org/dist/latest/).
+
+Ensure you're building zmq from a conservative location on disk, one without
+unusual characters or spaces, for example somewhere like: `C:\sources\myproject`.
+
+Installing the ZeroMQ library is optional and not required on Windows. We
+recommend running `npm install` and node executable commands from a
+[github for windows](https://windows.github.com/) shell or similar environment.
+
+### installing on Unix/POSIX (and osx):
+
+First install `pkg-config` and the [ZeroMQ library](http://www.zeromq.org/intro:get-the-software).
+
 This module is compatible with ZeroMQ versions 2, 3 and 4. The installation
 process varies by platform, but headers are mandatory. Most Linux distributions
 provide these headers with `-devel` packages like `zeromq-devel` or
@@ -18,10 +30,10 @@ provided by their distribution. Windows is supported but not actively
 maintained.
 
 Note: For zap support with versions >=4 you need to have libzmq built and linked
-against libsodium. Check the Travis configuration for a list of what is tested
+against libsodium. Check the [Travis configuration](.travis.yml) for a list of what is tested
 and therefore known to work.
 
-With ZeroMQ headers installed, you can install and use this module:
+#### with your platform-specifics taken care of, install and use this module:
 
     $ npm install zmq
 
@@ -88,18 +100,27 @@ sock.on('message', function(topic, message) {
 
 ## Running tests
 
-  Install dev deps:
+#### Install dev deps:
+```sh
+$ git clone https://github.com/JustinTulloss/zeromq.node.git zmq && cd zmq
+$ npm i
+```
+#### Build:
+```sh
+# on unix:
+$ make
 
-     $ npm install
+# building on windows:
+> npm i
+```
+#### Test:
+```sh
+# on unix:
+$ make test
 
-  Build:
-
-     $ make
-
-  Test:
-
-     $ make test
-
+# testing on windows:
+> npm t
+```
 ## Running benchmarks
 
 Benchmarks are available in the `perf` directory, and have been implemented
@@ -134,4 +155,3 @@ node ./remote_thr.js tcp://127.0.0.1:5555 1 100000
 ```
 
 Running `make perf` will run the commands listed above.
-
