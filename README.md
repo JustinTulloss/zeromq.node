@@ -97,6 +97,73 @@ sock.on('message', function(topic, message) {
   console.log('received a message related to:', topic, 'containing message:', message);
 });
 ```
+## Monitoring
+
+You can get socket state changes events by calling to the `monitor` function.
+The supported events are (see ZMQ [docs](http://api.zeromq.org/4-2:zmq-socket-monitor) for full description):
+* connect - ZMQ_EVENT_CONNECTED
+* connect_delay - ZMQ_EVENT_CONNECT_DELAYED
+* connect_retry - ZMQ_EVENT_CONNECT_RETRIED
+* listen - ZMQ_EVENT_LISTENING
+* bind_error - ZMQ_EVENT_BIND_FAILED
+* accept - ZMQ_EVENT_ACCEPTED
+* accept_error - ZMQ_EVENT_ACCEPT_FAILED
+* close - ZMQ_EVENT_CLOSED
+* close_error - ZMQ_EVENT_CLOSE_FAILED
+* disconnect - ZMQ_EVENT_DISCONNECTED
+
+All events get 2 arguments:
+* fd - The file descriptor of the underlying socket (if available)
+* endpoint - The underlying socket endpoint
+
+A special `monitor_error` event will be raised when there was an error in the monitoring process, after this event no more
+monitoring events will be sent, you can try and call `monitor` again to restart the monitoring process.
+
+### monitor(interval, numOfEvents)
+Will create an inproc PAIR socket where zmq will publish socket state changes events, the events from this socket will
+be read every `interval` (defaults to 10ms).
+By default only 1 message will be read every interval, this can be configured by using the `numOfEvents` parameter,
+where passing 0 will read all available messages per interval.
+
+### unmonitor()
+Stop the monitoring process
+
+### example
+
+```js
+// Create a socket
+var zmq = require('zmq');
+socket = zmq.socket('req');
+
+// Register to monitoring events
+socket.on('connect', function(fd, ep) {console.log('connect, endpoint:', ep);});
+socket.on('connect_delay', function(fd, ep) {console.log('connect_delay, endpoint:', ep);});
+socket.on('connect_retry', function(fd, ep) {console.log('connect_retry, endpoint:', ep);});
+socket.on('listen', function(fd, ep) {console.log('listen, endpoint:', ep);});
+socket.on('bind_error', function(fd, ep) {console.log('bind_error, endpoint:', ep);});
+socket.on('accept', function(fd, ep) {console.log('accept, endpoint:', ep);});
+socket.on('accept_error', function(fd, ep) {console.log('accept_error, endpoint:', ep);});
+socket.on('close', function(fd, ep) {console.log('close, endpoint:', ep);});
+socket.on('close_error', function(fd, ep) {console.log('close_error, endpoint:', ep);});
+socket.on('disconnect', function(fd, ep) {console.log('disconnect, endpoint:', ep);});
+
+// Handle monitor error
+socket.on('monitor_error', function(err) {
+	console.log('Error in monitoring: %s, will restart monitoring in 5 seconds', err);
+	setTimeout(function() { socket.monitor(500, 0); }, 5000);
+});
+
+// Call monitor, check for events every 500ms and get all available events.
+console.log('Start monitoring...');
+socket.monitor(500, 0);
+socket.connect('tcp://127.0.0.1:1234');
+
+setTimeout(function() {
+	console.log('Stop the monitoring...');
+	socket.unmonitor();
+}, 20000);
+
+```
 
 ## Running tests
 
