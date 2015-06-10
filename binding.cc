@@ -106,6 +106,7 @@ namespace zmq {
       void CallbackIfReady();
 #if ZMQ_CAN_MONITOR
       void MonitorEvent(uint16_t event_id, int32_t event_value, char *endpoint);
+      void MonitorError(const char *error_msg);
 #endif
 
     private:
@@ -160,8 +161,11 @@ namespace zmq {
 #if ZMQ_CAN_MONITOR
       void *monitor_socket_;
       uv_timer_t *monitor_handle_;
+      int64_t timer_interval_;
+      int64_t num_of_events_;
       static void UV_MonitorCallback(uv_timer_t* handle, int status);
       static NAN_METHOD(Monitor);
+      void Unmonitor();
       static NAN_METHOD(Unmonitor);
 #endif
 
@@ -173,6 +177,7 @@ namespace zmq {
   Persistent<String> callback_symbol;
 #if ZMQ_CAN_MONITOR
   Persistent<String> monitor_symbol;
+  Persistent<String> monitor_error;
   int monitors_count = 0;
 #endif
 
@@ -325,6 +330,7 @@ namespace zmq {
     NODE_SET_PROTOTYPE_METHOD(t, "monitor", Monitor);
     NODE_SET_PROTOTYPE_METHOD(t, "unmonitor", Unmonitor);
     NanAssignPersistent(monitor_symbol, NanNew("onMonitorEvent"));
+    NanAssignPersistent(monitor_error, NanNew("onMonitorError"));
 #endif
 
     target->Set(NanNew("SocketBinding"), t->GetFunction());
@@ -403,19 +409,34 @@ namespace zmq {
 #if ZMQ_CAN_MONITOR
   void
   Socket::MonitorEvent(uint16_t event_id, int32_t event_value, char *event_endpoint) {
-      NanScope();
+    NanScope();
 
-      Local<Value> argv[3];
-      argv[0] = NanNew<Integer>(event_id);
-      argv[1] = NanNew<Integer>(event_value);
-      argv[2] = NanNew<String>(event_endpoint);
+    Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanNew(monitor_symbol));
+    if (!callback_v->IsFunction()) {
+      return;
+    }
 
-      Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanNew(monitor_symbol));
-      if (!callback_v->IsFunction()) {
-        return;
-      }
+    Local<Value> argv[3];
+    argv[0] = NanNew<Integer>(event_id);
+    argv[1] = NanNew<Integer>(event_value);
+    argv[2] = NanNew<String>(event_endpoint);
 
-      NanMakeCallback(NanObjectWrapHandle(this), callback_v.As<Function>(), 3, argv);
+    NanMakeCallback(NanObjectWrapHandle(this), callback_v.As<Function>(), 3, argv);
+  }
+
+  void
+  Socket::MonitorError(const char *error_msg) {
+    NanScope();
+
+    Local<Value> callback_v = NanObjectWrapHandle(this)->Get(NanNew(monitor_error));
+    if (!callback_v->IsFunction()) {
+      return;
+    }
+
+    Local<Value> argv[1];
+    argv[0] = NanNew<String>(error_msg);
+
+    NanMakeCallback(NanObjectWrapHandle(this), callback_v.As<Function>(), 1, argv);
   }
 
   void
@@ -428,7 +449,9 @@ namespace zmq {
     item.socket = s->monitor_socket_;
     item.events = ZMQ_POLLIN;
 
-    if (zmq_poll(&item, 1, 0)) {
+    const char* error = NULL;
+    int64_t ittr = 0;
+    while ((s->num_of_events_ == 0 || s->num_of_events_ > ittr++) && zmq_poll(&item, 1, 0)) {
       zmq_msg_init (&msg1);
       if (zmq_recvmsg (s->monitor_socket_, &msg1, ZMQ_DONTWAIT) > 0) {
         char event_endpoint[1025];
@@ -444,19 +467,18 @@ namespace zmq {
 
         // get our next frame it may have the target address and safely copy to our buffer
         zmq_msg_init (&msg2);
-        if (zmq_msg_more(&msg1) == 0) {
-          NanThrowError(ExceptionFromError());
-          return;
+        if (zmq_msg_more(&msg1) == 0 || zmq_recvmsg (s->monitor_socket_, &msg2, 0) == -1) {
+          error = ErrorMessage();
+          zmq_msg_close(&msg2);
+          break;
         }
-        if (zmq_recvmsg (s->monitor_socket_, &msg2, 0) == -1) {
-          NanThrowError(ExceptionFromError());
-          return;
-        }
+        
         // protect from overflow
         size_t len = zmq_msg_size(&msg2);
         // MIN message size and buffer size with null padding
         len = len < sizeof(event_endpoint)-1 ? len : sizeof(event_endpoint)-1;
         memcpy(event_endpoint, zmq_msg_data(&msg2), len);
+        zmq_msg_close(&msg2);
 
         // null terminate our string
         event_endpoint[len]=0;
@@ -472,15 +494,24 @@ namespace zmq {
 #endif
 
         s->MonitorEvent(event_id, event_value, event_endpoint);
+        zmq_msg_close(&msg1);
       }
       else {
-        uv_timer_stop(s->monitor_handle_);
+        error = ErrorMessage();
+        zmq_msg_close(&msg1);
+        break;
       }
-
-      zmq_msg_close (&msg1);
     }
 
-
+    // If there was no error and we still monitor we reset the monitor timer
+    if (error == NULL && s->monitor_handle_ != NULL) {
+      uv_timer_start(s->monitor_handle_, reinterpret_cast<uv_timer_cb>(Socket::UV_MonitorCallback), s->timer_interval_, 0);
+    }
+    // If error raise the monitor error event and stop the monitor
+    else if (error != NULL) {
+      s->Unmonitor();
+      s->MonitorError(error);
+    }
   }
 #endif
 
@@ -507,6 +538,10 @@ namespace zmq {
     if (zmq_getsockopt(socket_, ZMQ_FD, &socket, &len)) {
       throw std::runtime_error(ErrorMessage());
     }
+
+    #if ZMQ_CAN_MONITOR
+      this->monitor_socket_ = NULL;
+    #endif
 
     uv_poll_init_socket(uv_default_loop(), poll_handle_, socket);
     uv_poll_start(poll_handle_, UV_READABLE, Socket::UV_PollCallback);
@@ -934,16 +969,24 @@ namespace zmq {
   NAN_METHOD(Socket::Monitor) {
     NanScope();
     int64_t timer_interval = 10; // default to 10ms interval
+    int64_t num_of_events = 1; // default is 1 event per interval
 
-    if (args.Length() == 1) {
-      if (!args[0]->IsUndefined()) {
-        if (!args[0]->IsNumber())
-          return NanThrowTypeError("Option must be an integer");
-        timer_interval = args[0]->ToInteger()->Value();
-        if (timer_interval <= 0)
-          return NanThrowTypeError("Option must be a positive integer");
-      }
+    if (args.Length() > 0 && !args[0]->IsUndefined()) {
+      if (!args[0]->IsNumber())
+        return NanThrowTypeError("Option must be an integer");
+      timer_interval = args[0]->ToInteger()->Value();
+      if (timer_interval <= 0)
+        return NanThrowTypeError("Option must be a positive integer");
     }
+
+    if (args.Length() > 1 && !args[1]->IsUndefined()) {
+      if (!args[1]->IsNumber())
+        return NanThrowTypeError("numOfEvents must be an integer");
+      num_of_events = args[1]->ToInteger()->Value();
+      if (num_of_events < 0)
+        return NanThrowTypeError("numOfEvents should be no less than zero");
+    }
+
     GET_SOCKET(args);
     char addr[255];
     Context *context = ObjectWrap::Unwrap<Context>(NanNew(socket->context_));
@@ -952,28 +995,46 @@ namespace zmq {
     if(zmq_socket_monitor(socket->socket_, addr, ZMQ_EVENT_ALL) != -1) {
       socket->monitor_socket_ = zmq_socket (context->context_, ZMQ_PAIR);
       zmq_connect (socket->monitor_socket_, addr);
-
+      socket->timer_interval_ = timer_interval;
+      socket->num_of_events_ = num_of_events;
       socket->monitor_handle_ = new uv_timer_t;
-
       socket->monitor_handle_->data = socket;
 
       uv_timer_init(uv_default_loop(), socket->monitor_handle_);
-      uv_timer_start(socket->monitor_handle_, reinterpret_cast<uv_timer_cb>(Socket::UV_MonitorCallback), timer_interval, timer_interval);
+      uv_timer_start(socket->monitor_handle_, reinterpret_cast<uv_timer_cb>(Socket::UV_MonitorCallback), timer_interval, 0);
     }
 
     NanReturnUndefined();
   }
 
+  void
+  Socket::Unmonitor() {
+    // Make sure we are monitoring
+    if (this->monitor_socket_ == NULL) {
+      return;
+    }
+
+    // Passing NULL as addr will tell zmq to stop monitor
+    zmq_socket_monitor(this->socket_, NULL, ZMQ_EVENT_ALL);
+
+    // Close the monitor socket and stop timer
+    if (zmq_close(this->monitor_socket_) < 0)
+      throw std::runtime_error(ErrorMessage());
+    uv_timer_stop(this->monitor_handle_);
+    this->monitor_handle_ = NULL;
+    this->monitor_socket_ = NULL;
+  }
+
   NAN_METHOD(Socket::Unmonitor) {
     NanScope();
-    Socket* socket = GetSocket(args);                         \
-    if (zmq_close(socket->monitor_socket_) < 0)
-      throw std::runtime_error(ErrorMessage());
-    uv_timer_stop(socket->monitor_handle_);
-    socket->monitor_handle_ = NULL;
-    socket->monitor_socket_ = NULL;
+    
+    // We can't use the GET_SOCKET macro here as it requries the socket to be open,
+    // which might not always be the case
+    Socket* socket = GetSocket(args);
+    socket->Unmonitor();
     NanReturnUndefined();
   }
+
 #endif
 
   NAN_METHOD(Socket::Recv) {
