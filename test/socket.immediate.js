@@ -2,37 +2,40 @@ var zmq = require('..')
   , should = require('should')
   , semver = require('semver');
 
+var address = 'tcp://127.0.0.1:5556'
+  , receivedMsgs = 0;
+
+// we target versions > 3.3.0
+var version = semver.gte(zmq.version, '3.3.0');
 
 describe('socket.immediate', function() {
 	
 	it('should test ZMQ_IMMEDIATE socket option', function(done) {
 		
-		var msgsToSend = 5
-		  , receivedMsgs = 0;
+		if (!version) {
+			done();
+			return console.warn('Test requires libzmq v3.3');
+		}
 		
 		var push = zmq.socket('push');
 		push.setsockopt('immediate', 1);
 		
-		push.connect('tcp://127.0.0.1:5423');
+		push.connect(address);
 		
-		for(var i=0; i<msgsToSend; i++) {
-			push.send('message #'+i);
-		}
+		push.send('Hello');
 		
 		var pull = zmq.socket('pull');
 		
-		var pull = zmq.socket('pull');
+		pull.bind(address);
 		
-		pull.on('message', function(data) {
+		pull.on('message', function(msg) {
 			receivedMsgs += 1;
-		});
-		
-		pull.bind('tcp://127.0.0.1:5423', function(err){
-			if (err) throw err;
 		});
 		
 		setTimeout(function(){
 			receivedMsgs.should.equal(0);
+			push.close();
+			pull.close();
 			done();
 		}, 1000);
 	});
