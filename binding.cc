@@ -1332,6 +1332,7 @@ namespace zmq {
     opts_binary.insert(49); // ZMQ_CURVE_SECRETKEY
     opts_binary.insert(50); // ZMQ_CURVE_SERVERKEY
     opts_binary.insert(55); // ZMQ_ZAP_DOMAIN
+    opts_int.insert(56); // ZMQ_IMMEDIATE
     #endif
 
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);

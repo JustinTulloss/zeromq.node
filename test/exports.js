@@ -109,6 +109,13 @@ describe('exports', function(){
         'ROUTER_RAW'
       ]);
     }
+    
+    // 4.0 and above.
+    if (semver.gte(zmq.version, '4.0.0')) {
+      constants.concat([
+        'IMMEDIATE'
+      ]);
+    }
 
     constants.forEach(function(typeOrProp){
       zmq['ZMQ_' + typeOrProp].should.be.a.Number;
