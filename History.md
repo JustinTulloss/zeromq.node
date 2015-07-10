@@ -1,3 +1,14 @@
+2.12.0 / 2015-07-10
+===================
+
+  * Massive improvements to monitoring code, with new documentation and tests [ValYouW]
+  * Improved documentation [reqshark]
+  * Updated bindings from ~1.1.1 to ~1.2.1 [reqshark]
+  * Test suite improvements [reqshark]
+  * Updated the Windows bundle to ZeroMQ 4.0.4 [kkoopa]
+  * License attribute added to package.json [pdehaan]
+
+
 2.11.1 / 2015-05-21
 ===================
 
