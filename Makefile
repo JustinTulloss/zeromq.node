@@ -6,7 +6,7 @@ test:
 	npm test
 
 clean:
-	rm -fr build
+	rm -fr build node_modules
 
 distclean:
 	node-gyp clean
