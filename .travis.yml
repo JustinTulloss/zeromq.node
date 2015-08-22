@@ -1,9 +1,16 @@
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - g++-4.8
 env:
  - ZMQ="git://github.com/zeromq/zeromq2-x.git"
  - ZMQ="git://github.com/zeromq/zeromq3-x.git -b v3.1.0"
  - ZMQ="git://github.com/zeromq/zeromq3-x.git -b v3.2.5"
  - ZMQ="git://github.com/zeromq/zeromq4-x.git -b v4.0.5" SODIUM="git://github.com/jedisct1/libsodium.git -b 0.4.5"
 before_install:
+ - export CXX=g++-4.8
  - sudo apt-get install uuid-dev
  - '[ -z "$SODIUM" ] || git clone --depth 1 $SODIUM libsodium'
  - '[ -z "$SODIUM" ] || cd libsodium'
