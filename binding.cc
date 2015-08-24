@@ -228,7 +228,7 @@ namespace zmq {
       if (!info[0]->IsNumber()) {
         return Nan::ThrowTypeError("io_threads must be an integer");
       }
-      io_threads = (int) info[0]->ToInteger()->Value();
+      io_threads = Nan::To<int>(info[0]).FromJust();
       if (io_threads < 1) {
         return Nan::ThrowRangeError("io_threads must be a positive number");
       }
@@ -342,13 +342,13 @@ namespace zmq {
       return Nan::ThrowError("Must pass a context and a type to constructor");
     }
 
-    Context *context = Nan::ObjectWrap::Unwrap<Context>(info[0]->ToObject());
+    Context *context = Nan::ObjectWrap::Unwrap<Context>(info[0].As<Object>());
 
     if (!info[1]->IsNumber()) {
       return Nan::ThrowTypeError("Type must be an integer");
     }
 
-    int type = (int) info[1]->ToInteger()->Value();
+    int type = Nan::To<int>(info[1]).FromJust();
 
     Socket *socket = new Socket(context, type);
     socket->Wrap(info.This());
@@ -451,9 +451,9 @@ namespace zmq {
         int32_t event_value;
 
 #if ZMQ_VERSION_MAJOR >= 4
-        uint8_t *data = (uint8_t *) zmq_msg_data (&msg1);
-        event_id = *(uint16_t *) (data);
-        event_value = *(uint32_t *) (data + 2);
+        uint8_t *data = static_cast<uint8_t *>(zmq_msg_data(&msg1));
+        event_id = *reinterpret_cast<uint16_t *>(data);
+        event_value = *reinterpret_cast<uint32_t *>(data + 2);
 
         zmq_msg_t msg2; /* 4.x has 2 messages per event */
 
@@ -599,7 +599,7 @@ namespace zmq {
       Nan::ThrowError("Value must be an integer");
       return Nan::Undefined();
     }
-    T value = (T) wrappedValue->ToInteger()->Value();
+    T value = Nan::To<T>(wrappedValue).FromJust();
     if (zmq_setsockopt(socket_, option, &value, sizeof(T)) < 0)
       Nan::ThrowError(ExceptionFromError());
     return Nan::Undefined();
@@ -623,7 +623,7 @@ namespace zmq {
       Nan::ThrowTypeError("Value must be a buffer");
       return Nan::Undefined();
     }
-    Local<Object> buf = wrappedValue->ToObject();
+    Local<Object> buf = wrappedValue.As<Object>();
     size_t length = Buffer::Length(buf);
     if (zmq_setsockopt(socket_, option, Buffer::Data(buf), length) < 0)
       Nan::ThrowError(ExceptionFromError());
@@ -635,7 +635,7 @@ namespace zmq {
       return Nan::ThrowError("Must pass an option");
     if (!info[0]->IsNumber())
       return Nan::ThrowTypeError("Option must be an integer");
-    int64_t option = info[0]->ToInteger()->Value();
+    int64_t option = Nan::To<int64_t>(info[0]).FromJust();
 
     GET_SOCKET(info);
 
@@ -659,7 +659,7 @@ namespace zmq {
       return Nan::ThrowError("Must pass an option and a value");
     if (!info[0]->IsNumber())
        return Nan::ThrowTypeError("Option must be an integer");
-    int64_t option = info[0]->ToInteger()->Value();
+    int64_t option = Nan::To<int64_t>(info[0]).FromJust();
     GET_SOCKET(info);
 
     if (opts_int.count(option)) {
@@ -669,7 +669,7 @@ namespace zmq {
     } else if (opts_int64.count(option)) {
       info.GetReturnValue().Set(socket->SetSockOpt<int64_t>(option, info[1]));
     } else if (opts_uint64.count(option)) {
-      info.GetReturnValue().Set(socket->SetSockOpt<uint64_t>(option, info[1]));
+      info.GetReturnValue().Set(socket->SetSockOpt<int64_t>(option, info[1]));
     } else if (opts_binary.count(option)) {
       info.GetReturnValue().Set(socket->SetSockOpt<char*>(option, info[1]));
     } else {
@@ -919,7 +919,7 @@ namespace zmq {
 
     private:
       static void FreeCallback(char* data, void* message) {
-        delete (MessageReference*) message;
+        delete static_cast<MessageReference*>(message);
       }
 
       class MessageReference {
@@ -954,7 +954,7 @@ namespace zmq {
     if (info.Length() > 0 && !info[0]->IsUndefined()) {
       if (!info[0]->IsNumber())
         return Nan::ThrowTypeError("Option must be an integer");
-      timer_interval = info[0]->ToInteger()->Value();
+      timer_interval = Nan::To<int64_t>(info[0]).FromJust();
       if (timer_interval <= 0)
         return Nan::ThrowTypeError("Option must be a positive integer");
     }
@@ -962,7 +962,7 @@ namespace zmq {
     if (info.Length() > 1 && !info[1]->IsUndefined()) {
       if (!info[1]->IsNumber())
         return Nan::ThrowTypeError("numOfEvents must be an integer");
-      num_of_events = info[1]->ToInteger()->Value();
+      num_of_events = Nan::To<int64_t>(info[1]).FromJust();
       if (num_of_events < 0)
         return Nan::ThrowTypeError("numOfEvents should be no less than zero");
     }
@@ -1021,7 +1021,7 @@ namespace zmq {
     if (argc == 1) {
       if (!info[0]->IsNumber())
         return Nan::ThrowTypeError("Argument should be an integer");
-      flags = info[0]->ToInteger()->Value();
+      flags = Nan::To<int>(info[0]).FromJust();
     } else if (argc != 0) {
       return Nan::ThrowTypeError("Only one argument at most was expected");
     }
@@ -1091,11 +1091,11 @@ namespace zmq {
           // Called by zmq when the message has been sent.
           // NOTE: May be called from a worker thread. Do not modify V8/Node.
           static void FreeCallback(void* data, void* message) {
-            uv_async_send(&reinterpret_cast<BufferReference *>(message)->async);
+            uv_async_send(&static_cast<BufferReference *>(message)->async);
           }
 
           static void cleanup(uv_async_t *handle, int status) {
-            delete reinterpret_cast<BufferReference *>(handle->data);
+            delete static_cast<BufferReference *>(handle->data);
           }
         private:
           Nan::Persistent<Object> persistent;
@@ -1122,7 +1122,7 @@ namespace zmq {
     if (argc == 2) {
       if (!info[1]->IsNumber())
         return Nan::ThrowTypeError("Second argument should be an integer");
-      flags = info[1]->ToInteger()->Value();
+      flags = Nan::To<int>(info[1]).FromJust();
     }
 
     GET_SOCKET(info);
@@ -1139,7 +1139,7 @@ namespace zmq {
     if (res != 0)
       return Nan::ThrowError(ErrorMessage());
 
-    char * cp = (char *)zmq_msg_data(&msg);
+    char * cp = static_cast<char *>(zmq_msg_data(&msg));
     const char * dat = Buffer::Data(buf);
     std::copy(dat, dat + len, cp);
     while (true) {
@@ -1186,7 +1186,7 @@ namespace zmq {
       this->endpoints = 0;
 
       uv_poll_stop(poll_handle_);
-      uv_close((uv_handle_t*)poll_handle_, on_uv_close);
+      uv_close(reinterpret_cast<uv_handle_t*>(poll_handle_), on_uv_close);
     }
   }
 
@@ -1368,7 +1368,7 @@ extern "C" NAN_MODULE_INIT(init) {
   wchar_t pathDir[MAX_PATH] = L"";
   if (kernel32_dll != NULL) {
     set_dll_directory =
-          (SetDllDirectoryFunc)GetProcAddress(kernel32_dll, "SetDllDirectoryW");
+          reinterpret_cast<SetDllDirectoryFunc>(GetProcAddress(kernel32_dll, "SetDllDirectoryW"));
     if (set_dll_directory) {
       GetModuleFileNameW(GetModuleHandleW(L"zmq.node"), path, MAX_PATH - 1);
       wcsncpy(pathDir, path, wcsrchr(path, '\\') - path);
