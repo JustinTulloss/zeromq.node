@@ -1,3 +1,11 @@
+2.13.0 / 2015-08-26
+===================
+
+  * io.js 3.x compatible [kkoopa]
+  * corrections to type casting operations [kkoopa]
+  * "make clean" now also removes node_modules [reqshark]
+
+
 2.12.0 / 2015-07-10
 ===================
 
