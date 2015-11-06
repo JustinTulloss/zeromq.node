@@ -6,7 +6,9 @@ test:
 	npm test
 
 clean:
-	rm -fr build node_modules
+	rm -fr build node_modules ldlocal
+	rm -rf zeromq-4.1.3 zeromq-4.1.3.tar.gz libsodium-1.0.5 libsodium-1.0.5.tar.gz
+	mkdir ldlocal
 
 distclean:
 	node-gyp clean

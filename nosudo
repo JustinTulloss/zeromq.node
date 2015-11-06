@@ -1,0 +1,86 @@
+#!/usr/bin/env node
+
+ /**
+ * LD hacking around sudo install for better travis infrastructure
+ */
+
+var exec    = require('child_process').exec;
+var sources = {
+  'zeromq'    : 'http://download.zeromq.org/',
+  'libsodium' : 'http://download.libsodium.org/libsodium/releases/'
+}
+var env    = [ '',
+  'LDFLAGS=-L$LDHACK/lib',
+  'CFLAGS=-I$LDHACK/include',
+  'LD_RUN_PATH=$LDHACK/lib',
+  'LD_LIBRARY_PATH=$LDHACK/lib',
+  'PKG_CONFIG_PATH=$LDHACK/lib/pkgconfig'
+].join('øexport ').split('ø'); env.shift();
+
+function make (dir, wlibsodium) { // the w/libsodium flag for ./configure
+  var str = 'cd ' + dir
+      + ' && ./autogen.sh'
+      + ' && ' + env.join(' && ') + ' && '; // shared env exports
+
+  str += wlibsodium ? 'export LIBS=-lsodium && export sodium_CFLAGS=$CFLAGS && '
+                      + 'export sodium_LIBS=$LDFLAGS && '
+                      + './configure --with-libsodium=' + process.env.LDHACK
+                    : './configure';
+  str += ' --prefix=' + process.env.LDHACK + ' && make && make install';
+  console.log('running:\n%s\n', str);
+  return str;
+}
+
+var version = process.env.ZMQ;
+if (Number(version.split('.')[0]) < 4) {
+  // simple install --without-libsodium
+  dl('zeromq', version, function (err, dirname) {
+    if (err) throw err;
+    exec(make(dirname), npminstall);
+  });
+} else {
+  // get a libsodium first
+  dl('libsodium', '1.0.5', function (err, dirname) {
+    if (err) throw err;
+    exec(make(dirname), withLibsodium);
+  });
+  function withLibsodium (err, stdo) {
+    if (err) throw err;
+    console.log(stdo, '\n\nlibsodium installed, downloading zeromq');
+    dl('zeromq', version, function (err, dirname) {
+      if (err) throw err;
+      exec(make(dirname, true), npminstall);
+    });
+  }
+  function npminstall (err, stdo, stder) {
+    if (err) throw err;
+    console.log(stder, stdo,'\nzeromq library linking complete.\ninstalling zmq')
+    var ldconfig = 'env LD_LIBRARY_PATH=$LDHACK/lib LD_RUN_PATH=$LDHACK/lib '
+        + 'PKG_CONFIG_PATH=$LDHACK/lib/pkgconfig LDFLAGS=-L$LDHACK/lib '
+        + 'CFLAGS=-I$LDHACK/lib/include';
+    ldconfig += version < 4 ? '' : ' LIBS=-lsodium';
+    exec(ldconfig + ' npm install', function(){
+      console.log('now using libzmq', require('./').zmqVersion())
+    });
+  }
+}
+
+// pkg tarballs piped to WriteStream, unpacked to their new dir after 'end' event
+// dl's last param, fn cb tells us when its done, that's where we're headed next
+function dl (lib, ver, fn) {
+  var filename = lib + '-' + ver + '.tar.gz';
+
+  require('http').get(sources[lib] + filename, function (res) {
+    res.on('error', fn);
+    res.on('end', function() {
+      exec( 'tar xzvf ' + filename, function (err) {
+        if(err) fn(err);
+        console.log('download and unpack tar complete: %s\n%s configure make'
+          + ' and install... this may take a few minutes', lib+'-'+ver, lib );
+        fn(null, lib + '-' + ver);
+      });
+    });
+
+    res.pipe(require('fs').createWriteStream(filename));
+  });
+}

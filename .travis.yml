@@ -1,37 +1,40 @@
+sudo: false
+
+language: c
+
 addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
     packages:
+    - gcc-4.8
     - g++-4.8
+    - uuid-dev
+
 env:
- - ZMQ="git://github.com/zeromq/zeromq2-x.git"
- - ZMQ="git://github.com/zeromq/zeromq3-x.git -b v3.1.0"
- - ZMQ="git://github.com/zeromq/zeromq3-x.git -b v3.2.5"
- - ZMQ="git://github.com/zeromq/zeromq4-x.git -b v4.0.5" SODIUM="git://github.com/jedisct1/libsodium.git -b 0.4.5"
+ - ZMQ="2.2.0"
+ - ZMQ="3.2.5"
+ - ZMQ="4.0.5"
+ - ZMQ="4.1.3"
+
 before_install:
+ - export CC=gcc-4.8
  - export CXX=g++-4.8
- - sudo apt-get install uuid-dev
- - '[ -z "$SODIUM" ] || git clone --depth 1 $SODIUM libsodium'
- - '[ -z "$SODIUM" ] || cd libsodium'
- - '[ -z "$SODIUM" ] || ./autogen.sh'
- - '[ -z "$SODIUM" ] || ./configure'
- - '[ -z "$SODIUM" ] || make'
- - '[ -z "$SODIUM" ] || sudo make install'
- - '[ -z "$SODIUM" ] || cd ..'
- - git clone --depth 1 $ZMQ zmqlib
- - cd zmqlib
- - ./autogen.sh
- - ./configure
- - make
- - sudo make install
- - sudo /sbin/ldconfig
- - cd ..
-language: node_js
-node_js:
- - "0.8"
- - "0.10"
- - "0.12"
- - "4"
- - "5"
+ - mkdir ldlocal
+ - export LDHACK=`pwd`/ldlocal
+ - rm -rf ~/.nvm ~/.npm && git clone https://github.com/creationix/nvm.git ~/.nvm
+ - source ~/.nvm/nvm.sh && nvm install node
+ - node -v
+
+install:
+  - ./nosudo
+  - ls -la
+# language: node_js
+# node_js:
+#  - "0.8"
+#  - "0.10"
+#  - "0.12"
+#  - "4"
+#  - "5"
+
 script: travis_retry npm test
