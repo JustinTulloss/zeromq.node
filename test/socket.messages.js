@@ -112,4 +112,30 @@ describe('socket.messages', function(){
     });
   });
 
+  it('should call send() callbacks', function(done){
+    var received = 0;
+    var callbacks = 0;
+
+    function cb() {
+      callbacks += 1;
+    }
+
+    pull.on('message', function () {
+      received += 1;
+
+      if (received === 4) {
+        callbacks.should.equal(received);
+        done();
+      }
+    });
+
+    pull.bind('inproc://stuff_ssmm', function(){
+      push.connect('inproc://stuff_ssmm');
+
+      push.send('hello', null, cb);
+      push.send('hello', null, cb);
+      push.send('hello', null, cb);
+      push.send(['hello', 'world'], null, cb);
+    });
+  });
 });
