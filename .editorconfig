@@ -1,0 +1,15 @@
+root = true
+
+[*]
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+
+[*.js]
+indent_style = space
+indent_size = 2
+
+[*.cc]
+indent_style = space
+indent_size = 2
+
