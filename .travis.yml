@@ -14,21 +14,46 @@ addons:
 env:
  - ZMQ="2.2.0"
  - ZMQ="3.2.5"
- - ZMQ="4.0.5"
- - ZMQ="4.1.3"
+ - ZMQ="4.0.5" SODIUM="http://download.libsodium.org/libsodium/releases/libsodium-1.0.5.tar.gz"
+ - ZMQ="4.1.3" SODIUM="http://download.libsodium.org/libsodium/releases/libsodium-1.0.5.tar.gz"
 
 before_install:
+ - mkdir ldlocal
  - export CC=gcc-4.8
  - export CXX=g++-4.8
- - mkdir ldlocal
  - export LDHACK=`pwd`/ldlocal
+ - echo $LDHACK
+ - export LDFLAGS=-L$LDHACK/lib
+ - export CFLAGS=-I$LDHACK/include
+ - export LD_RUN_PATH=$LDHACK/lib
+ - export LD_LIBRARY_PATH=$LDHACK/lib
+ - export PKG_CONFIG_PATH=$LDHACK/lib/pkgconfig
+ - echo $PKG_CONFIG_PATH
+ - wget http://download.zeromq.org/zeromq-$ZMQ.tar.gz
+ - tar xzvf zeromq-$ZMQ.tar.gz
+ - '[ -z "$SODIUM" ] || wget $SODIUM'
+ - '[ -z "$SODIUM" ] || tar xzvf libsodium-1.0.5.tar.gz'
+ - '[ -z "$SODIUM" ] || cd libsodium-1.0.5'
+ - '[ -z "$SODIUM" ] || ./autogen.sh'
+ - '[ -z "$SODIUM" ] || ./configure --prefix=$LDHACK'
+ - '[ -z "$SODIUM" ] || make'
+ - '[ -z "$SODIUM" ] || make install'
+ - '[ -z "$SODIUM" ] || cd ..'
+ - '[ -z "$SODIUM" ] || export LIBS=-lsodium && export sodium_CFLAGS=$CFLAGS && export sodium_LIBS=$LDFLAGS'
+ - cd zeromq-$ZMQ
+ - ./autogen.sh
+ - if [[ -z "$SODIUM" ]]; then ./configure --prefix=$LDHACK; else ./configure --prefix=$LDHACK --with-libsodium=$LDHACK; fi
+ - make
+ - make install
+ - cd ..
  - rm -rf ~/.nvm ~/.npm && git clone https://github.com/creationix/nvm.git ~/.nvm
  - source ~/.nvm/nvm.sh && nvm install node
  - node -v
 
 install:
-  - ./nosudo
-  - ls -la
+  - env LD_LIBRARY_PATH=$LDHACK/lib LD_RUN_PATH=$LDHACK/lib PKG_CONFIG_PATH=$LDHACK/lib/pkgconfig LDFLAGS=-L$LDHACK/lib CFLAGS=-I$LDHACK/lib/include npm install
+  # probably need to add an if-then here for libsodium linked npm install
+
 # language: node_js
 # node_js:
 #  - "0.8"
