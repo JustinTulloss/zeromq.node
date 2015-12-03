@@ -1,37 +1,65 @@
+sudo: false
+
+language: c
+
 addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
     packages:
+    - gcc-4.8
     - g++-4.8
+    - uuid-dev
+
 env:
- - ZMQ="git://github.com/zeromq/zeromq2-x.git"
- - ZMQ="git://github.com/zeromq/zeromq3-x.git -b v3.1.0"
- - ZMQ="git://github.com/zeromq/zeromq3-x.git -b v3.2.5"
- - ZMQ="git://github.com/zeromq/zeromq4-x.git -b v4.0.5" SODIUM="git://github.com/jedisct1/libsodium.git -b 0.4.5"
+ - ZMQ="2.2.0"
+ - ZMQ="3.2.5"
+ - ZMQ="4.0.5" SODIUM="http://download.libsodium.org/libsodium/releases/libsodium-1.0.5.tar.gz"
+ - ZMQ="4.1.3" SODIUM="http://download.libsodium.org/libsodium/releases/libsodium-1.0.5.tar.gz"
+
 before_install:
+ - mkdir ldlocal
+ - export CC=gcc-4.8
  - export CXX=g++-4.8
- - sudo apt-get install uuid-dev
- - '[ -z "$SODIUM" ] || git clone --depth 1 $SODIUM libsodium'
- - '[ -z "$SODIUM" ] || cd libsodium'
+ - export LDHACK=`pwd`/ldlocal
+ - echo $LDHACK
+ - export LDFLAGS=-L$LDHACK/lib
+ - export CFLAGS=-I$LDHACK/include
+ - export LD_RUN_PATH=$LDHACK/lib
+ - export LD_LIBRARY_PATH=$LDHACK/lib
+ - export PKG_CONFIG_PATH=$LDHACK/lib/pkgconfig
+ - echo $PKG_CONFIG_PATH
+ - wget http://download.zeromq.org/zeromq-$ZMQ.tar.gz
+ - tar xzvf zeromq-$ZMQ.tar.gz
+ - '[ -z "$SODIUM" ] || wget $SODIUM'
+ - '[ -z "$SODIUM" ] || tar xzvf libsodium-1.0.5.tar.gz'
+ - '[ -z "$SODIUM" ] || cd libsodium-1.0.5'
  - '[ -z "$SODIUM" ] || ./autogen.sh'
- - '[ -z "$SODIUM" ] || ./configure'
+ - '[ -z "$SODIUM" ] || ./configure --prefix=$LDHACK'
  - '[ -z "$SODIUM" ] || make'
- - '[ -z "$SODIUM" ] || sudo make install'
+ - '[ -z "$SODIUM" ] || make install'
  - '[ -z "$SODIUM" ] || cd ..'
- - git clone --depth 1 $ZMQ zmqlib
- - cd zmqlib
+ - '[ -z "$SODIUM" ] || export LIBS=-lsodium && export sodium_CFLAGS=$CFLAGS && export sodium_LIBS=$LDFLAGS'
+ - cd zeromq-$ZMQ
  - ./autogen.sh
- - ./configure
+ - if [[ -z "$SODIUM" ]]; then ./configure --prefix=$LDHACK; else ./configure --prefix=$LDHACK --with-libsodium=$LDHACK; fi
  - make
- - sudo make install
- - sudo /sbin/ldconfig
+ - make install
  - cd ..
-language: node_js
-node_js:
- - "0.8"
- - "0.10"
- - "0.12"
- - "4"
- - "5"
+ - rm -rf ~/.nvm ~/.npm && git clone https://github.com/creationix/nvm.git ~/.nvm
+ - source ~/.nvm/nvm.sh && nvm install node
+ - node -v
+
+install:
+  - env LD_LIBRARY_PATH=$LDHACK/lib LD_RUN_PATH=$LDHACK/lib PKG_CONFIG_PATH=$LDHACK/lib/pkgconfig LDFLAGS=-L$LDHACK/lib CFLAGS=-I$LDHACK/lib/include npm install
+  # probably need to add an if-then here for libsodium linked npm install
+
+# language: node_js
+# node_js:
+#  - "0.8"
+#  - "0.10"
+#  - "0.12"
+#  - "4"
+#  - "5"
+
 script: travis_retry npm test
