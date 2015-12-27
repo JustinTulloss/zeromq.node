@@ -8,21 +8,39 @@
     "url": "http://github.com/JustinTulloss/zeromq.node.git"
   },
   "dependencies": {
+    "bindings": "~1.2.1",
     "nan": "~2.1.0",
-    "bindings": "~1.2.1"
+    "node-pre-gyp": "^0.6.18"
   },
+  "bundledDependencies": ["node-pre-gyp"],
   "devDependencies": {
-    "should": "2.1.x",
+    "aws-sdk": "^2.2.26",
+    "mocha": "~1.13.0",
     "semver": "~4.1.1",
-    "mocha": "~1.13.0"
+    "should": "2.1.x"
   },
   "engines": {
     "node": ">=0.8"
   },
   "scripts": {
-    "test": "mocha --expose-gc --slow 2000 --timeout 600000"
+    "test": "mocha --expose-gc --slow 2000 --timeout 600000",
+    "install": "node-pre-gyp install --fallback-to-build"
   },
-  "keywords": ["zeromq", "zmq", "0mq", "ømq", "libzmq", "native", "binding", "addon"],
+  "binary": {
+    "module_name": "zmq",
+		"module_path": "./builds",
+    "host": "https://zmq-prebuilt.s3-us-west-1.amazonaws.com"
+  },
+  "keywords": [
+    "zeromq",
+    "zmq",
+    "0mq",
+    "ømq",
+    "libzmq",
+    "native",
+    "binding",
+    "addon"
+  ],
   "license": "MIT",
   "author": "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
   "contributors": [
