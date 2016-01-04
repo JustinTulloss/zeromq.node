@@ -28,7 +28,7 @@
   },
   "binary": {
     "module_name": "zmq",
-		"module_path": "./builds",
+    "module_path": "./builds",
     "host": "https://zmq-prebuilt.s3-us-west-1.amazonaws.com"
   },
   "keywords": [
