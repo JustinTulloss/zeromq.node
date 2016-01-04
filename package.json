@@ -14,7 +14,6 @@
   },
   "bundledDependencies": ["node-pre-gyp"],
   "devDependencies": {
-    "aws-sdk": "^2.2.26",
     "mocha": "~1.13.0",
     "semver": "~4.1.1",
     "should": "2.1.x"
@@ -28,8 +27,7 @@
   },
   "binary": {
     "module_name": "zmq",
-    "module_path": "./builds",
-    "host": "https://zmq-prebuilt.s3-us-west-1.amazonaws.com"
+    "module_path": "./builds"
   },
   "keywords": [
     "zeromq",
