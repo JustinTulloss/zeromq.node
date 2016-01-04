@@ -27,7 +27,8 @@
   },
   "binary": {
     "module_name": "zmq",
-    "module_path": "./builds"
+    "module_path": "./builds",
+    "host": "NONE"
   },
   "keywords": [
     "zeromq",
