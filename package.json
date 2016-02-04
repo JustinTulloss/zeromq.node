@@ -12,9 +12,10 @@
     "bindings": "~1.2.1"
   },
   "devDependencies": {
-    "should": "2.1.x",
+    "mocha": "~1.13.0",
+    "prebuild": "^2.9.0",
     "semver": "~4.1.1",
-    "mocha": "~1.13.0"
+    "should": "2.1.x"
   },
   "engines": {
     "node": ">=0.8"
@@ -22,7 +23,16 @@
   "scripts": {
     "test": "mocha --expose-gc --slow 2000 --timeout 600000"
   },
-  "keywords": ["zeromq", "zmq", "0mq", "ømq", "libzmq", "native", "binding", "addon"],
+  "keywords": [
+    "zeromq",
+    "zmq",
+    "0mq",
+    "ømq",
+    "libzmq",
+    "native",
+    "binding",
+    "addon"
+  ],
   "license": "MIT",
   "author": "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
   "contributors": [
