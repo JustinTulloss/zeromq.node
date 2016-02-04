@@ -21,6 +21,7 @@
     "node": ">=0.8"
   },
   "scripts": {
+    "install": "prebuild --install",
     "test": "mocha --expose-gc --slow 2000 --timeout 600000"
   },
   "keywords": [
