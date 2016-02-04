@@ -13,11 +13,15 @@ os:
   - linux
   - osx
 
-language: node_js
+osx_image: xcode7.2
 
-node_js:
- - "4"
- - "5"
+matrix:
+  fast_finish: true
+  include:
+    - os: osx
+      env: NODE_VERSION="5" NVM_DIR=~/.nvm
+    - os: linux
+      env: NODE_VERSION="5"
 
 env:
  - ZMQ="4.0.5" SODIUM="1.0.5"
@@ -25,6 +29,10 @@ env:
 
 before_install:
  - if [ $TRAVIS_OS_NAME == "osx" ]; then brew update; brew install nvm; mkdir ~/.nvm; . $(brew --prefix nvm)/nvm.sh; fi
+ - nvm install $NODE_VERSION
+ - nvm use $NODE_VERSION
+ - node --version
+ - npm --version
  - export CXX=g++-4.8
  - export CC=gcc-4.8
  - mkdir ldlocal
