@@ -9,6 +9,10 @@ addons:
     - g++-4.8
     - uuid-dev
 
+os:
+  - linux
+  - osx
+
 language: node_js
 
 node_js:
