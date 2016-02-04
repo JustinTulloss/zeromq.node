@@ -1,4 +1,4 @@
-# zmq &nbsp;&nbsp;[![Build Status](https://travis-ci.org/JustinTulloss/zeromq.node.png)](https://travis-ci.org/JustinTulloss/zeromq.node) &nbsp;[![Build status](https://ci.appveyor.com/api/projects/status/n0h0sjs127eadfuo/branch/windowsbuild?svg=true)](https://ci.appveyor.com/project/reqshark/zeromq-node)
+# zmq &nbsp;&nbsp;[![Build Status](https://travis-ci.org/nteract/zmq-prebuilt.png)](https://travis-ci.org/nteract/zmq-prebuilt) &nbsp;[![Build status](https://ci.appveyor.com/api/projects/status/6u7saauir2msxpou?svg=true)](https://ci.appveyor.com/project/rgbkrk/zmq-prebuilt)
 
 [ØMQ](http://www.zeromq.org/) bindings for node.js.
 
