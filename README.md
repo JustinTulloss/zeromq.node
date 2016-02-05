@@ -2,10 +2,11 @@
 
 [ØMQ](http://www.zeromq.org/) bindings for node.js.
 
+WARNING: This is not ready yet.
+
 ## Installation
 
     $ npm install zmq-prebuilt
-
 
 We rely on [`prebuild`](https://github.com/mafintosh/prebuild). Prepare to be amazed at the wonders of binaries.
 
