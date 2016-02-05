@@ -46,7 +46,7 @@ function finish() {
 }
 
 function send() {
-  req.send(message, zmq.aflags.ZMQ_SENDONLY);
+  req.send(message);
 }
 
 send()
