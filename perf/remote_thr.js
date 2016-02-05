@@ -20,7 +20,7 @@ sock.connect(connect_to)
 
 function send(){
   for (var i = 0; i < message_count; i++) {
-    sock.send(message)
+    sock.send(message, zmq.aflags.ZMQ_SENDONLY)
   }
 
   // all messages may not be received by local_thr if closed immediately
