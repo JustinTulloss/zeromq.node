@@ -32,7 +32,7 @@
             }
           },
         }, {
-          'libraries': ['-lzmq'],
+          'libraries': [ '<!@(pkg-config libzmq --variable=libdir)/libzmq.a' ],
           'cflags!': ['-fno-exceptions'],
           'cflags_cc!': ['-fno-exceptions'],
         }],
