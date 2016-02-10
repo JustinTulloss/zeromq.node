@@ -8,9 +8,11 @@ var addr = 'tcp://127.0.0.1'
   , captureAddr = addr+':5509';
 
 var version = semver.gte(zmq.version, '3.1.0');
+var testutil = require('./util');
 
 describe('proxy.xpub-xsub', function() {
-
+  afterEach(testutil.cleanup);
+  
   it('should proxy pub-sub connected to xpub-xsub', function (done) {
     if (!version) {
       done();
@@ -22,18 +24,13 @@ describe('proxy.xpub-xsub', function() {
 
     var sub = zmq.socket('sub');
     var pub = zmq.socket('pub');
+    testutil.push_sockets(frontend, backend, sub, pub);
 
     sub.subscribe('');
     sub.on('message',function (msg) {
-
-      frontend.close();
-      backend.close();
-      sub.close();
-      pub.close();
-
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('foo');
-
+      console.log(msg.toString());
       done();
     });
 
@@ -45,7 +42,11 @@ describe('proxy.xpub-xsub', function() {
 
         setTimeout(function() {
           pub.send('foo');
-        }, 200.0);
+        }, 500);
+
+        setTimeout(function () {
+          throw Error("Timeout");
+        }, 10000);
 
         zmq.proxy(frontend,backend);
 
@@ -67,33 +68,24 @@ describe('proxy.xpub-xsub', function() {
 
     var sub = zmq.socket('sub');
     var pub = zmq.socket('pub');
+    testutil.push_sockets(frontend, backend, sub, pub, capture, capSub);
+
+    var countdown = testutil.done_countdown(done, 2);
 
     sub.subscribe('');
     sub.on('message', function (msg) {
-
-      sub.close();
-      pub.close();
-      backend.close();
-      frontend.close();
-
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('foo');
 
       console.log(msg.toString());
-
+      countdown();
     });
 
     capSub.subscribe('');
     capSub.on('message',function (msg) {
-
-      capture.close();
-      capSub.close();
-
-      setTimeout(function(){
-        msg.should.be.an.instanceof(Buffer);
-        msg.toString().should.equal('foo');
-        done();
-      },100.0);
+      msg.should.be.an.instanceof(Buffer);
+      msg.toString().should.equal('foo');
+      countdown();
     });
 
     capture.bind(captureAddr,function() {
@@ -106,7 +98,11 @@ describe('proxy.xpub-xsub', function() {
 
           setTimeout(function () {
             pub.send('foo');
-          }, 200.0);
+          }, 500);
+
+          setTimeout(function () {
+            throw Error("Timeout");
+          }, 10000);
 
           zmq.proxy(frontend,backend,capture);
         });
@@ -131,6 +127,7 @@ describe('proxy.xpub-xsub', function() {
 
     sub.connect(frontendAddr);
     pub.connect(backendAddr);
+    testutil.push_sockets(frontend, backend, sub, pub);
 
     try{
 
@@ -141,15 +138,9 @@ describe('proxy.xpub-xsub', function() {
       e.message.should.equal('wrong socket order to proxy');
 
     } finally{
-      frontend.close();
-      backend.close();
-      pub.close();
-      sub.close();
 
-      //allow time for TCP sockets to close
-      setTimeout(function(){
-        done();
-      },200)
+      done();
+
     }
   })
 });

@@ -7,7 +7,10 @@ var addr = 'tcp://127.0.0.1'
   , backendAddr = addr+':5505'
   , captureAddr = addr+':5506';
 
+var testutil = require('./util');
+
 describe('proxy.router-dealer', function() {
+  afterEach(testutil.cleanup);
 
   it('should proxy req-rep connected over router-dealer', function (done){
 
@@ -22,14 +25,11 @@ describe('proxy.router-dealer', function() {
 
     req.connect(frontendAddr);
     rep.connect(backendAddr);
+    testutil.push_sockets(frontend, backend, req, rep);
 
     req.on('message',function(msg){
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('foo bar');
-      frontend.close();
-      backend.close();
-      req.close();
-      rep.close();
       done();
     });
 
@@ -64,11 +64,12 @@ describe('proxy.router-dealer', function() {
     rep.connect(backendAddr);
     capSub.connect(captureAddr);
     capSub.subscribe('');
+    testutil.push_sockets(frontend, backend, req, rep, capture, capSub);
+    var countdown = testutil.done_countdown(done, 2);
 
     req.on('message',function (msg) {
-      req.close();
-      rep.close();
       console.log(msg.toString());
+      countdown();
     });
 
     rep.on('message', function (msg) {
@@ -76,14 +77,10 @@ describe('proxy.router-dealer', function() {
     });
 
     capSub.on('message',function (msg) {
-      backend.close();
-      frontend.close();
-      capture.close();
-      capSub.close();
       setTimeout(function() {
         msg.should.be.an.instanceof(Buffer);
         msg.toString().should.equal('foo bar');
-        done();
+        countdown();
       },100.0)
     });
 
