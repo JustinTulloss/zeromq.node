@@ -47,7 +47,6 @@
             '/usr/local/include',
           ],
           'libraries': [
-            '<!@(pkg-config libzmq --libs)',
             '-L/opt/local/lib',
             '-L/usr/local/lib',
           ]
@@ -56,18 +55,11 @@
           'include_dirs': [
             '<!@(pkg-config libzmq --cflags-only-I | sed s/-I//g)',
             '/usr/local/include',
-          ],
-          'libraries': [
-            '<!@(pkg-config libzmq --libs)',
-            '-L/usr/local/lib',
           ]
         }],
         ['OS=="linux"', {
           'cflags': [
             '<!(pkg-config libzmq --cflags 2>/dev/null || echo "")',
-          ],
-          'libraries': [
-            '<!(pkg-config libzmq --libs 2>/dev/null || echo "")',
           ],
         }],
       ]
