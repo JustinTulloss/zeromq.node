@@ -32,7 +32,8 @@
             }
           },
         }, {
-          'libraries': [ '<!@(pkg-config libzmq --variable=libdir)/libzmq.a' ],
+          'libraries': [ '<(PRODUCT_DIR)/../../zmq/lib/libzmq.a' ],
+          'include_dirs': [ '<(PRODUCT_DIR)/../../zmq/include' ],
           'cflags!': ['-fno-exceptions'],
           'cflags_cc!': ['-fno-exceptions'],
         }],
@@ -40,27 +41,10 @@
           'xcode_settings': {
             'GCC_ENABLE_CPP_EXCEPTIONS': 'YES'
           },
-          # add macports include & lib dirs, homebrew include & lib dirs
-          'include_dirs': [
-            '<!@(pkg-config libzmq --cflags-only-I | sed s/-I//g)',
-            '/opt/local/include',
-            '/usr/local/include',
-          ],
-          'libraries': [
-            '-L/opt/local/lib',
-            '-L/usr/local/lib',
-          ]
         }],
         ['OS=="openbsd" or OS=="freebsd"', {
-          'include_dirs': [
-            '<!@(pkg-config libzmq --cflags-only-I | sed s/-I//g)',
-            '/usr/local/include',
-          ]
         }],
         ['OS=="linux"', {
-          'cflags': [
-            '<!(pkg-config libzmq --cflags 2>/dev/null || echo "")',
-          ],
         }],
       ]
     }
