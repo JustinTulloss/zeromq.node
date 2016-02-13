@@ -11,3 +11,4 @@ binding.Makefile
 binding.target.gyp.mk
 gyp-mac-tool
 out/
+zmq

@@ -30,20 +30,7 @@ before_install:
  - npm --version
  - test "$(uname)" = "Darwin"  || export CXX=g++-4.8 CC=gcc-4.8
  - gcc --version
- - mkdir zmq
- - export ZMQ_PREFIX=`pwd`/zmq
- - export CFLAGS=-fPIC
- - export CXXFLAGS=-fPIC
- - export PKG_CONFIG_PATH=$ZMQ_PREFIX/lib/pkgconfig
- - echo $PKG_CONFIG_PATH
- - wget https://github.com/zeromq/zeromq4-1/archive/$ZMQ.tar.gz -O zeromq-$ZMQ.tar.gz
- - tar xzvf zeromq-$ZMQ.tar.gz
- - cd zeromq4-1-$ZMQ
- - ./autogen.sh
- - ./configure --prefix=$ZMQ_PREFIX --with-tweetnacl --with-relaxed --enable-static --disable-shared
- - V=1 make -j
- - make install
- - cd ..
+ - sh build_libzmq.sh
 
 install: env PKG_CONFIG_PATH=$ZMQ_PREFIX/lib/pkgconfig npm install
 
