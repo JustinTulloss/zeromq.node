@@ -12,3 +12,6 @@ binding.target.gyp.mk
 gyp-mac-tool
 out/
 zmq
+
+npm-debug.log
+prebuilds
