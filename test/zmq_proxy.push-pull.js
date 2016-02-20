@@ -7,8 +7,11 @@ var addr = 'tcp://127.0.0.1'
   , backendAddr = addr+':5502'
   , captureAddr = addr+':5503';
 
-describe('proxy.push-pull', function() {
+var testutil = require('./util');
 
+describe('proxy.push-pull', function() {
+  afterEach(testutil.cleanup);
+  
   it('should proxy push-pull connected to pull-push',function (done) {
 
     var frontend = zmq.socket('pull');
@@ -22,14 +25,9 @@ describe('proxy.push-pull', function() {
 
     push.connect(frontendAddr);
     pull.connect(backendAddr);
+    testutil.push_sockets(frontend, backend, push, pull);
 
     pull.on('message',function (msg) {
-
-      frontend.close();
-      backend.close();
-      push.close();
-      pull.close();
-
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('foo');
       done();
@@ -53,7 +51,8 @@ describe('proxy.push-pull', function() {
 
     var pull = zmq.socket('pull');
     var push = zmq.socket('push');
-
+    testutil.push_sockets(frontend, backend, push, pull, capture, capSub);
+    
     frontend.bindSync(frontendAddr);
     backend.bindSync(backendAddr);
     capture.bindSync(captureAddr);
@@ -61,28 +60,21 @@ describe('proxy.push-pull', function() {
     pull.connect(frontendAddr);
     push.connect(backendAddr);
     capSub.connect(captureAddr);
+    
+    var countdown = testutil.done_countdown(done, 2);
 
     pull.on('message',function (msg) {
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('foo');
       console.log(msg.toString());
+      countdown();
     });
 
     capSub.subscribe('');
     capSub.on('message',function (msg) {
-      capture.close();
-      capSub.close();
-
-      setTimeout(function() {
-        frontend.close();
-        backend.close();
-        push.close();
-        pull.close();
-
-        msg.should.be.an.instanceof(Buffer);
-        msg.toString().should.equal('foo');
-        done();
-      },100.0);
+      msg.should.be.an.instanceof(Buffer);
+      msg.toString().should.equal('foo');
+      countdown();
     });
 
     setTimeout(function() {

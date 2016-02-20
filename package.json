@@ -1,28 +1,39 @@
 {
-  "name": "zmq",
-  "version": "2.14.0",
-  "description": "Bindings for node.js and io.js to ZeroMQ",
+  "name": "zmq-prebuilt",
+  "version": "0.0.2",
+  "description": "Prebuilt bindings for node.js to ZeroMQ",
   "main": "index",
   "repository": {
     "type": "git",
-    "url": "http://github.com/JustinTulloss/zeromq.node.git"
+    "url": "http://github.com/nteract/zmq-prebuilt.git"
   },
   "dependencies": {
     "nan": "~2.1.0",
+    "prebuild": "^2.9.0",
     "bindings": "~1.2.1"
   },
   "devDependencies": {
-    "should": "2.1.x",
+    "mocha": "~1.13.0",
     "semver": "~4.1.1",
-    "mocha": "~1.13.0"
+    "should": "2.1.x"
   },
   "engines": {
     "node": ">=0.8"
   },
   "scripts": {
+    "install": "prebuild --install",
     "test": "mocha --expose-gc --slow 2000 --timeout 600000"
   },
-  "keywords": ["zeromq", "zmq", "0mq", "ømq", "libzmq", "native", "binding", "addon"],
+  "keywords": [
+    "zeromq",
+    "zmq",
+    "0mq",
+    "ømq",
+    "libzmq",
+    "native",
+    "binding",
+    "addon"
+  ],
   "license": "MIT",
   "author": "Justin Tulloss <justin.tulloss@gmail.com> (http://justin.harmonize.fm)",
   "contributors": [

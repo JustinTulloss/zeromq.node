@@ -9,8 +9,11 @@ var addr = 'tcp://127.0.0.1'
 
 //since its for libzmq2, we target versions < 3.0.0
 var version = semver.lte(zmq.version, '3.0.0');
+var testutil = require('./util');
 
 describe('proxy.xrep-xreq', function() {
+  afterEach(testutil.cleanup);
+  
   it('should proxy req-rep connected to xrep-xreq', function (done) {
     if (!version) {
       done();
@@ -28,14 +31,11 @@ describe('proxy.xrep-xreq', function() {
 
     req.connect(frontendAddr);
     rep.connect(backendAddr);
+    testutil.push_sockets(frontend, backend, req, rep);
 
     req.on('message',function(msg){
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('foo bar');
-      frontend.close();
-      backend.close();
-      req.close();
-      rep.close();
       done();
     });
 
