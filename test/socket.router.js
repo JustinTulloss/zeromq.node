@@ -17,16 +17,24 @@ describe('socket.router', function(){
     }
 
     var envelope = '12384982398293';
-    var errMsg = 'No route to host';
-    if (require('os').platform() == 'win32') errMsg = 'Unknown error';
+
+    var errMsgs = require('os').platform() === 'win32' ? ['Unknown error'] : [];
+    errMsgs.push('No route to host');
+    errMsgs.push('Resource temporarily unavailable');
+
+    function assertRouteError(err) {
+      if (errMsgs.indexOf(err.message) === -1) {
+        throw new Error('Bad error');
+      }
+    }
 
     // should emit an error event on unroutable msgs if mandatory = 1 and error handler is set
 
     (function(){
       var sock = zmq.socket('router');
-      sock.on('error', function(err){
-        err.message.should.equal(errMsg);
+      sock.on('error', function (err) {
         sock.close();
+        assertRouteError(err);
         if (++complete === 2) done();
       });
 
@@ -42,17 +50,23 @@ describe('socket.router', function(){
 
       sock.setsockopt(zmq.ZMQ_ROUTER_MANDATORY, 1);
 
-      (function(){
+      try {
         sock.send([envelope, '']);
-      }).should.throw(errMsg);
+      } catch (err) {
+        assertRouteError(err);
+      }
 
-      (function(){
+      try {
         sock.send([envelope, '']);
-      }).should.throw(errMsg);
+      } catch (err) {
+        assertRouteError(err);
+      }
 
-      (function(){
+      try {
         sock.send([envelope, '']);
-      }).should.throw(errMsg);
+      } catch (err) {
+        assertRouteError(err);
+      }
 
       sock.close();
     })();
@@ -65,7 +79,7 @@ describe('socket.router', function(){
       (function(){
         sock.send([envelope, '']);
         sock.close();
-      }).should.not.throw(errMsg);
+      }).should.not.throw;
     })();
     if (++complete === 2) done();
   });

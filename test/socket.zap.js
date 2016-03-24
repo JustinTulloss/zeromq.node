@@ -30,7 +30,7 @@ describe('socket.zap', function(){
     try {
       rep.curve_server = 0;
     } catch(e) {
-      console.log("libsodium seems to be missing; skipping curve test");
+      console.log("libsodium seems to be missing (skipping curve test)");
       done();
       return;
     }
@@ -51,7 +51,8 @@ describe('socket.zap', function(){
     rep.curve_secretkey = serverPrivateKey;
     rep.mechanism.should.eql(2);
 
-    rep.bind(port, function(){
+    rep.bind(port, function (error) {
+      if (error) throw error;
       req.curve_serverkey = serverPublicKey;
       req.curve_publickey = clientPublicKey;
       req.curve_secretkey = clientPrivateKey;
@@ -68,7 +69,7 @@ describe('socket.zap', function(){
 
   });
 
-  it('should supoort null', function(done){
+  it('should support null', function(done){
     var port = 'tcp://127.0.0.1:12345';
     if (!semver.gte(zmq.version, '4.0.0')) {
       done();
@@ -84,12 +85,12 @@ describe('socket.zap', function(){
     rep.zap_domain = "test";
     rep.mechanism.should.eql(0);
 
-    rep.bind(port, function(){
+    rep.bind(port, function (error) {
+      if (error) throw error;
       req.mechanism.should.eql(0);
       req.connect(port);
       req.send('hello');
       req.on('message', function(msg){
-        console.log('here')
         msg.should.be.an.instanceof(Buffer);
         msg.toString().should.equal('world');
         done();
@@ -97,7 +98,7 @@ describe('socket.zap', function(){
     });
   });
 
-  it('should supoort plain', function(done){
+  it('should support plain', function(done){
     var port = 'tcp://127.0.0.1:12346';
     if (!semver.gte(zmq.version, '4.0.0')) {
       done();
@@ -114,7 +115,8 @@ describe('socket.zap', function(){
     rep.plain_server = 1;
     rep.mechanism.should.eql(1);
 
-    rep.bind(port, function(){
+    rep.bind(port, function (error) {
+      if (error) throw error;
       req.plain_username = "user";
       req.plain_password = "pass";
       req.mechanism.should.eql(1);
@@ -122,7 +124,6 @@ describe('socket.zap', function(){
       req.connect(port);
       req.send('hello');
       req.on('message', function(msg){
-        console.log('here')
         msg.should.be.an.instanceof(Buffer);
         msg.toString().should.equal('world');
         done();

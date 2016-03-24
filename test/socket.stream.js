@@ -38,7 +38,8 @@ describe('socket.stream', function(){
       });
 
       var addr = '127.0.0.1:5513';
-      stream.bind('tcp://'+addr, function(){
+      stream.bind('tcp://'+addr, function (error) {
+        if (error) throw error;
         //send non-peer request to zmq, like an http GET method with URI path
         http.get('http://'+addr+'/aRandomRequestPath', function (httpMsg){
 

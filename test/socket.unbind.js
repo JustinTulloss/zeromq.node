@@ -14,10 +14,10 @@ describe('socket.unbind', function(){
       , c = zmq.socket('dealer');
 
     var message_count = 0;
-    a.bind('tcp://127.0.0.1:5420', function (err) {
-      if (err) throw err;
-      a.bind('tcp://127.0.0.1:5421', function (err) {
-        if (err) throw err;
+    a.bind('tcp://127.0.0.1:5420', function (error) {
+      if (error) throw error;
+      a.bind('tcp://127.0.0.1:5421', function (error) {
+        if (error) throw error;
         b.connect('tcp://127.0.0.1:5420');
         b.send('Hello from b.');
         c.connect('tcp://127.0.0.1:5421');
@@ -38,7 +38,9 @@ describe('socket.unbind', function(){
     a.on('message', function(msg) {
       message_count++;
       if (msg.toString() === 'Hello from b.') {
-        a.unbind('tcp://127.0.0.1:5420');
+        a.unbind('tcp://127.0.0.1:5420', function (error) {
+          if (error) throw error;
+        });
       } else if (msg.toString() === 'Final message from c.') {
         message_count.should.equal(4);
         a.close();
