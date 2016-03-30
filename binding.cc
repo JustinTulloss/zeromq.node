@@ -126,6 +126,11 @@ namespace zmq {
       static NAN_METHOD(GetSockOpt);
       static NAN_METHOD(SetSockOpt);
 
+      void _AttachToEventLoop();
+      void _DetachFromEventLoop();
+      static NAN_METHOD(AttachToEventLoop);
+      static NAN_METHOD(DetachFromEventLoop);
+
       struct BindState;
       static NAN_METHOD(Bind);
 
@@ -311,6 +316,8 @@ namespace zmq {
     Nan::SetPrototypeMethod(t, "connect", Connect);
     Nan::SetPrototypeMethod(t, "getsockopt", GetSockOpt);
     Nan::SetPrototypeMethod(t, "setsockopt", SetSockOpt);
+    Nan::SetPrototypeMethod(t, "ref", AttachToEventLoop);
+    Nan::SetPrototypeMethod(t, "unref", DetachFromEventLoop);
     Nan::SetPrototypeMethod(t, "recv", Recv);
     Nan::SetPrototypeMethod(t, "send", Send);
     Nan::SetPrototypeMethod(t, "close", Close);
@@ -677,6 +684,24 @@ namespace zmq {
     }
   }
 
+  void Socket::_AttachToEventLoop() {
+    uv_ref(reinterpret_cast<uv_handle_t *>(this->poll_handle_));
+  }
+
+  NAN_METHOD(Socket::AttachToEventLoop) {
+    GET_SOCKET(info);
+    socket->_AttachToEventLoop();
+  }
+
+  void Socket::_DetachFromEventLoop() {
+    uv_unref(reinterpret_cast<uv_handle_t *>(this->poll_handle_));
+  }
+
+  NAN_METHOD(Socket::DetachFromEventLoop) {
+    GET_SOCKET(info);
+    socket->_DetachFromEventLoop();
+  }
+
   struct Socket::BindState {
     BindState(Socket* sock_, Local<Function> cb_, Local<String> addr_)
           : addr(addr_) {
@@ -743,8 +768,10 @@ namespace zmq {
     Socket *socket = Nan::ObjectWrap::Unwrap<Socket>(Nan::New(state->sock_obj));
     socket->state_ = STATE_READY;
 
-    if (socket->endpoints == 0)
+    if (socket->endpoints == 0) {
       socket->Ref();
+      socket->_AttachToEventLoop();
+    }
     socket->endpoints += 1;
 
     Nan::MakeCallback(Nan::GetCurrentContext()->Global(), cb, 1, argv);
@@ -764,8 +791,10 @@ namespace zmq {
 
     socket->state_ = STATE_READY;
 
-    if (socket->endpoints == 0)
+    if (socket->endpoints == 0) {
       socket->Ref();
+      socket->_AttachToEventLoop();
+    }
 
     socket->endpoints += 1;
 
@@ -817,8 +846,10 @@ namespace zmq {
     Socket *socket = Nan::ObjectWrap::Unwrap<Socket>(Nan::New(state->sock_obj));
     socket->state_ = STATE_READY;
 
-    if (--socket->endpoints == 0)
+    if (--socket->endpoints == 0) {
       socket->Unref();
+      socket->_DetachFromEventLoop();
+    }
 
     Nan::MakeCallback(Nan::GetCurrentContext()->Global(), cb, 1, argv);
 
@@ -837,8 +868,10 @@ namespace zmq {
 
     socket->state_ = STATE_READY;
 
-    if (--socket->endpoints == 0)
+    if (--socket->endpoints == 0) {
       socket->Unref();
+      socket->_DetachFromEventLoop();
+    }
 
     return;
   }
@@ -855,8 +888,10 @@ namespace zmq {
     if (zmq_connect(socket->socket_, *address))
       return Nan::ThrowError(ErrorMessage());
 
-    if (socket->endpoints++ == 0)
+    if (socket->endpoints++ == 0) {
       socket->Ref();
+      socket->_AttachToEventLoop();
+    }
 
     return;
   }
@@ -873,8 +908,10 @@ namespace zmq {
     Nan::Utf8String address(info[0].As<String>());
     if (zmq_disconnect(socket->socket_, *address))
       return Nan::ThrowError(ErrorMessage());
-    if (--socket->endpoints == 0)
+    if (--socket->endpoints == 0) {
       socket->Unref();
+      socket->_DetachFromEventLoop();
+    }
 
     return;
   }
