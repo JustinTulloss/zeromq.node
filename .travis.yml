@@ -5,9 +5,10 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-    - gcc-4.8
-    - g++-4.8
+    - gcc-4.9
+    - g++-4.9
     - uuid-dev
+    - libssl-dev
 
 language: node_js
 
@@ -21,11 +22,11 @@ env:
  - ZMQ="2.2.0"
  - ZMQ="3.2.5"
  - ZMQ="4.0.5" SODIUM="1.0.5"
- - ZMQ="4.1.3" SODIUM="1.0.5"
+ - ZMQ="4.1.4" SODIUM="1.0.5"
 
 before_install:
- - export CXX=g++-4.8
- - export CC=gcc-4.8
+ - export CXX=g++-4.9
+ - export CC=gcc-4.9
  - mkdir ldlocal
  - export LDHACK=`pwd`/ldlocal
  - export LDFLAGS=-L$LDHACK/lib
