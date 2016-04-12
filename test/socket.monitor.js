@@ -41,7 +41,9 @@ describe('socket.monitor', function() {
     // enable monitoring for this socket
     rep.monitor();
 
-    rep.bind('tcp://127.0.0.1:5423');
+    rep.bind('tcp://127.0.0.1:5423', function (error) {
+      if (error) throw error;
+    });
 
     rep.on('bind', function(){
       req.connect('tcp://127.0.0.1:5423');

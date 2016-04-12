@@ -148,14 +148,16 @@ namespace zmq {
 
       class IncomingMessage;
       static NAN_METHOD(Recv);
+      static NAN_METHOD(Readv);
       class OutgoingMessage;
       static NAN_METHOD(Send);
+      static NAN_METHOD(Sendv);
       void Close();
       static NAN_METHOD(Close);
 
       Nan::Persistent<Object> context_;
       void *socket_;
-      int32_t pending_;
+      bool pending_;
       uint8_t state_;
       int32_t endpoints;
 #if ZMQ_CAN_MONITOR
@@ -169,7 +171,7 @@ namespace zmq {
       static NAN_METHOD(Unmonitor);
 #endif
 
-      bool IsReady();
+      short PollForEvents();
       uv_poll_t *poll_handle_;
       static void UV_PollCallback(uv_poll_t* handle, int status, int events);
   };
@@ -312,7 +314,9 @@ namespace zmq {
     Nan::SetPrototypeMethod(t, "getsockopt", GetSockOpt);
     Nan::SetPrototypeMethod(t, "setsockopt", SetSockOpt);
     Nan::SetPrototypeMethod(t, "recv", Recv);
+    Nan::SetPrototypeMethod(t, "readv", Readv);
     Nan::SetPrototypeMethod(t, "send", Send);
+    Nan::SetPrototypeMethod(t, "sendv", Sendv);
     Nan::SetPrototypeMethod(t, "close", Close);
 
 #if ZMQ_CAN_DISCONNECT
@@ -355,11 +359,12 @@ namespace zmq {
     info.GetReturnValue().Set(info.This());
   }
 
-  bool
-  Socket::IsReady() {
-    zmq_pollitem_t item = {socket_, 0, ZMQ_POLLIN, 0};
-    if (pending_ > 0)
+  short
+  Socket::PollForEvents() {
+    zmq_pollitem_t item = { socket_, 0, ZMQ_POLLIN, 0 };
+    if (pending_)
       item.events |= ZMQ_POLLOUT;
+
     while (true) {
       int rc = zmq_poll(&item, 1, 0);
       if (rc < 0) {
@@ -376,7 +381,8 @@ namespace zmq {
 
   void
   Socket::CallbackIfReady() {
-    if (this->IsReady()) {
+    short events = PollForEvents();
+    if (events != 0) {
       Nan::HandleScope scope;
 
       Local<Value> callback_v = Nan::Get(this->handle(), Nan::New(callback_symbol)).ToLocalChecked();
@@ -384,7 +390,11 @@ namespace zmq {
         return;
       }
 
-      Nan::MakeCallback(this->handle(), callback_v.As<Function>(), 0, NULL);
+      Local<Value> argv[2];
+      argv[0] = Nan::New<Boolean>((events & ZMQ_POLLIN) != 0);
+      argv[1] = Nan::New<Boolean>((events & ZMQ_POLLOUT) != 0);
+
+      Nan::MakeCallback(this->handle(), callback_v.As<Function>(), 2, argv);
     }
   }
 
@@ -510,7 +520,7 @@ namespace zmq {
   Socket::Socket(Context *context, int type) : Nan::ObjectWrap() {
     context_.Reset(context->handle());
     socket_ = zmq_socket(context->context_, type);
-    pending_ = 0;
+    pending_ = false;
     state_ = STATE_READY;
 
     if (NULL == socket_) {
@@ -562,16 +572,15 @@ namespace zmq {
 
   NAN_GETTER(Socket::GetPending) {
     Socket* socket = Nan::ObjectWrap::Unwrap<Socket>(info.Holder());
-    info.GetReturnValue().Set(Nan::New<Integer>(socket->pending_));
+    info.GetReturnValue().Set(socket->pending_);
   }
 
   NAN_SETTER(Socket::SetPending) {
-    if (!value->IsNumber()) {
-      Nan::ThrowTypeError("Pending must be an integer");
-    }
+    if (!value->IsBoolean())
+      return Nan::ThrowTypeError("Pending must be a boolean");
 
     Socket* socket = Nan::ObjectWrap::Unwrap<Socket>(info.Holder());
-    socket->pending_ = Nan::To<int32_t>(value).FromJust();
+    socket->pending_ = Nan::To<bool>(value).FromJust();
   }
 
   template<typename T>
@@ -586,9 +595,8 @@ namespace zmq {
         }
         Nan::ThrowError(ExceptionFromError());
         return Nan::Undefined();
-      } else {
-        break;
       }
+      break;
     }
     return Nan::New<Number>(value);
   }
@@ -658,7 +666,7 @@ namespace zmq {
     if (info.Length() != 2)
       return Nan::ThrowError("Must pass an option and a value");
     if (!info[0]->IsNumber())
-       return Nan::ThrowTypeError("Option must be an integer");
+      return Nan::ThrowTypeError("Option must be an integer");
     int64_t option = Nan::To<int64_t>(info[0]).FromJust();
     GET_SOCKET(info);
 
@@ -1015,6 +1023,76 @@ namespace zmq {
 
 #endif
 
+  NAN_METHOD(Socket::Readv) {
+    Socket* socket = GetSocket(info);
+    if (socket->state_ != STATE_READY)
+      return;
+
+    int events;
+    size_t events_size = sizeof(events);
+    bool checkPollIn = true;
+
+    int rc = 0;
+    int flags = 0;
+    int64_t more = 1;
+    size_t more_size = sizeof(more);
+    size_t index = 0;
+
+    Local<Array> result = Nan::New<Array>();
+
+    while (more == 1) {
+      if (checkPollIn) {
+        while (zmq_getsockopt(socket->socket_, ZMQ_EVENTS, &events, &events_size)) {
+          if (zmq_errno() != EINTR)
+            return Nan::ThrowError(ErrorMessage());
+        }
+
+        if ((events & ZMQ_POLLIN) == 0)
+          return;
+      }
+
+      IncomingMessage part;
+
+      while (true) {
+        rc = zmq_msg_init(part);
+        if (rc != 0) {
+          if (zmq_errno()==EINTR) {
+            continue;
+          }
+          return Nan::ThrowError(ErrorMessage());
+        }
+        break;
+      }
+
+      while (true) {
+      #if ZMQ_VERSION_MAJOR == 2
+        rc = zmq_recv(socket->socket_, part, flags);
+      #elif ZMQ_VERSION_MAJOR == 3
+        rc = zmq_recvmsg(socket->socket_, part, flags);
+      #else
+        rc = zmq_msg_recv(part, socket->socket_, flags);
+        checkPollIn = false;
+      #endif
+
+        if (rc < 0) {
+          if (zmq_errno() == EINTR)
+            continue;
+          return Nan::ThrowError(ErrorMessage());
+        }
+
+        Nan::Set(result, index++, part.GetBuffer());
+        break;
+      }
+
+      while (zmq_getsockopt(socket->socket_, ZMQ_RCVMORE, &more, &more_size)) {
+        if (zmq_errno() != EINTR)
+          return Nan::ThrowError(ErrorMessage());
+      }
+    }
+
+    info.GetReturnValue().Set(result);
+  }
+
   NAN_METHOD(Socket::Recv) {
     int flags = 0;
     int argc = info.Length();
@@ -1107,6 +1185,82 @@ namespace zmq {
     BufferReference* bufref_;
   };
 
+  NAN_METHOD(Socket::Sendv) {
+    Socket* socket = GetSocket(info);
+    if (socket->state_ != STATE_READY)
+      return info.GetReturnValue().Set(false);
+
+    int events;
+    size_t events_size = sizeof(events);
+    bool checkPollOut = true;
+
+    int rc;
+
+    Local<Array> batch = info[0].As<Array>();
+    size_t len = batch->Length();
+
+    if (len == 0)
+      return info.GetReturnValue().Set(true);
+
+    if (len % 2 != 0)
+      return Nan::ThrowTypeError("Batch length must be even!");
+
+    for (size_t i = 0; i < len; i += 2) {
+      if (checkPollOut) {
+        while (zmq_getsockopt(socket->socket_, ZMQ_EVENTS, &events, &events_size)) {
+          if (zmq_errno() != EINTR)
+            return Nan::ThrowError(ErrorMessage());
+        }
+
+        if ((events & ZMQ_POLLOUT) == 0)
+          return info.GetReturnValue().Set(false);
+      }
+
+      Local<Object> buf = batch->Get(i).As<Object>();
+      Local<Number> flagsObj = batch->Get(i + 1).As<Number>();
+
+      int flags = Nan::To<int>(flagsObj).FromJust();
+      size_t len = Buffer::Length(buf);
+
+      zmq_msg_t msg;
+      rc = zmq_msg_init_size(&msg, len);
+      if (rc != 0)
+        return Nan::ThrowError(ErrorMessage());
+
+      char * cp = static_cast<char *>(zmq_msg_data(&msg));
+      const char * dat = Buffer::Data(buf);
+      std::copy(dat, dat + len, cp);
+
+      while (true) {
+        int rc;
+      #if ZMQ_VERSION_MAJOR == 2
+        rc = zmq_send(socket->socket_, &msg, flags);
+      #elif ZMQ_VERSION_MAJOR == 3
+        rc = zmq_sendmsg(socket->socket_, &msg, flags);
+      #else
+        rc = zmq_msg_send(&msg, socket->socket_, flags);
+        checkPollOut = false;
+      #endif
+        if (rc < 0){
+          if (zmq_errno() == EINTR) {
+            continue;
+          }
+          return Nan::ThrowError(ErrorMessage());
+        }
+        break;
+      }
+    }
+
+    if (checkPollOut) {
+      while (zmq_getsockopt(socket->socket_, ZMQ_EVENTS, &events, &events_size)) {
+        if (zmq_errno() != EINTR)
+          return Nan::ThrowError(ErrorMessage());
+      }
+    }
+
+    return info.GetReturnValue().Set(true);
+  }
+
   // WARNING: the buffer passed here will be kept alive
   // until zmq_send completes, possibly on another thread.
   // Do not modify or reuse any buffer passed to send.
@@ -1117,7 +1271,7 @@ namespace zmq {
     if (argc != 1 && argc != 2)
       return Nan::ThrowTypeError("Must pass a Buffer and optionally flags");
     if (!Buffer::HasInstance(info[0]))
-        return Nan::ThrowTypeError("First argument should be a Buffer");
+      return Nan::ThrowTypeError("First argument should be a Buffer");
     int flags = 0;
     if (argc == 2) {
       if (!info[1]->IsNumber())

@@ -65,7 +65,6 @@ describe('proxy.push-pull', function() {
     pull.on('message',function (msg) {
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('foo');
-      console.log(msg.toString());
     });
 
     capSub.subscribe('');

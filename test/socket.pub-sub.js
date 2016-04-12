@@ -34,7 +34,8 @@ describe('socket.pub-sub', function(){
 
     var addr = "inproc://stuff_ssps";
 
-    sub.bind(addr, function(){
+    sub.bind(addr, function (error) {
+      if (error) throw error;
       pub.connect(addr);
 
       // The connect is asynchronous, and messages published to a non-
@@ -75,7 +76,8 @@ describe('socket.pub-sub', function(){
       }
     });
 
-    sub.bind('inproc://stuff_sspsf', function(){
+    sub.bind('inproc://stuff_sspsf', function (error) {
+      if (error) throw error;
       pub.connect('inproc://stuff_sspsf');
 
       // See comments on pub-sub test.

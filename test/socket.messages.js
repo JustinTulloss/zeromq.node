@@ -31,7 +31,8 @@ describe('socket.messages', function(){
       }
     });
 
-    pull.bind('inproc://stuff_ssm', function(){
+    pull.bind('inproc://stuff_ssm', function (error) {
+      if (error) throw error;
       push.connect('inproc://stuff_ssm');
       push.send('string');
       push.send(15.99);
@@ -49,7 +50,8 @@ describe('socket.messages', function(){
       done();
     });
 
-    pull.bind('inproc://stuff_ssmm', function(){
+    pull.bind('inproc://stuff_ssmm', function (error) {
+      if (error) throw error;
       push.connect('inproc://stuff_ssmm');
       push.send(['string', 15.99, new Buffer('buffer')]);
     });
@@ -67,7 +69,8 @@ describe('socket.messages', function(){
       done();
     });
 
-    pull.bind('inproc://stuff_sss', function(){
+    pull.bind('inproc://stuff_sss', function (error) {
+      if (error) throw error;
       push.connect('inproc://stuff_sss');
       push.send(['tobi', 'loki'], zmq.ZMQ_SNDMORE);
       push.send(['jane', 'luna'], zmq.ZMQ_SNDMORE);
@@ -104,7 +107,8 @@ describe('socket.messages', function(){
       pull.setsockopt(zmq.ZMQ_HWM, 1);
     }
 
-    push.bind('tcp://127.0.0.1:12345', function () {
+    push.bind('tcp://127.0.0.1:12345', function (error) {
+      if (error) throw error;
       push.send('string');
       push.send(15.99);
       push.send(new Buffer('buffer'));
@@ -129,7 +133,8 @@ describe('socket.messages', function(){
       }
     });
 
-    pull.bind('inproc://stuff_ssmm', function(){
+    pull.bind('inproc://stuff_ssmm', function (error) {
+      if (error) throw error;
       push.connect('inproc://stuff_ssmm');
 
       push.send('hello', null, cb);

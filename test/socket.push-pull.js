@@ -29,7 +29,8 @@ describe('socket.push-pull', function(){
 
     var addr = "inproc://stuff";
 
-    pull.bind(addr, function(){
+    pull.bind(addr, function (error) {
+      if (error) throw error;
       push.connect(addr);
 
       push.send('foo');
@@ -56,7 +57,8 @@ describe('socket.push-pull', function(){
 
       var addr = "inproc://pause_stuff";
 
-      pull.bind(addr, function(){
+      pull.bind(addr, function (error) {
+        if (error) throw error;
         push.connect(addr);
 
         push.send('foo');
@@ -79,7 +81,8 @@ describe('socket.push-pull', function(){
       var addr = "inproc://pause_stuff";
 
       var messages = ['bar', 'foo'];
-      pull.bind(addr, function(){
+      pull.bind(addr, function (error) {
+        if (error) throw error;
         push.connect(addr);
 
         pull.pause()
@@ -132,7 +135,8 @@ describe('socket.push-pull', function(){
 
     var addr = "inproc://resume_stuff";
 
-    pull.bind(addr, function(){
+    pull.bind(addr, function (error) {
+      if (error) throw error;
       push.connect(addr);
       pull.pause()
 

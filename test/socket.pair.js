@@ -1,6 +1,5 @@
 var zmq = require('..')
-  , should = require('should')
-  , semver = require('semver');
+  , should = require('should');
 
 describe('socket.pair', function(){
 
@@ -9,8 +8,9 @@ describe('socket.pair', function(){
       , pairC = zmq.socket('pair');
 
     var n = 0;
-    pairB.on('message', function (msg){
+    pairB.on('message', function (msg) {
       msg.should.be.an.instanceof(Buffer);
+
       switch (n++) {
         case 0:
           msg.toString().should.equal('foo');
@@ -27,14 +27,16 @@ describe('socket.pair', function(){
       }
     });
 
-    pairC.on('message', function (msg){
+    pairC.on('message', function (msg) {
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('barnacle');
     })
 
-    var addr = "inproc://stuff";
+    var addr = "inproc://stuffpair";
 
-    pairB.bind(addr, function(){
+    pairB.bind(addr, function (error) {
+      if (error) throw error;
+
       pairC.connect(addr);
       pairB.send('barnacle');
       pairC.send('foo');

@@ -13,8 +13,8 @@ var version = semver.lte(zmq.version, '3.0.0');
 describe('proxy.xrep-xreq', function() {
   it('should proxy req-rep connected to xrep-xreq', function (done) {
     if (!version) {
-      done();
-      return console.warn('Test requires libzmq v2');
+      console.warn('Test requires libzmq v2 (skipping)');
+      return done();
     }
 
     var frontend = zmq.socket('xrep');

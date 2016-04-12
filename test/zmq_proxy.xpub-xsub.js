@@ -37,8 +37,10 @@ describe('proxy.xpub-xsub', function() {
       done();
     });
 
-    frontend.bind(frontendAddr,function() {
-      backend.bind(backendAddr,function() {
+    frontend.bind(frontendAddr, function (error) {
+      if (error) throw error;
+      backend.bind(backendAddr, function (error) {
+        if (error) throw error;
 
         sub.connect(frontendAddr);
         pub.connect(backendAddr);
@@ -47,7 +49,7 @@ describe('proxy.xpub-xsub', function() {
           pub.send('foo');
         }, 200.0);
 
-        zmq.proxy(frontend,backend);
+        zmq.proxy(frontend, backend);
 
       });
     });
@@ -78,9 +80,6 @@ describe('proxy.xpub-xsub', function() {
 
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('foo');
-
-      console.log(msg.toString());
-
     });
 
     capSub.subscribe('');
@@ -96,9 +95,12 @@ describe('proxy.xpub-xsub', function() {
       },100.0);
     });
 
-    capture.bind(captureAddr,function() {
-      frontend.bind(frontendAddr,function() {
-        backend.bind(backendAddr,function() {
+    capture.bind(captureAddr, function (error) {
+      if (error) throw error;
+      frontend.bind(frontendAddr, function (error) {
+        if (error) throw error;
+        backend.bind(backendAddr, function (error) {
+          if (error) throw error;
 
           pub.connect(backendAddr);
           sub.connect(frontendAddr);

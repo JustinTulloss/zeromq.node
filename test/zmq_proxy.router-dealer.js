@@ -68,7 +68,6 @@ describe('proxy.router-dealer', function() {
     req.on('message',function (msg) {
       req.close();
       rep.close();
-      console.log(msg.toString());
     });
 
     rep.on('message', function (msg) {
