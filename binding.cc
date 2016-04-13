@@ -767,8 +767,10 @@ namespace zmq {
     Nan::Utf8String addr(info[0].As<String>());
     GET_SOCKET(info);
     socket->state_ = STATE_BUSY;
-    if (zmq_bind(socket->socket_, *addr) < 0)
+    if (zmq_bind(socket->socket_, *addr) < 0) {
+      socket->state_ = STATE_READY;
       return Nan::ThrowError(ErrorMessage());
+    }
 
     socket->state_ = STATE_READY;
 
@@ -840,8 +842,10 @@ namespace zmq {
     Nan::Utf8String addr(info[0].As<String>());
     GET_SOCKET(info);
     socket->state_ = STATE_BUSY;
-    if (zmq_unbind(socket->socket_, *addr) < 0)
+    if (zmq_unbind(socket->socket_, *addr) < 0) {
+      socket->state_ = STATE_READY;
       return Nan::ThrowError(ErrorMessage());
+    }
 
     socket->state_ = STATE_READY;
 
