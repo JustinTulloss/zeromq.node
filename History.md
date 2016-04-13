@@ -2,6 +2,7 @@ NEXT
 ===================
 
   * Dropped support for Node 0.8 [reqshark]
+  * Added unref/ref APIs to detach/attach sockets from/to the event loop [Joongi Kim]
   * Improved message throughput 3-fold on ZMQ 4 [ronkorving]
   * Various travis configuration improvements [reqshark]
   * Bumped NAN to 2.1.x [ronkorving]
