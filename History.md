@@ -1,3 +1,11 @@
+NEXT
+===================
+
+  * Dropped support for Node 0.8 [reqshark]
+  * Improved message throughput 3-fold on ZMQ 4 [ronkorving]
+  * Various travis configuration improvements [reqshark]
+  * Bumped NAN to 2.1.x [ronkorving]
+
 2.14.0 / 2015-11-20
 ===================
 
