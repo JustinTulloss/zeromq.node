@@ -101,20 +101,22 @@ sock.on('message', function(topic, message) {
 
 You can get socket state changes events by calling to the `monitor` function.
 The supported events are (see ZMQ [docs](http://api.zeromq.org/4-2:zmq-socket-monitor) for full description):
-* connect - ZMQ_EVENT_CONNECTED
-* connect_delay - ZMQ_EVENT_CONNECT_DELAYED
-* connect_retry - ZMQ_EVENT_CONNECT_RETRIED
-* listen - ZMQ_EVENT_LISTENING
-* bind_error - ZMQ_EVENT_BIND_FAILED
-* accept - ZMQ_EVENT_ACCEPTED
-* accept_error - ZMQ_EVENT_ACCEPT_FAILED
-* close - ZMQ_EVENT_CLOSED
-* close_error - ZMQ_EVENT_CLOSE_FAILED
-* disconnect - ZMQ_EVENT_DISCONNECTED
+
+* connect - `ZMQ_EVENT_CONNECTED`
+* connect_delay - `ZMQ_EVENT_CONNECT_DELAYED`
+* connect_retry - `ZMQ_EVENT_CONNECT_RETRIED`
+* listen - `ZMQ_EVENT_LISTENING`
+* bind_error - `ZMQ_EVENT_BIND_FAILED`
+* accept - `ZMQ_EVENT_ACCEPTED`
+* accept_error - `ZMQ_EVENT_ACCEPT_FAILED`
+* close - `ZMQ_EVENT_CLOSED`
+* close_error - `ZMQ_EVENT_CLOSE_FAILED`
+* disconnect - `ZMQ_EVENT_DISCONNECTED`
 
 All events get 2 arguments:
-* fd - The file descriptor of the underlying socket (if available)
-* endpoint - The underlying socket endpoint
+
+* `fd` - The file descriptor of the underlying socket (if available)
+* `endpoint` - The underlying socket endpoint
 
 A special `monitor_error` event will be raised when there was an error in the monitoring process, after this event no more
 monitoring events will be sent, you can try and call `monitor` again to restart the monitoring process.
@@ -163,6 +165,31 @@ setTimeout(function() {
 	socket.unmonitor();
 }, 20000);
 
+```
+
+## Detaching from the event loop
+You may temporarily disable polling on a specific ZMQ socket and let the node.js
+process to terminate without closing sockets explicitly by removing their event loop
+references.  Newly created sockets are already `ref()`-ed.
+
+### unref()
+Detach the socket from the main event loop of the node.js runtime.
+Calling this on already detached sockets is a no-op.
+
+### ref()
+Attach the socket to the main event loop.
+Calling this on already attached sockets is a no-op.
+
+### Example
+```js
+var zmq = require('zmq');
+socket = zmq.socket('sub');
+socket.bindSync('tcp://127.0.0.1:1234');
+socket.subscribe('');
+socket.on('message', function(msg) { console.log(msg.toString(); });
+// Here blocks indefinitely unless interrupted.
+// Let it terminate after 1 second.
+setTimeout(function() { socket.unref(); }, 1000);
 ```
 
 ## Running tests
