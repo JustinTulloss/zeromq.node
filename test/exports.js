@@ -9,10 +9,15 @@ describe('exports', function(){
   });
 
   it('should generate valid curve keypair', function(done) {
-    if (!semver.gte(zmq.version,'4.0.0') || require('os').platform() == 'win32'){
+    try {
+      var rep = zmq.socket('rep');
+      rep.curve_server = 0;
+    } catch(e) {
+      console.log("libsodium seems to be missing (skipping curve test)");
       done();
-      return console.warn('Test requires libzmq >= 4 compiled with libsodium');
+      return;
     }
+
     var curve = zmq.curveKeypair();
     should.exist(curve);
     should.exist(curve.public);
@@ -20,7 +25,7 @@ describe('exports', function(){
     curve.public.length.should.equal(40);
     curve.secret.length.should.equal(40);
     done();
-  }); 
+  });
 
   it('should export socket types and options', function(){
     // All versions.
