@@ -41,7 +41,7 @@ describe('socket.messages', function(){
   });
 
   it('should support multipart messages', function(done){
-    pull.on('message', function(msg1, msg2, msg3){
+    pull.on('message', function (msg1, msg2, msg3){
       msg1.toString().should.equal('string');
       msg2.toString().should.equal('15.99');
       msg3.toString().should.equal('buffer');
@@ -72,8 +72,8 @@ describe('socket.messages', function(){
     pull.bind('inproc://stuff_sss', function (error) {
       if (error) throw error;
       push.connect('inproc://stuff_sss');
-      push.send(['tobi', 'loki'], zmq.ZMQ_SNDMORE);
-      push.send(['jane', 'luna'], zmq.ZMQ_SNDMORE);
+      push.send(['tobi', 'loki'], 'ZMQ_SNDMORE');
+      push.send(['jane', 'luna'], 'ZMQ_SNDMORE');
       push.send('manny');
     });
   });

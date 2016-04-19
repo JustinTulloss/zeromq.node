@@ -27,18 +27,10 @@ describe('exports', function(){
     done();
   });
 
-  it('should export states', function(){
-    ['STATE_READY', 'STATE_BUSY', 'STATE_CLOSED'].forEach(function(state){
-      zmq[state].should.be.a.Number;
-    });
-  });
-
-  it('should export constructors', function(){
-    zmq.Context.should.be.a.Function;
-    zmq.Socket.should.be.a.Function;
-  });
-
   it('should export methods', function(){
     zmq.socket.should.be.a.Function;
+    zmq.createSocket.should.be.a.Function;
+    zmq.context.should.be.a.Function;
+    zmq.createContext.should.be.a.Function;
   });
 });

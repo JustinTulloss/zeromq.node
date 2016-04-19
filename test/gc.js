@@ -5,7 +5,6 @@ var zmq = require('..')
 it('should cooperate with gc', function(done){
   var a = zmq.socket('dealer')
     , b = zmq.socket('dealer');
-
   /**
    * We create 2 dealer sockets.
    * One of them (`a`) is not referenced explicitly after the main loop

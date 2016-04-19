@@ -49,7 +49,7 @@ describe('socket.zap', function(){
     rep.zap_domain = "test";
     rep.setsockopt('curve_server', 1);
     rep.setsockopt('curve_secretkey', serverPrivateKey);
-    rep.mechanism.should.eql(2);
+    rep.getsockopt('mechanism').should.eql(2);
 
     rep.bind(port, function (error) {
       if (error) throw error;
