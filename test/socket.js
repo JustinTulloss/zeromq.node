@@ -17,21 +17,16 @@ describe('socket', function(){
   });
 
   it('should use socketopt', function(){
-    sock.getsockopt(zmq.ZMQ_BACKLOG).should.not.equal(75);
-    sock.setsockopt(zmq.ZMQ_BACKLOG, 75).should.equal(sock);
-    sock.getsockopt(zmq.ZMQ_BACKLOG).should.equal(75);
-    sock.setsockopt(zmq.ZMQ_BACKLOG, 100);
+    sock.getsockopt('ZMQ_BACKLOG').should.not.equal(75);
+    sock.setsockopt('ZMQ_BACKLOG', 75).should.equal(sock);
+    sock.getsockopt('ZMQ_BACKLOG').should.equal(75);
+    sock.setsockopt('ZMQ_BACKLOG', 100);
   });
 
   it('should use socketopt with sugar', function(){
     sock.getsockopt('backlog').should.not.equal(75);
     sock.setsockopt('backlog', 75).should.equal(sock);
     sock.getsockopt('backlog').should.equal(75);
-
-    sock.backlog.should.be.a.Number;
-    sock.backlog.should.not.equal(50);
-    sock.backlog = 50;
-    sock.backlog.should.equal(50);
   });
 
   it('should close', function(){
@@ -40,7 +35,7 @@ describe('socket', function(){
 
   it('should support options', function(){
     sock = zmq.socket('req', { backlog: 30 });
-    sock.backlog.should.equal(30);
+    sock.getsockopt('backlog').should.equal(30);
     sock.close();
   });
 

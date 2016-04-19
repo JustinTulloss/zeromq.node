@@ -28,7 +28,7 @@ describe('socket.zap', function(){
     }
 
     try {
-      rep.curve_server = 0;
+      rep.setsockopt('curve_server', 0);
     } catch(e) {
       console.log("libsodium seems to be missing (skipping curve test)");
       done();
@@ -47,16 +47,16 @@ describe('socket.zap', function(){
     });
 
     rep.zap_domain = "test";
-    rep.curve_server = 1;
-    rep.curve_secretkey = serverPrivateKey;
+    rep.setsockopt('curve_server', 1);
+    rep.setsockopt('curve_secretkey', serverPrivateKey);
     rep.mechanism.should.eql(2);
 
     rep.bind(port, function (error) {
       if (error) throw error;
-      req.curve_serverkey = serverPublicKey;
-      req.curve_publickey = clientPublicKey;
-      req.curve_secretkey = clientPrivateKey;
-      req.mechanism.should.eql(2);
+      req.setsockopt('curve_serverkey', serverPublicKey);
+      req.setsockopt('curve_publickey', clientPublicKey);
+      req.setsockopt('curve_secretkey', clientPrivateKey);
+      req.getsockopt('mechanism').should.eql(2);
 
       req.connect(port);
       req.send('hello');
@@ -82,12 +82,12 @@ describe('socket.zap', function(){
       rep.send('world');
     });
 
-    rep.zap_domain = "test";
-    rep.mechanism.should.eql(0);
+    rep.setsockopt('zap_domain', 'test');
+    rep.getsockopt('mechanism').should.eql(0);
 
     rep.bind(port, function (error) {
       if (error) throw error;
-      req.mechanism.should.eql(0);
+      req.getsockopt('mechanism').should.eql(0);
       req.connect(port);
       req.send('hello');
       req.on('message', function(msg){
@@ -111,15 +111,15 @@ describe('socket.zap', function(){
       rep.send('world');
     });
 
-    rep.zap_domain = "test";
-    rep.plain_server = 1;
-    rep.mechanism.should.eql(1);
+    rep.setsockopt('zap_domain', 'test');
+    rep.setsockopt('plain_server', 1);
+    rep.getsockopt('mechanism').should.eql(1);
 
     rep.bind(port, function (error) {
       if (error) throw error;
-      req.plain_username = "user";
-      req.plain_password = "pass";
-      req.mechanism.should.eql(1);
+      req.setsockopt('plain_username', 'user');
+      req.setsockopt('plain_password', 'pass');
+      req.getsockopt('mechanism').should.eql(1);
 
       req.connect(port);
       req.send('hello');

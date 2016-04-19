@@ -38,7 +38,7 @@ describe('socket.router', function(){
         if (++complete === 2) done();
       });
 
-      sock.setsockopt(zmq.ZMQ_ROUTER_MANDATORY, 1);
+      sock.setsockopt('ZMQ_ROUTER_MANDATORY', 1);
 
       sock.send([envelope, '']);
     })();
@@ -48,7 +48,7 @@ describe('socket.router', function(){
     (function(){
       var sock = zmq.socket('router');
 
-      sock.setsockopt(zmq.ZMQ_ROUTER_MANDATORY, 1);
+      sock.setsockopt('ZMQ_ROUTER_MANDATORY', 1);
 
       try {
         sock.send([envelope, '']);

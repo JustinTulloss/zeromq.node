@@ -1431,76 +1431,347 @@ namespace zmq {
   }
 #endif
 
+#define OPT(type, name) \
+  opts_ ## type.insert(name); \
+  Nan::Set(options, Nan::New<String>(#name).ToLocalChecked(), Nan::New<Integer>(name));
+
+#define CTX_OPT(name) \
+  Nan::Set(ctxOptions, Nan::New<String>(#name).ToLocalChecked(), Nan::New<Integer>(name));
+
+
   static NAN_MODULE_INIT(Initialize) {
     Nan::HandleScope scope;
 
-    opts_int.insert(14); // ZMQ_FD
-    opts_int.insert(16); // ZMQ_TYPE
-    opts_int.insert(17); // ZMQ_LINGER
-    opts_int.insert(18); // ZMQ_RECONNECT_IVL
-    opts_int.insert(19); // ZMQ_BACKLOG
-    opts_int.insert(21); // ZMQ_RECONNECT_IVL_MAX
-    opts_int.insert(23); // ZMQ_SNDHWM
-    opts_int.insert(24); // ZMQ_RCVHWM
-    opts_int.insert(25); // ZMQ_MULTICAST_HOPS
-    opts_int.insert(27); // ZMQ_RCVTIMEO
-    opts_int.insert(28); // ZMQ_SNDTIMEO
-    opts_int.insert(29); // ZMQ_RCVLABEL
-    opts_int.insert(30); // ZMQ_RCVCMD
-    opts_int.insert(31); // ZMQ_IPV4ONLY
-    opts_int.insert(33); // ZMQ_ROUTER_MANDATORY
-    opts_int.insert(34); // ZMQ_TCP_KEEPALIVE
-    opts_int.insert(35); // ZMQ_TCP_KEEPALIVE_CNT
-    opts_int.insert(36); // ZMQ_TCP_KEEPALIVE_IDLE
-    opts_int.insert(37); // ZMQ_TCP_KEEPALIVE_INTVL
-    opts_int.insert(39); // ZMQ_DELAY_ATTACH_ON_CONNECT
-    opts_int.insert(40); // ZMQ_XPUB_VERBOSE
-    opts_int.insert(41); // ZMQ_ROUTER_RAW
-    opts_int.insert(42); // ZMQ_IPV6
+    // empty objects to hold string -> int values for constants
 
-    opts_int64.insert(3); // ZMQ_SWAP
-    opts_int64.insert(8); // ZMQ_RATE
-    opts_int64.insert(10); // ZMQ_MCAST_LOOP
-    opts_int64.insert(20); // ZMQ_RECOVERY_IVL_MSEC
-    opts_int64.insert(22); // ZMQ_MAXMSGSIZE
+    Local<Object> options = Nan::New<Object>();
+    Local<Object> ctxOptions = Nan::New<Object>();
+    Nan::Set(target, Nan::New("options").ToLocalChecked(), options);
+    Nan::Set(target, Nan::New("ctxOptions").ToLocalChecked(), ctxOptions);
 
-    opts_uint64.insert(1); // ZMQ_HWM
-    opts_uint64.insert(4); // ZMQ_AFFINITY
+    // Context options
 
-    opts_binary.insert(5); // ZMQ_IDENTITY
-    opts_binary.insert(6); // ZMQ_SUBSCRIBE
-    opts_binary.insert(7); // ZMQ_UNSUBSCRIBE
-    opts_binary.insert(32); // ZMQ_LAST_ENDPOINT
-    opts_binary.insert(38); // ZMQ_TCP_ACCEPT_FILTER
+    // Context options since ZMQ 3.2:
+    // http://api.zeromq.org/3-2:zmq-ctx-set
 
-    // transition types
-    #if ZMQ_VERSION_MAJOR >= 3
-    opts_int.insert(15); // ZMQ_EVENTS 3.x int
-    opts_int.insert(8); // ZMQ_RATE 3.x int
-    opts_int.insert(9); // ZMQ_RECOVERY_IVL 3.x int
-    opts_int.insert(13); // ZMQ_RCVMORE 3.x int
-    opts_int.insert(11); // ZMQ_SNDBUF 3.x int
-    opts_int.insert(12); // ZMQ_RCVBUF 3.x int
-    #else
-    opts_uint32.insert(15); // ZMQ_EVENTS 2.x uint32_t
-    opts_int64.insert(8); // ZMQ_RATE 2.x int64_t
-    opts_int64.insert(9); // ZMQ_RECOVERY_IVL 2.x int64_t
-    opts_int64.insert(13); // ZMQ_RCVMORE 2.x int64_t
-    opts_uint64.insert(11); // ZMQ_SNDBUF 2.x uint64_t
-    opts_uint64.insert(12); // ZMQ_RCVBUF 2.x uint64_t
+    #ifdef ZMQ_IO_THREADS
+      CTX_OPT(ZMQ_IO_THREADS);
     #endif
 
-    #if ZMQ_VERSION_MAJOR >= 4
-    opts_int.insert(43); // ZMQ_MECHANISM
-    opts_int.insert(44); // ZMQ_PLAIN_SERVER
-    opts_binary.insert(45); // ZMQ_PLAIN_USERNAME
-    opts_binary.insert(46); // ZMQ_PLAIN_PASSWORD
-    opts_int.insert(47); // ZMQ_CURVE_SERVER
-    opts_binary.insert(48); // ZMQ_CURVE_PUBLICKEY
-    opts_binary.insert(49); // ZMQ_CURVE_SECRETKEY
-    opts_binary.insert(50); // ZMQ_CURVE_SERVERKEY
-    opts_binary.insert(55); // ZMQ_ZAP_DOMAIN
+    #ifdef ZMQ_MAX_SOCKETS
+      CTX_OPT(ZMQ_MAX_SOCKETS);
     #endif
+
+    // Context options since ZMQ 4.0:
+    // http://api.zeromq.org/4-0:zmq-ctx-set
+
+    #ifdef ZMQ_THREAD_SCHED_POLICY
+      CTX_OPT(ZMQ_THREAD_SCHED_POLICY);
+    #endif
+
+    #ifdef ZMQ_THREAD_PRIORITY
+      CTX_OPT(ZMQ_THREAD_PRIORITY);
+    #endif
+
+    #ifdef ZMQ_IPV6
+      CTX_OPT(ZMQ_IPV6);
+    #endif
+
+
+    // Socket options since ZMQ 2.2:
+    // http://api.zeromq.org/2-2:zmq-setsockopt
+    // http://api.zeromq.org/2-2:zmq-getsockopt
+
+    #ifdef ZMQ_TYPE
+      OPT(int, ZMQ_TYPE);
+    #endif
+
+    #ifdef ZMQ_RCVMORE
+      #if ZMQ_VERSION_MAJOR <= 2
+        OPT(int64, ZMQ_RCVMORE);
+      #else
+        OPT(int, ZMQ_RCVMORE);
+      #endif
+    #endif
+
+    #ifdef ZMQ_HWM
+      OPT(uint64, ZMQ_HWM);
+    #endif
+
+    #ifdef ZMQ_SWAP
+      OPT(int64, ZMQ_SWAP);
+    #endif
+
+    #ifdef ZMQ_AFFINITY
+      OPT(uint64, ZMQ_AFFINITY);
+    #endif
+
+    #ifdef ZMQ_IDENTITY
+      OPT(binary, ZMQ_IDENTITY);
+    #endif
+
+    #ifdef ZMQ_SUBSCRIBE
+      OPT(binary, ZMQ_SUBSCRIBE);
+    #endif
+
+    #ifdef ZMQ_UNSUBSCRIBE
+      OPT(binary, ZMQ_UNSUBSCRIBE);
+    #endif
+
+    #ifdef ZMQ_RCVTIMEO
+      OPT(int, ZMQ_RCVTIMEO);
+    #endif
+
+    #ifdef ZMQ_SNDTIMEO
+      OPT(int, ZMQ_SNDTIMEO);
+    #endif
+
+    #ifdef ZMQ_RATE
+      #if ZMQ_VERSION_MAJOR <= 2
+        OPT(int64, ZMQ_RATE);
+      #else
+        OPT(int, ZMQ_RATE);
+      #endif
+    #endif
+
+    #ifdef ZMQ_RECOVERY_IVL
+      #if ZMQ_VERSION_MAJOR <= 2
+        OPT(int64, ZMQ_RECOVERY_IVL);
+      #else
+        OPT(int, ZMQ_RECOVERY_IVL);
+      #endif
+    #endif
+
+    #ifdef ZMQ_RECOVERY_IVL_MSEC
+      OPT(int64, ZMQ_RECOVERY_IVL_MSEC);
+    #endif
+
+    #ifdef ZMQ_MCAST_LOOP
+      OPT(int64, ZMQ_MCAST_LOOP);
+    #endif
+
+    #ifdef ZMQ_SNDBUF
+      #if ZMQ_VERSION_MAJOR <= 2
+        OPT(uint64, ZMQ_SNDBUF);
+      #else
+        OPT(int, ZMQ_SNDBUF);
+      #endif
+    #endif
+
+    #ifdef ZMQ_RCVBUF
+      #if ZMQ_VERSION_MAJOR <= 2
+        OPT(uint64, ZMQ_RCVBUF);
+      #else
+        OPT(int, ZMQ_RCVBUF);
+      #endif
+    #endif
+
+    #ifdef ZMQ_LINGER
+      OPT(int, ZMQ_LINGER);
+    #endif
+
+    #ifdef ZMQ_RECONNECT_IVL
+      OPT(int, ZMQ_RECONNECT_IVL);
+    #endif
+
+    #ifdef ZMQ_RECONNECT_IVL_MAX
+      OPT(int, ZMQ_RECONNECT_IVL_MAX);
+    #endif
+
+    #ifdef ZMQ_BACKLOG
+      OPT(int, ZMQ_BACKLOG);
+    #endif
+
+    #ifdef ZMQ_FD
+      OPT(int, ZMQ_FD);
+    #endif
+
+    #ifdef ZMQ_EVENTS
+      #if ZMQ_VERSION_MAJOR <= 2
+        OPT(int, ZMQ_EVENTS);
+      #else
+        OPT(uint32, ZMQ_EVENTS);
+      #endif
+    #endif
+
+    // Socket options since ZMQ 3.0:
+    // http://api.zeromq.org/3-0:zmq-setsockopt
+    // http://api.zeromq.org/3-0:zmq-getsockopt
+
+    #ifdef ZMQ_RCVLABEL
+      OPT(int, ZMQ_RCVLABEL);
+    #endif
+
+    // Socket options since ZMQ 3.2:
+    // http://api.zeromq.org/3-2:zmq-setsockopt
+    // http://api.zeromq.org/3-2:zmq-getsockopt
+
+    #ifdef ZMQ_SNDHWM
+      OPT(int, ZMQ_SNDHWM);
+    #endif
+
+    #ifdef ZMQ_RCVHWM
+      OPT(int, ZMQ_RCVHWM);
+    #endif
+
+    #ifdef ZMQ_MAXMSGSIZE
+      OPT(int64, ZMQ_MAXMSGSIZE);
+    #endif
+
+    #ifdef ZMQ_MULTICAST_HOPS
+      OPT(int, ZMQ_MULTICAST_HOPS);
+    #endif
+
+    #ifdef ZMQ_IPV4ONLY
+      OPT(int, ZMQ_IPV4ONLY);
+    #endif
+
+    #ifdef ZMQ_DELAY_ATTACH_ON_CONNECT
+      OPT(int, ZMQ_DELAY_ATTACH_ON_CONNECT);
+    #endif
+
+    #ifdef ZMQ_LAST_ENDPOINT
+      OPT(binary, ZMQ_LAST_ENDPOINT);
+    #endif
+
+    #ifdef ZMQ_ROUTER_MANDATORY
+      OPT(int, ZMQ_ROUTER_MANDATORY);
+    #endif
+
+    #ifdef ZMQ_XPUB_VERBOSE
+      OPT(int, ZMQ_XPUB_VERBOSE);
+    #endif
+
+    #ifdef ZMQ_TCP_KEEPALIVE
+      OPT(int, ZMQ_TCP_KEEPALIVE);
+    #endif
+
+    #ifdef ZMQ_TCP_KEEPALIVE_IDLE
+      OPT(int, ZMQ_TCP_KEEPALIVE_IDLE);
+    #endif
+
+    #ifdef ZMQ_TCP_KEEPALIVE_CNT
+      OPT(int, ZMQ_TCP_KEEPALIVE_CNT);
+    #endif
+
+    #ifdef ZMQ_TCP_KEEPALIVE_INTVL
+      OPT(int, ZMQ_TCP_KEEPALIVE_INTVL);
+    #endif
+
+    #ifdef ZMQ_TCP_ACCEPT_FILTER
+      OPT(binary, ZMQ_TCP_ACCEPT_FILTER);
+    #endif
+
+    // Socket options since ZMQ 4.0:
+    // http://api.zeromq.org/4-0:zmq-setsockopt
+    // http://api.zeromq.org/4-0:zmq-getsockopt
+
+    #ifdef ZMQ_IPV6
+      OPT(int, ZMQ_IPV6);
+    #endif
+
+    #ifdef ZMQ_IMMEDIATE
+      OPT(int, ZMQ_IMMEDIATE);
+    #endif
+
+    #ifdef ZMQ_MECHANISM
+      OPT(int, ZMQ_MECHANISM);
+    #endif
+
+    #ifdef ZMQ_ROUTER_RAW
+      OPT(int, ZMQ_ROUTER_RAW);
+    #endif
+
+    #ifdef ZMQ_PROBE_ROUTER
+      OPT(int, ZMQ_PROBE_ROUTER);
+    #endif
+
+    #ifdef ZMQ_REQ_CORRELATE
+      OPT(int, ZMQ_REQ_CORRELATE);
+    #endif
+
+    #ifdef ZMQ_REQ_RELAXED
+      OPT(int, ZMQ_REQ_RELAXED);
+    #endif
+
+    #ifdef ZMQ_PLAIN_SERVER
+      OPT(int, ZMQ_PLAIN_SERVER);
+    #endif
+
+    #ifdef ZMQ_PLAIN_USERNAME
+      OPT(binary, ZMQ_PLAIN_USERNAME);
+    #endif
+
+    #ifdef ZMQ_PLAIN_PASSWORD
+      OPT(binary, ZMQ_PLAIN_PASSWORD);
+    #endif
+
+    #ifdef ZMQ_CURVE_SERVER
+      OPT(int, ZMQ_CURVE_SERVER);
+    #endif
+
+    #ifdef ZMQ_CURVE_PUBLICKEY
+      OPT(binary, ZMQ_CURVE_PUBLICKEY);
+    #endif
+
+    #ifdef ZMQ_CURVE_SECRETKEY
+      OPT(binary, ZMQ_CURVE_SECRETKEY);
+    #endif
+
+    #ifdef ZMQ_CURVE_SERVERKEY
+      OPT(binary, ZMQ_CURVE_SERVERKEY);
+    #endif
+
+    #ifdef ZMQ_ZAP_DOMAIN
+      OPT(binary, ZMQ_ZAP_DOMAIN);
+    #endif
+
+    #ifdef ZMQ_CONFLATE
+      OPT(int, ZMQ_CONFLATE);
+    #endif
+
+    // Socket options since ZMQ 4.1:
+    // http://api.zeromq.org/4-1:zmq-setsockopt
+    // http://api.zeromq.org/4-1:zmq-getsockopt
+
+    #ifdef ZMQ_CONNECT_RID
+      OPT(binary, ZMQ_CONNECT_RID);
+    #endif
+
+    #ifdef ZMQ_GSSAPI_PLAINTEXT
+      OPT(int, ZMQ_GSSAPI_PLAINTEXT);
+    #endif
+
+    #ifdef ZMQ_GSSAPI_PRINCIPAL
+      OPT(binary, ZMQ_GSSAPI_PRINCIPAL);
+    #endif
+
+    #ifdef ZMQ_GSSAPI_SERVER
+      OPT(int, ZMQ_GSSAPI_SERVER);
+    #endif
+
+    #ifdef ZMQ_GSSAPI_SERVICE_PRINCIPAL
+      OPT(binary, ZMQ_GSSAPI_SERVICE_PRINCIPAL);
+    #endif
+
+    #ifdef ZMQ_HANDSHAKE_IVL
+      OPT(int, ZMQ_HANDSHAKE_IVL);
+    #endif
+
+    #ifdef ZMQ_ROUTER_HANDOVER
+      OPT(int, ZMQ_ROUTER_HANDOVER);
+    #endif
+
+    #ifdef ZMQ_TOS
+      OPT(int, ZMQ_TOS);
+    #endif
+
+    // TODO: ZMQ_IPC_FILTER_GID
+    // TODO: ZMQ_IPC_FILTER_PID
+    // TODO: ZMQ_IPC_FILTER_UID
+
+
+    // Other constants
 
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_UNBIND);
