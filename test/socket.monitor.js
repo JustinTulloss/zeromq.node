@@ -58,7 +58,7 @@ describe('socket.monitor', function() {
 
   it('should use default interval and numOfEvents', function(done) {
     var req = zmq.socket('req');
-    req.setsockopt('ZMQ_RECONNECT_IVL', 5); // We want a quick connect retry from zmq
+    req.set('ZMQ_RECONNECT_IVL', 5); // We want a quick connect retry from zmq
 
     // We will try to connect to a non-existing server, zmq will issue events: "connect_retry", "close", "connect_retry"
     // The connect_retry will be issued immediately after the close event, so we will measure the time between the close
@@ -84,7 +84,7 @@ describe('socket.monitor', function() {
 
   it('should read multiple events on monitor interval', function(done) {
     var req = zmq.socket('req');
-    req.setsockopt('ZMQ_RECONNECT_IVL', 5);
+    req.set('ZMQ_RECONNECT_IVL', 5);
     var closeTime;
     req.on('close', function() {
       closeTime = Date.now();

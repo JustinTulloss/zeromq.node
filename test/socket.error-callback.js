@@ -14,7 +14,7 @@ describe('socket.error-callback', function(){
 
   it('should create a socket and set ZMQ_ROUTER_MANDATORY', function () {
     sock = zmq.socket('router');
-    sock.setsockopt('ZMQ_ROUTER_MANDATORY', 1);
+    sock.set('ZMQ_ROUTER_MANDATORY', 1);
   });
 
   it('should callback with error when not connected', function (done) {

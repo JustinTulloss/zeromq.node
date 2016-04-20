@@ -11,7 +11,7 @@ describe('exports', function(){
   it('should generate valid curve keypair', function(done) {
     try {
       var rep = zmq.socket('rep');
-      rep.setsockopt('curve_server', 0);
+      rep.set('curve_server', 0);
     } catch(e) {
       console.log("libsodium seems to be missing (skipping curve test)");
       done();

@@ -28,7 +28,7 @@ describe('socket.zap', function(){
     }
 
     try {
-      rep.setsockopt('curve_server', 0);
+      rep.set('curve_server', 0);
     } catch(e) {
       console.log("libsodium seems to be missing (skipping curve test)");
       done();
@@ -47,16 +47,16 @@ describe('socket.zap', function(){
     });
 
     rep.zap_domain = "test";
-    rep.setsockopt('curve_server', 1);
-    rep.setsockopt('curve_secretkey', serverPrivateKey);
-    rep.getsockopt('mechanism').should.eql(2);
+    rep.set('curve_server', 1);
+    rep.set('curve_secretkey', serverPrivateKey);
+    rep.get('mechanism').should.eql(2);
 
     rep.bind(port, function (error) {
       if (error) throw error;
-      req.setsockopt('curve_serverkey', serverPublicKey);
-      req.setsockopt('curve_publickey', clientPublicKey);
-      req.setsockopt('curve_secretkey', clientPrivateKey);
-      req.getsockopt('mechanism').should.eql(2);
+      req.set('curve_serverkey', serverPublicKey);
+      req.set('curve_publickey', clientPublicKey);
+      req.set('curve_secretkey', clientPrivateKey);
+      req.get('mechanism').should.eql(2);
 
       req.connect(port);
       req.send('hello');
@@ -82,12 +82,12 @@ describe('socket.zap', function(){
       rep.send('world');
     });
 
-    rep.setsockopt('zap_domain', 'test');
-    rep.getsockopt('mechanism').should.eql(0);
+    rep.set('zap_domain', 'test');
+    rep.get('mechanism').should.eql(0);
 
     rep.bind(port, function (error) {
       if (error) throw error;
-      req.getsockopt('mechanism').should.eql(0);
+      req.get('mechanism').should.eql(0);
       req.connect(port);
       req.send('hello');
       req.on('message', function(msg){
@@ -111,15 +111,15 @@ describe('socket.zap', function(){
       rep.send('world');
     });
 
-    rep.setsockopt('zap_domain', 'test');
-    rep.setsockopt('plain_server', 1);
-    rep.getsockopt('mechanism').should.eql(1);
+    rep.set('zap_domain', 'test');
+    rep.set('plain_server', 1);
+    rep.get('mechanism').should.eql(1);
 
     rep.bind(port, function (error) {
       if (error) throw error;
-      req.setsockopt('plain_username', 'user');
-      req.setsockopt('plain_password', 'pass');
-      req.getsockopt('mechanism').should.eql(1);
+      req.set('plain_username', 'user');
+      req.set('plain_password', 'pass');
+      req.get('mechanism').should.eql(1);
 
       req.connect(port);
       req.send('hello');
