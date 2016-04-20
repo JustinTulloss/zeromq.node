@@ -2,8 +2,8 @@ var zmq = require('..')
   , should = require('should')
   , semver = require('semver');
 
-describe('socket.router', function(){
-  it('should handle the unroutable', function(done){
+describe('socket.router', function () {
+  it('should handle the unroutable', function (done) {
     var complete = 0;
 
     if (!semver.gte(zmq.version, '3.2.0')) {
@@ -30,7 +30,7 @@ describe('socket.router', function(){
 
     // should emit an error event on unroutable msgs if mandatory = 1 and error handler is set
 
-    (function(){
+    (function () {
       var sock = zmq.socket('router');
       sock.on('error', function (err) {
         sock.close();
@@ -45,7 +45,7 @@ describe('socket.router', function(){
 
     // should throw an error on unroutable msgs if mandatory = 1 and no error handler is set
 
-    (function(){
+    (function () {
       var sock = zmq.socket('router');
 
       sock.set('ZMQ_ROUTER_MANDATORY', 1);
@@ -73,10 +73,10 @@ describe('socket.router', function(){
 
     // should silently ignore unroutable msgs if mandatory = 0
 
-    (function(){
+    (function () {
       var sock = zmq.socket('router');
 
-      (function(){
+      (function () {
         sock.send([envelope, '']);
         sock.close();
       }).should.not.throw;

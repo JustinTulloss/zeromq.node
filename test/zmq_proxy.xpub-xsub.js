@@ -9,7 +9,7 @@ var addr = 'tcp://127.0.0.1'
 
 var version = semver.gte(zmq.version, '3.1.0');
 
-describe('proxy.xpub-xsub', function() {
+describe('proxy.xpub-xsub', function () {
 
   it('should proxy pub-sub connected to xpub-xsub', function (done) {
     if (!version) {
@@ -24,7 +24,7 @@ describe('proxy.xpub-xsub', function() {
     var pub = zmq.socket('pub');
 
     sub.subscribe('');
-    sub.on('message',function (msg) {
+    sub.on('message', function (msg) {
 
       frontend.close();
       backend.close();
@@ -45,7 +45,7 @@ describe('proxy.xpub-xsub', function() {
         sub.connect(frontendAddr);
         pub.connect(backendAddr);
 
-        setTimeout(function() {
+        setTimeout(function () {
           pub.send('foo');
         }, 200.0);
 
@@ -83,12 +83,12 @@ describe('proxy.xpub-xsub', function() {
     });
 
     capSub.subscribe('');
-    capSub.on('message',function (msg) {
+    capSub.on('message', function (msg) {
 
       capture.close();
       capSub.close();
 
-      setTimeout(function(){
+      setTimeout(function () {
         msg.should.be.an.instanceof(Buffer);
         msg.toString().should.equal('foo');
         done();
@@ -138,7 +138,7 @@ describe('proxy.xpub-xsub', function() {
 
       zmq.proxy(backend,frontend);
 
-    } catch(e){
+    } catch(e) {
 
       e.message.should.equal('wrong socket order to proxy');
 
@@ -149,7 +149,7 @@ describe('proxy.xpub-xsub', function() {
       sub.close();
 
       //allow time for TCP sockets to close
-      setTimeout(function(){
+      setTimeout(function () {
         done();
       },200)
     }

@@ -7,9 +7,9 @@ var addr = 'tcp://127.0.0.1'
   , backendAddr = addr+':5502'
   , captureAddr = addr+':5503';
 
-describe('proxy.push-pull', function() {
+describe('proxy.push-pull', function () {
 
-  it('should proxy push-pull connected to pull-push',function (done) {
+  it('should proxy push-pull connected to pull-push', function (done) {
 
     var frontend = zmq.socket('pull');
     var backend = zmq.socket('push');
@@ -23,7 +23,7 @@ describe('proxy.push-pull', function() {
     push.connect(frontendAddr);
     pull.connect(backendAddr);
 
-    pull.on('message',function (msg) {
+    pull.on('message', function (msg) {
 
       frontend.close();
       backend.close();
@@ -35,7 +35,7 @@ describe('proxy.push-pull', function() {
       done();
     });
 
-    setTimeout(function() {
+    setTimeout(function () {
       push.send('foo');
     }, 100.0);
 
@@ -43,7 +43,7 @@ describe('proxy.push-pull', function() {
 
   });
 
-  it('should proxy pull-push connected to push-pull with capture',function (done) {
+  it('should proxy pull-push connected to push-pull with capture', function (done) {
 
     var frontend = zmq.socket('push');
     var backend = zmq.socket('pull');
@@ -62,17 +62,17 @@ describe('proxy.push-pull', function() {
     push.connect(backendAddr);
     capSub.connect(captureAddr);
 
-    pull.on('message',function (msg) {
+    pull.on('message', function (msg) {
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('foo');
     });
 
     capSub.subscribe('');
-    capSub.on('message',function (msg) {
+    capSub.on('message', function (msg) {
       capture.close();
       capSub.close();
 
-      setTimeout(function() {
+      setTimeout(function () {
         frontend.close();
         backend.close();
         push.close();
@@ -84,7 +84,7 @@ describe('proxy.push-pull', function() {
       },100.0);
     });
 
-    setTimeout(function() {
+    setTimeout(function () {
       push.send('foo');
     }, 100.0);
 

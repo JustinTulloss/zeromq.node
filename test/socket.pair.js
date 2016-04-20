@@ -1,9 +1,9 @@
 var zmq = require('..')
   , should = require('should');
 
-describe('socket.pair', function(){
+describe('socket.pair', function () {
 
-  it('should support pair-pair', function (done){
+  it('should support pair-pair', function (done) {
     var pairB = zmq.socket('pair')
       , pairC = zmq.socket('pair');
 

@@ -1279,11 +1279,6 @@ namespace zmq {
     Local<Object> options = Nan::New<Object>();
     Local<Object> ctxOptions = Nan::New<Object>();
 
-    Nan::Set(target, Nan::New("sendFlags").ToLocalChecked(), sendFlags);
-    Nan::Set(target, Nan::New("types").ToLocalChecked(), types);
-    Nan::Set(target, Nan::New("options").ToLocalChecked(), options);
-    Nan::Set(target, Nan::New("ctxOptions").ToLocalChecked(), ctxOptions);
-
     // Helper macros for storing and exposing constants
 
     #define OPT(type, name) \
@@ -1720,7 +1715,12 @@ namespace zmq {
     #undef SENDFLAG
     #undef TYPE
 
-    // Expose methods
+    // Expose properties and methods
+
+    Nan::Set(target, Nan::New("sendFlags").ToLocalChecked(), sendFlags);
+    Nan::Set(target, Nan::New("types").ToLocalChecked(), types);
+    Nan::Set(target, Nan::New("options").ToLocalChecked(), options);
+    Nan::Set(target, Nan::New("ctxOptions").ToLocalChecked(), ctxOptions);
 
     Nan::SetMethod(target, "zmqVersion", ZmqVersion);
     #if ZMQ_VERSION_MAJOR >= 4

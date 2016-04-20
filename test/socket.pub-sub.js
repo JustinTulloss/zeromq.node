@@ -2,19 +2,19 @@ var zmq = require('..')
   , should = require('should')
   , semver = require('semver');
 
-describe('socket.pub-sub', function(){
+describe('socket.pub-sub', function () {
   var pub, sub;
 
-  beforeEach(function() {
+  beforeEach(function () {
     pub = zmq.socket('pub');
     sub = zmq.socket('sub');
   });
 
-  it('should support pub-sub', function(done){
+  it('should support pub-sub', function (done) {
     var n = 0;
 
     sub.subscribe('');
-    sub.on('message', function(msg){
+    sub.on('message', function (msg) {
       msg.should.be.an.instanceof(Buffer);
       switch (n++) {
         case 0:
@@ -47,7 +47,7 @@ describe('socket.pub-sub', function(){
       // established before we start the send.  This fixes the observed
       // hang.
 
-      setTimeout(function() {
+      setTimeout(function () {
         pub.send('foo');
         pub.send('bar');
         pub.send('baz');
@@ -55,13 +55,13 @@ describe('socket.pub-sub', function(){
     });
   });
 
-  it('should support pub-sub filter', function(done){
+  it('should support pub-sub filter', function (done) {
     var n = 0;
 
     sub.subscribe('js');
     sub.subscribe('luna');
 
-    sub.on('message', function(msg){
+    sub.on('message', function (msg) {
       msg.should.be.an.instanceof(Buffer);
       switch (n++) {
         case 0:
@@ -82,7 +82,7 @@ describe('socket.pub-sub', function(){
 
       // See comments on pub-sub test.
 
-      setTimeout(function() {
+      setTimeout(function () {
         pub.send('js is cool');
         pub.send('ruby is meh');
         pub.send('py is pretty cool');

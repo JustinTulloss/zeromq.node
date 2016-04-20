@@ -3,12 +3,12 @@ var zmq = require('..')
   , should = require('should')
   , semver = require('semver');
 
-describe('exports', function(){
-  it('should export a valid version', function(){
+describe('exports', function () {
+  it('should export a valid version', function () {
     semver.valid(zmq.version).should.be.ok;
   });
 
-  it('should generate valid curve keypair', function(done) {
+  it('should generate valid curve keypair', function (done) {
     try {
       var rep = zmq.socket('rep');
       rep.set('curve_server', 0);
@@ -27,7 +27,7 @@ describe('exports', function(){
     done();
   });
 
-  it('should export methods', function(){
+  it('should export methods', function () {
     zmq.socket.should.be.a.Function;
     zmq.createSocket.should.be.a.Function;
     zmq.context.should.be.a.Function;

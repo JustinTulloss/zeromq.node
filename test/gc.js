@@ -1,8 +1,7 @@
+var zmq = require('..');
+var should = require('should');
 
-var zmq = require('..')
-  , should = require('should');
-
-it('should cooperate with gc', function(done){
+it('should cooperate with gc', function (done) {
   var a = zmq.socket('dealer');
   var b = zmq.socket('dealer');
 

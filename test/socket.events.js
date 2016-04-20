@@ -1,13 +1,13 @@
 var zmq = require('..')
   , should = require('should');
 
-describe('socket.events', function(){
+describe('socket.events', function () {
 
-  it('should support events', function(done){
-    var rep = zmq.socket('rep')
-      , req = zmq.socket('req');
+  it('should support events', function (done) {
+    var rep = zmq.socket('rep');
+    var req = zmq.socket('req');
 
-    rep.on('message', function(msg){
+    rep.on('message', function (msg) {
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('hello');
       rep.send('world');
@@ -17,9 +17,9 @@ describe('socket.events', function(){
       if (error) throw error;
     });
 
-    rep.on('bind', function(){
+    rep.on('bind', function () {
       req.connect('inproc://stuffevents');
-      req.on('message', function(msg){
+      req.on('message', function (msg) {
         msg.should.be.an.instanceof(Buffer);
         msg.toString().should.equal('world');
         req.close();

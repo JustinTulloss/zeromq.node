@@ -1,13 +1,13 @@
-var zmq = require('..')
-  , should = require('should')
-  , semver = require('semver')
+var zmq = require('..');
+var should = require('should');
+var semver = require('semver');
 
-describe('context', function() {
+describe('context', function () {
   if (!semver.gte(zmq.version, '3.2.0')) {
     return console.warn('Test requires libzmq >= 3.2.0');
   }
 
-  it('should support setting max io threads', function(done) {
+  it('should support setting max io threads', function (done) {
     var ctx = zmq.getDefaultContext();
 
     ctx.set('ZMQ_IO_THREADS', 3);
@@ -16,7 +16,7 @@ describe('context', function() {
     done();
   });
 
-  it('should support setting max number of sockets', function(done) {
+  it('should support setting max number of sockets', function (done) {
     var ctx = zmq.getDefaultContext();
 
     var currMaxSockets = ctx.get('ZMQ_MAX_SOCKETS');
