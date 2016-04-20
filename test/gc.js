@@ -3,8 +3,9 @@ var zmq = require('..')
   , should = require('should');
 
 it('should cooperate with gc', function(done){
-  var a = zmq.socket('dealer')
-    , b = zmq.socket('dealer');
+  var a = zmq.socket('dealer');
+  var b = zmq.socket('dealer');
+
   /**
    * We create 2 dealer sockets.
    * One of them (`a`) is not referenced explicitly after the main loop
@@ -14,7 +15,7 @@ it('should cooperate with gc', function(done){
    * If a message is delivered, than everything is ok. Otherwise the guard
    * timeout will make the test fail.
    */
-  a.on('message', function(msg){
+  a.on('message', function (msg) {
     msg.should.be.an.instanceof(Buffer);
     msg.toString().should.equal('hello');
     this.close();
@@ -25,7 +26,7 @@ it('should cooperate with gc', function(done){
 
   var bound = false;
 
-  a.bind('tcp://127.0.0.1:5555', function(e){
+  a.bind('tcp://127.0.0.1:5555', function (e) {
     if (e) {
       clearInterval(interval);
       done(e);
@@ -34,7 +35,7 @@ it('should cooperate with gc', function(done){
     }
   });
 
-  var interval = setInterval(function(){
+  var interval = setInterval(function () {
     gc();
     if (bound) {
       clearInterval(interval);
@@ -44,7 +45,7 @@ it('should cooperate with gc', function(done){
   }, 100);
 
   // guard against hanging
-  var timeout = setTimeout(function(){
+  var timeout = setTimeout(function () {
     clearInterval(interval);
     done(new Error('timeout of 5000ms exceeded (bound: ' + bound + ')'));
   }, 15000);
