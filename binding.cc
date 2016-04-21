@@ -55,10 +55,10 @@
   };
 #endif
 
-#define ZMQ_CAN_DISCONNECT (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
-#define ZMQ_CAN_UNBIND (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
+#define ZMQ_CAN_DISCONNECT (ZMQ_VERSION >= 30200)
+#define ZMQ_CAN_UNBIND (ZMQ_VERSION >= 30200)
 #define ZMQ_CAN_MONITOR (ZMQ_VERSION > 30201)
-#define ZMQ_CAN_SET_CTX (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
+#define ZMQ_CAN_SET_CTX (ZMQ_VERSION >= 30200)
 
 using namespace v8;
 using namespace node;
@@ -90,8 +90,6 @@ namespace zmq {
   ExceptionFromError() {
     return Nan::Error(ErrorMessage());
   }
-
-  class Socket;
 
   /*
    * Manages a reference to a zmq_msg_t instance
@@ -394,8 +392,6 @@ namespace zmq {
     Local<FunctionTemplate> t = Nan::New<FunctionTemplate>(New);
     t->InstanceTemplate()->SetInternalFieldCount(1);
     Nan::SetAccessor(t->InstanceTemplate(),
-      Nan::New("state").ToLocalChecked(), Socket::GetState);
-    Nan::SetAccessor(t->InstanceTemplate(),
       Nan::New("pending").ToLocalChecked(), GetPending, SetPending);
 
     Nan::SetPrototypeMethod(t, "bind", Bind);
@@ -581,7 +577,7 @@ namespace zmq {
 #else
         // monitoring on zmq < 4 used zmq_event_t
         zmq_event_t event;
-        memcpy (&event, zmq_msg_data (&msg1), sizeof (zmq_event_t));
+        memcpy(&event, zmq_msg_data (&msg1), sizeof (zmq_event_t));
         event_id = event.event;
 
         // Bit of a hack, but all events in the zmq_event_t union have the same layout so this will work for all event types.
@@ -636,7 +632,7 @@ namespace zmq {
     }
 
 #if ZMQ_CAN_MONITOR
-      this->monitor_socket_ = NULL;
+    this->monitor_socket_ = NULL;
 #endif
 
     uv_poll_init_socket(uv_default_loop(), poll_handle_, socket);
@@ -655,9 +651,9 @@ namespace zmq {
   #define GET_SOCKET(info)                                      \
       Socket* socket = GetSocket(info);                         \
       if (socket->state_ == STATE_CLOSED)                       \
-          return Nan::ThrowTypeError("Socket is closed");       \
+        return Nan::ThrowTypeError("Socket is closed");         \
       if (socket->state_ == STATE_BUSY)                         \
-          return Nan::ThrowTypeError("Socket is busy");
+        return Nan::ThrowTypeError("Socket is busy");
 
   NAN_GETTER(Socket::GetState) {
     Socket* socket = Nan::ObjectWrap::Unwrap<Socket>(info.Holder());
@@ -1242,11 +1238,8 @@ namespace zmq {
    */
 
   static NAN_METHOD(ZmqVersion) {
-    int major, minor, patch;
-    zmq_version(&major, &minor, &patch);
-
     char version_info[16];
-    snprintf(version_info, 16, "%d.%d.%d", major, minor, patch);
+    snprintf(version_info, 16, "%d.%d.%d", ZMQ_VERSION_MAJOR, ZMQ_VERSION_MINOR, ZMQ_VERSION_PATCH);
 
     info.GetReturnValue().Set(Nan::New<String>(version_info).ToLocalChecked());
   }
@@ -1723,9 +1716,9 @@ namespace zmq {
     Nan::Set(target, Nan::New("ctxOptions").ToLocalChecked(), ctxOptions);
 
     Nan::SetMethod(target, "zmqVersion", ZmqVersion);
-    #if ZMQ_VERSION_MAJOR >= 4
+#if ZMQ_VERSION_MAJOR >= 4
     Nan::SetMethod(target, "zmqCurveKeypair", ZmqCurveKeypair);
-    #endif
+#endif
 
     Context::Initialize(target);
     Socket::Initialize(target);
