@@ -57,6 +57,29 @@ var zmq = require('zmq');
 console.log('Using libzmq version:', zmq.version);
 ```
 
+### Feature support
+
+To see if a socket type is supported by this version of ZeroMQ:
+
+```js
+var type = 'sub';
+var isSupported = zmq.socketTypeExists(type); // returns a boolean
+```
+
+To see if a socket option is supported by this version of ZeroMQ:
+
+```js
+var option = 'ZMQ_ROUTER_MANDATORY';
+var isSupported = zmq.socketOptionExists(option); // returns a boolean
+```
+
+To see if a context option is supported by this version of ZeroMQ:
+
+```js
+var option = 'ZMQ_IO_THREADS';
+var isSupported = zmq.contextOptionExists(option); // returns a boolean
+```
+
 ### Contexts
 
 **Creating a context**
