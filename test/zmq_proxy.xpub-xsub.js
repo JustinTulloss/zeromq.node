@@ -25,7 +25,6 @@ describe('proxy.xpub-xsub', function () {
 
     sub.subscribe('');
     sub.on('message', function (msg) {
-
       frontend.close();
       backend.close();
       sub.close();
@@ -47,10 +46,9 @@ describe('proxy.xpub-xsub', function () {
 
         setTimeout(function () {
           pub.send('foo');
-        }, 200.0);
+        }, 200);
 
         zmq.proxy(frontend, backend);
-
       });
     });
   });
@@ -72,7 +70,6 @@ describe('proxy.xpub-xsub', function () {
 
     sub.subscribe('');
     sub.on('message', function (msg) {
-
       sub.close();
       pub.close();
       backend.close();
@@ -84,7 +81,6 @@ describe('proxy.xpub-xsub', function () {
 
     capSub.subscribe('');
     capSub.on('message', function (msg) {
-
       capture.close();
       capSub.close();
 
@@ -92,7 +88,7 @@ describe('proxy.xpub-xsub', function () {
         msg.should.be.an.instanceof(Buffer);
         msg.toString().should.equal('foo');
         done();
-      },100.0);
+      }, 100);
     });
 
     capture.bind(captureAddr, function (error) {
@@ -108,7 +104,7 @@ describe('proxy.xpub-xsub', function () {
 
           setTimeout(function () {
             pub.send('foo');
-          }, 200.0);
+          }, 200);
 
           zmq.proxy(frontend,backend,capture);
         });
@@ -134,15 +130,11 @@ describe('proxy.xpub-xsub', function () {
     sub.connect(frontendAddr);
     pub.connect(backendAddr);
 
-    try{
-
+    try {
       zmq.proxy(backend,frontend);
-
-    } catch(e) {
-
-      e.message.should.equal('wrong socket order to proxy');
-
-    } finally{
+    } catch (e) {
+      e.message.should.equal('Wrong socket order to proxy');
+    } finally {
       frontend.close();
       backend.close();
       pub.close();
@@ -151,7 +143,7 @@ describe('proxy.xpub-xsub', function () {
       //allow time for TCP sockets to close
       setTimeout(function () {
         done();
-      },200)
+      }, 200);
     }
   })
 });

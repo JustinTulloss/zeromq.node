@@ -323,8 +323,8 @@ socket.on('disconnect', function (fd, ep) { console.log('disconnect, endpoint:',
 
 // Handle monitor errors
 socket.on('monitor_error', function(err) {
-	console.log('Error in monitoring: %s, will restart monitoring in 5 seconds', err);
-	setTimeout(function() { socket.monitor(500, 0); }, 5000);
+  console.log('Error in monitoring: %s, will restart monitoring in 5 seconds', err);
+  setTimeout(function () { socket.monitor(500, 0); }, 5000);
 });
 
 // Call monitor, check for events every 500ms and get all available events.
@@ -333,7 +333,7 @@ socket.monitor(500, 0);
 socket.connect('tcp://127.0.0.1:1234');
 
 setTimeout(function() {
-	socket.unmonitor();
+  socket.unmonitor();
 }, 20000);
 ```
 

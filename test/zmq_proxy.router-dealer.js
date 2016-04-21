@@ -1,11 +1,11 @@
-var zmq = require('..')
-  , should = require('should')
-  , semver = require('semver');
+var zmq = require('..');
+var should = require('should');
+var semver = require('semver');
 
-var addr = 'tcp://127.0.0.1'
-  , frontendAddr = addr+':5504'
-  , backendAddr = addr+':5505'
-  , captureAddr = addr+':5506';
+var addr = 'tcp://127.0.0.1';
+var frontendAddr = addr + ':5504';
+var backendAddr = addr + ':5505';
+var captureAddr = addr + ':5506';
 
 describe('proxy.router-dealer', function () {
 
@@ -34,12 +34,12 @@ describe('proxy.router-dealer', function () {
     });
 
     rep.on('message', function (msg) {
-      rep.send(msg+' bar');
+      rep.send(msg + ' bar');
     });
 
     setTimeout(function () {
       req.send('foo');
-    }, 100.0);
+    }, 100);
 
     zmq.proxy(frontend,backend);
 
@@ -83,12 +83,12 @@ describe('proxy.router-dealer', function () {
         msg.should.be.an.instanceof(Buffer);
         msg.toString().should.equal('foo bar');
         done();
-      },100.0)
+      }, 100);
     });
 
     setTimeout(function () {
       req.send('foo');
-    },200.0)
+    }, 200);
 
     zmq.proxy(frontend,backend,capture);
 
