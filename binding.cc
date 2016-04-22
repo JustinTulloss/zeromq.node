@@ -1701,13 +1701,6 @@ namespace zmq {
     // TODO: ZMQ_IPC_FILTER_PID
     // TODO: ZMQ_IPC_FILTER_UID
 
-    // Undefine helpers
-
-    #undef OPT
-    #undef CTX_OPT
-    #undef SENDFLAG
-    #undef TYPE
-
     // Expose properties and methods
 
     Nan::Set(target, Nan::New("sendFlags").ToLocalChecked(), sendFlags);
