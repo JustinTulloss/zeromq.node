@@ -6,7 +6,7 @@ NEXT
   * Improved message throughput 3-fold on ZMQ 4 [ronkorving]
   * When bind or unbind failed, you could never try again (fixed) [ronkorving]
   * Various travis configuration improvements [reqshark]
-  * Bumped NAN to 2.1.x [ronkorving]
+  * Bumped NAN to 2.2.x [JanStevens]
 
 2.14.0 / 2015-11-20
 ===================
