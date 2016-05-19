@@ -84,4 +84,41 @@ describe('socket.router', function(){
     if (++complete === 2) done();
   });
 
+  it('should handle router <-> dealer message bursts', function (done) {
+    // tests https://github.com/JustinTulloss/zeromq.node/issues/523
+    // based on https://gist.github.com/messa/862638ab44ca65f712fe4d6ef79aeb67
+
+    var router = zmq.socket('router');
+    var dealer = zmq.socket('dealer');
+    var addr = 'tcp://127.0.0.1:12345';
+    var expected = 100;
+    var counted = 0;
+
+    router.bindSync(addr);
+
+    router.on('message', function () {
+      var msg = [];
+      for (var i = 0; i < arguments.length; i += 1) {
+        msg.push(arguments[i]);
+      }
+      router.send(msg);
+    });
+
+    dealer.on('message', function (msg) {
+      msg.toString().should.equal('Hello');
+
+      counted += 1;
+      if (counted === expected) {
+        router.close();
+        dealer.close();
+        done();
+      }
+    });
+
+    dealer.connect(addr);
+
+    for (var i = 0; i < expected; i += 1) {
+      dealer.send(['Hello']);
+    }
+  });
 });
