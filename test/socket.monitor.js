@@ -2,26 +2,26 @@ var zmq = require('..')
   , should = require('should')
   , semver = require('semver');
 
-describe('socket.monitor', function() {
+describe('socket.monitor', function () {
   if (!zmq.ZMQ_CAN_MONITOR) {
     console.log("monitoring not enabled skipping test");
     return;
   }
 
-  it('should be able to monitor the socket', function(done) {
+  it('should be able to monitor the socket', function (done) {
     var rep = zmq.socket('rep')
       , req = zmq.socket('req')
       , events = [];
 
-    rep.on('message', function(msg){
+    rep.on('message', function (msg) {
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('hello');
       rep.send('world');
     });
 
     var testedEvents = ['listen', 'accept', 'disconnect', 'close'];
-    testedEvents.forEach(function(e) {
-      rep.on(e, function(event_value, event_endpoint_addr) {
+    testedEvents.forEach(function (e) {
+      rep.on(e, function (event_value, event_endpoint_addr) {
         // Test the endpoint addr arg
         event_endpoint_addr.toString().should.equal('tcp://127.0.0.1:5423');
 
@@ -45,10 +45,10 @@ describe('socket.monitor', function() {
       if (error) throw error;
     });
 
-    rep.on('bind', function(){
+    rep.on('bind', function () {
       req.connect('tcp://127.0.0.1:5423');
       req.send('hello');
-      req.on('message', function(msg){
+      req.on('message', function (msg) {
         msg.should.be.an.instanceof(Buffer);
         msg.toString().should.equal('world');
         req.close();
@@ -56,9 +56,9 @@ describe('socket.monitor', function() {
     });
   });
 
-  it('should use default interval and numOfEvents', function(done) {
+  it('should use default interval and numOfEvents', function (done) {
     var req = zmq.socket('req');
-    req.setsockopt(zmq.ZMQ_RECONNECT_IVL, 5); // We want a quick connect retry from zmq
+    req.set('ZMQ_RECONNECT_IVL', 5); // We want a quick connect retry from zmq
 
     // We will try to connect to a non-existing server, zmq will issue events: "connect_retry", "close", "connect_retry"
     // The connect_retry will be issued immediately after the close event, so we will measure the time between the close
@@ -66,11 +66,11 @@ describe('socket.monitor', function() {
     // the monitor socket).
 
     var closeTime;
-    req.on('close', function() {
+    req.on('close', function () {
 	    closeTime = Date.now();
     });
 
-    req.on('connect_retry', function() {
+    req.on('connect_retry', function () {
       var diff = Date.now() - closeTime;
       req.unmonitor();
       req.close();
@@ -82,15 +82,15 @@ describe('socket.monitor', function() {
     req.connect('tcp://127.0.0.1:5423');
   });
 
-  it('should read multiple events on monitor interval', function(done) {
+  it('should read multiple events on monitor interval', function (done) {
     var req = zmq.socket('req');
-    req.setsockopt(zmq.ZMQ_RECONNECT_IVL, 5);
+    req.set('ZMQ_RECONNECT_IVL', 5);
     var closeTime;
-    req.on('close', function() {
+    req.on('close', function () {
       closeTime = Date.now();
     });
 
-    req.on('connect_retry', function() {
+    req.on('connect_retry', function () {
       var diff = Date.now() - closeTime;
       req.unmonitor();
       req.close();

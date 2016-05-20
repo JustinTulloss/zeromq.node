@@ -1,20 +1,18 @@
 
-var zmq = require('..')
-  , should = require('should')
-  , semver = require('semver');
+var zmq = require('..');
+var should = require('should');
+var semver = require('semver');
 
-var version = semver.gte(zmq.version, '3.2.0');
-
-describe('socket.error-callback', function(){
-  var sock;
-
-  if (!version) {
+describe('socket.error-callback', function () {
+  if (!semver.gte(zmq.version, '3.2.0')) {
     return console.warn("ZMQ_ROUTER_MANDATORY requires libzmq 3.2.0, skipping test");
   }
 
+  var sock;
+
   it('should create a socket and set ZMQ_ROUTER_MANDATORY', function () {
     sock = zmq.socket('router');
-    sock.setsockopt(zmq.ZMQ_ROUTER_MANDATORY, 1);
+    sock.set('ZMQ_ROUTER_MANDATORY', 1);
   });
 
   it('should callback with error when not connected', function (done) {

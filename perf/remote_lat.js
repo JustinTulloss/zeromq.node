@@ -1,7 +1,7 @@
-var zmq = require('../');
+var zmq = require('..');
 var assert = require('assert');
 
-if (process.argv.length != 5) {
+if (process.argv.length !== 5) {
   console.log('usage: remote_lat <connect-to> <message-size> <roundtrip-count>');
   process.exit(1);
 }

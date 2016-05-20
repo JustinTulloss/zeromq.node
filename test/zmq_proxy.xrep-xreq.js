@@ -1,16 +1,16 @@
 var zmq = require('..')
-  , should = require('should')
-  , semver = require('semver');
+var should = require('should');
+var semver = require('semver');
 
-var addr = 'tcp://127.0.0.1'
-  , frontendAddr = addr+':5510'
-  , backendAddr = addr+':5511'
-  , captureAddr = addr+':5512';
+var addr = 'tcp://127.0.0.1';
+var frontendAddr = addr + ':5510';
+var backendAddr = addr + ':5511';
+var captureAddr = addr + ':5512';
 
 //since its for libzmq2, we target versions < 3.0.0
 var version = semver.lte(zmq.version, '3.0.0');
 
-describe('proxy.xrep-xreq', function() {
+describe('proxy.xrep-xreq', function () {
   it('should proxy req-rep connected to xrep-xreq', function (done) {
     if (!version) {
       console.warn('Test requires libzmq v2 (skipping)');
@@ -29,7 +29,7 @@ describe('proxy.xrep-xreq', function() {
     req.connect(frontendAddr);
     rep.connect(backendAddr);
 
-    req.on('message',function(msg){
+    req.on('message', function (msg) {
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('foo bar');
       frontend.close();
@@ -40,13 +40,13 @@ describe('proxy.xrep-xreq', function() {
     });
 
     rep.on('message', function (msg) {
-      rep.send(msg+' bar');
+      rep.send(msg + ' bar');
     });
 
-    setTimeout(function() {
+    setTimeout(function () {
       req.send('foo');
-    }, 100.0);
+    }, 100);
 
-    zmq.proxy(frontend,backend);
+    zmq.proxy(frontend, backend);
   });
 });

@@ -1,15 +1,15 @@
-var zmq = require('..')
-  , should = require('should')
-  , semver = require('semver');
+var zmq = require('..');
+var should = require('should');
+var semver = require('semver');
 
-var addr = 'tcp://127.0.0.1'
-  , frontendAddr = addr+':5501'
-  , backendAddr = addr+':5502'
-  , captureAddr = addr+':5503';
+var addr = 'tcp://127.0.0.1';
+var frontendAddr = addr + ':5501';
+var backendAddr = addr + ':5502';
+var captureAddr = addr + ':5503';
 
-describe('proxy.push-pull', function() {
+describe('proxy.push-pull', function () {
 
-  it('should proxy push-pull connected to pull-push',function (done) {
+  it('should proxy push-pull connected to pull-push', function (done) {
 
     var frontend = zmq.socket('pull');
     var backend = zmq.socket('push');
@@ -23,7 +23,7 @@ describe('proxy.push-pull', function() {
     push.connect(frontendAddr);
     pull.connect(backendAddr);
 
-    pull.on('message',function (msg) {
+    pull.on('message', function (msg) {
 
       frontend.close();
       backend.close();
@@ -35,15 +35,14 @@ describe('proxy.push-pull', function() {
       done();
     });
 
-    setTimeout(function() {
+    setTimeout(function () {
       push.send('foo');
-    }, 100.0);
+    }, 100);
 
-    zmq.proxy(frontend,backend);
-
+    zmq.proxy(frontend, backend);
   });
 
-  it('should proxy pull-push connected to push-pull with capture',function (done) {
+  it('should proxy pull-push connected to push-pull with capture', function (done) {
 
     var frontend = zmq.socket('push');
     var backend = zmq.socket('pull');
@@ -62,17 +61,17 @@ describe('proxy.push-pull', function() {
     push.connect(backendAddr);
     capSub.connect(captureAddr);
 
-    pull.on('message',function (msg) {
+    pull.on('message', function (msg) {
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('foo');
     });
 
     capSub.subscribe('');
-    capSub.on('message',function (msg) {
+    capSub.on('message', function (msg) {
       capture.close();
       capSub.close();
 
-      setTimeout(function() {
+      setTimeout(function () {
         frontend.close();
         backend.close();
         push.close();
@@ -81,12 +80,12 @@ describe('proxy.push-pull', function() {
         msg.should.be.an.instanceof(Buffer);
         msg.toString().should.equal('foo');
         done();
-      },100.0);
+      }, 100);
     });
 
-    setTimeout(function() {
+    setTimeout(function () {
       push.send('foo');
-    }, 100.0);
+    }, 100);
 
     zmq.proxy(frontend,backend,capture);
 

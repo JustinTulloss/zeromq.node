@@ -55,10 +55,10 @@
   };
 #endif
 
-#define ZMQ_CAN_DISCONNECT (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
-#define ZMQ_CAN_UNBIND (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
+#define ZMQ_CAN_DISCONNECT (ZMQ_VERSION >= 30200)
+#define ZMQ_CAN_UNBIND (ZMQ_VERSION >= 30200)
 #define ZMQ_CAN_MONITOR (ZMQ_VERSION > 30201)
-#define ZMQ_CAN_SET_CTX (ZMQ_VERSION_MAJOR == 3 && ZMQ_VERSION_MINOR >= 2) || ZMQ_VERSION_MAJOR > 3
+#define ZMQ_CAN_SET_CTX (ZMQ_VERSION >= 30200)
 
 using namespace v8;
 using namespace node;
@@ -77,7 +77,90 @@ namespace zmq {
   std::set<int> opts_uint64;
   std::set<int> opts_binary;
 
-  class Socket;
+  /*
+   * Helpers for dealing with ØMQ errors.
+   */
+
+  static inline const char*
+  ErrorMessage() {
+    return zmq_strerror(zmq_errno());
+  }
+
+  static inline Local<Value>
+  ExceptionFromError() {
+    return Nan::Error(ErrorMessage());
+  }
+
+  /*
+   * Manages a reference to a zmq_msg_t instance
+   * Will return the zmq_msg_t instance by being deferenced
+   */
+
+  class MessageReference {
+    public:
+      inline MessageReference() {
+        if (zmq_msg_init(&msg_) < 0)
+          throw std::runtime_error(ErrorMessage());
+      }
+
+      inline ~MessageReference() {
+        if (zmq_msg_close(&msg_) < 0)
+          throw std::runtime_error(ErrorMessage());
+      }
+
+      inline operator zmq_msg_t*() {
+        return &msg_;
+      }
+
+    private:
+      zmq_msg_t msg_;
+  };
+
+
+  /*
+   * An object that creates an empty ØMQ message, which can be used for
+   * zmq_recv. After the receive call, a Buffer object wrapping the ØMQ
+   * message can be requested. The reference for the ØMQ message will
+   * remain while the data is in use by the Buffer.
+   */
+
+  class IncomingMessage {
+    public:
+      inline IncomingMessage() {
+        msgref_ = new MessageReference();
+      };
+
+      inline ~IncomingMessage() {
+        if (buf_.IsEmpty() && msgref_) {
+          delete msgref_;
+          msgref_ = NULL;
+        } else
+          buf_.Reset();
+      };
+
+      inline operator zmq_msg_t*() {
+        return *msgref_;
+      }
+
+      inline Local<Value> GetBuffer() {
+        if (buf_.IsEmpty()) {
+          Local<Object> buf_obj = Nan::NewBuffer((char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_), FreeCallback, msgref_).ToLocalChecked();
+          if (buf_obj.IsEmpty()) {
+            return Local<Value>();
+          }
+          buf_.Reset(buf_obj);
+        }
+        return Nan::New(buf_);
+      }
+
+    private:
+      static void FreeCallback(char* data, void* message) {
+        delete static_cast<MessageReference*>(message);
+      }
+
+      Nan::Persistent<Object> buf_;
+      MessageReference* msgref_;
+  };
 
   class Context : public Nan::ObjectWrap {
     friend class Socket;
@@ -86,14 +169,14 @@ namespace zmq {
       virtual ~Context();
 
     private:
-      Context(int io_threads);
+      Context();
       static NAN_METHOD(New);
       static Context *GetContext(const Nan::FunctionCallbackInfo<Value>&);
       void Close();
       static NAN_METHOD(Close);
 #if ZMQ_CAN_SET_CTX
-      static NAN_METHOD(GetOpt);
-      static NAN_METHOD(SetOpt);
+      static NAN_METHOD(Get);
+      static NAN_METHOD(Set);
 #endif
 
       void* context_;
@@ -151,12 +234,8 @@ namespace zmq {
       static NAN_METHOD(Disconnect);
 #endif
 
-      class IncomingMessage;
-      static NAN_METHOD(Recv);
-      static NAN_METHOD(Readv);
-      class OutgoingMessage;
+      static NAN_METHOD(Read);
       static NAN_METHOD(Send);
-      static NAN_METHOD(Sendv);
       void Close();
       static NAN_METHOD(Close);
 
@@ -191,21 +270,6 @@ namespace zmq {
   static NAN_MODULE_INIT(Initialize);
 
   /*
-   * Helpers for dealing with ØMQ errors.
-   */
-
-  static inline const char*
-  ErrorMessage() {
-    return zmq_strerror(zmq_errno());
-  }
-
-  static inline Local<Value>
-  ExceptionFromError() {
-    return Nan::Error(ErrorMessage());
-  }
-
-
-  /*
    * Context methods.
    */
 
@@ -216,8 +280,8 @@ namespace zmq {
 
     Nan::SetPrototypeMethod(t, "close", Close);
 #if ZMQ_CAN_SET_CTX
-    Nan::SetPrototypeMethod(t, "setOpt", SetOpt);
-    Nan::SetPrototypeMethod(t, "getOpt", GetOpt);
+    Nan::SetPrototypeMethod(t, "set", Set);
+    Nan::SetPrototypeMethod(t, "get", Get);
 #endif
 
     Nan::Set(target, Nan::New("Context").ToLocalChecked(), Nan::GetFunction(t).ToLocalChecked());
@@ -230,23 +294,18 @@ namespace zmq {
 
   NAN_METHOD(Context::New) {
     assert(info.IsConstructCall());
-    int io_threads = 1;
-    if (info.Length() == 1) {
-      if (!info[0]->IsNumber()) {
-        return Nan::ThrowTypeError("io_threads must be an integer");
-      }
-      io_threads = Nan::To<int>(info[0]).FromJust();
-      if (io_threads < 1) {
-        return Nan::ThrowRangeError("io_threads must be a positive number");
-      }
-    }
-    Context *context = new Context(io_threads);
+    Context *context = new Context();
     context->Wrap(info.This());
     info.GetReturnValue().Set(info.This());
   }
 
-  Context::Context(int io_threads) : Nan::ObjectWrap() {
-    context_ = zmq_init(io_threads);
+  Context::Context() : Nan::ObjectWrap() {
+#if ZMQ_VERSION < 30200
+      context_ = zmq_init(1);
+#else
+      context_ = zmq_ctx_new();
+#endif
+
     if (!context_) throw std::runtime_error(ErrorMessage());
   }
 
@@ -258,18 +317,35 @@ namespace zmq {
   void
   Context::Close() {
     if (context_ != NULL) {
-      if (zmq_term(context_) < 0) throw std::runtime_error(ErrorMessage());
+      int rc;
+
+      while (true) {
+#if ZMQ_VERSION < 30200
+        rc = zmq_term(context_);
+#else
+        rc = zmq_ctx_destroy(context_);
+#endif
+
+        if (rc < 0) {
+          if (zmq_errno() == EINTR) {
+            continue;
+          }
+
+          throw std::runtime_error(ErrorMessage());
+        }
+        break;
+      }
+
       context_ = NULL;
     }
   }
 
   NAN_METHOD(Context::Close) {
     GetContext(info)->Close();
-    return;
   }
 
 #if ZMQ_CAN_SET_CTX
-  NAN_METHOD(Context::SetOpt) {
+  NAN_METHOD(Context::Set) {
     if (info.Length() != 2)
       return Nan::ThrowError("Must pass an option and a value");
     if (!info[0]->IsNumber() || !info[1]->IsNumber())
@@ -278,12 +354,13 @@ namespace zmq {
     int value = Nan::To<int32_t>(info[1]).FromJust();
 
     Context *context = GetContext(info);
-    if (zmq_ctx_set(context->context_, option, value) < 0)
-      return Nan::ThrowError(ExceptionFromError());
+    while (zmq_ctx_set(context->context_, option, value))
+      if (zmq_errno() != EINTR)
+        return Nan::ThrowError(ExceptionFromError());
     return;
   }
 
-  NAN_METHOD(Context::GetOpt) {
+  NAN_METHOD(Context::Get) {
     if (info.Length() != 1)
       return Nan::ThrowError("Must pass an option");
     if (!info[0]->IsNumber())
@@ -291,8 +368,18 @@ namespace zmq {
     int option = Nan::To<int32_t>(info[0]).FromJust();
 
     Context *context = GetContext(info);
-    int value = zmq_ctx_get(context->context_, option);
-    info.GetReturnValue().Set(Nan::New<Integer>(value));
+
+    int rc;
+    do {
+      rc = zmq_ctx_get(context->context_, option);
+      if (rc < 0) {
+        if (zmq_errno() != EINTR)
+          return Nan::ThrowError(ExceptionFromError());
+        continue;
+      }
+    } while (rc < 0);
+
+    info.GetReturnValue().Set(Nan::New<Integer>(rc));
   }
 #endif
   /*
@@ -304,8 +391,6 @@ namespace zmq {
 
     Local<FunctionTemplate> t = Nan::New<FunctionTemplate>(New);
     t->InstanceTemplate()->SetInternalFieldCount(1);
-    Nan::SetAccessor(t->InstanceTemplate(),
-      Nan::New("state").ToLocalChecked(), Socket::GetState);
     Nan::SetAccessor(t->InstanceTemplate(),
       Nan::New("pending").ToLocalChecked(), GetPending, SetPending);
 
@@ -320,10 +405,8 @@ namespace zmq {
     Nan::SetPrototypeMethod(t, "setsockopt", SetSockOpt);
     Nan::SetPrototypeMethod(t, "ref", AttachToEventLoop);
     Nan::SetPrototypeMethod(t, "unref", DetachFromEventLoop);
-    Nan::SetPrototypeMethod(t, "recv", Recv);
-    Nan::SetPrototypeMethod(t, "readv", Readv);
+    Nan::SetPrototypeMethod(t, "read", Read);
     Nan::SetPrototypeMethod(t, "send", Send);
-    Nan::SetPrototypeMethod(t, "sendv", Sendv);
     Nan::SetPrototypeMethod(t, "close", Close);
 
 #if ZMQ_CAN_DISCONNECT
@@ -375,7 +458,7 @@ namespace zmq {
     while (true) {
       int rc = zmq_poll(&item, 1, 0);
       if (rc < 0) {
-        if (zmq_errno()==EINTR) {
+        if (zmq_errno() == EINTR) {
           continue;
         }
         throw std::runtime_error(ErrorMessage());
@@ -494,7 +577,7 @@ namespace zmq {
 #else
         // monitoring on zmq < 4 used zmq_event_t
         zmq_event_t event;
-        memcpy (&event, zmq_msg_data (&msg1), sizeof (zmq_event_t));
+        memcpy(&event, zmq_msg_data (&msg1), sizeof (zmq_event_t));
         event_id = event.event;
 
         // Bit of a hack, but all events in the zmq_event_t union have the same layout so this will work for all event types.
@@ -548,9 +631,9 @@ namespace zmq {
       throw std::runtime_error(ErrorMessage());
     }
 
-    #if ZMQ_CAN_MONITOR
-      this->monitor_socket_ = NULL;
-    #endif
+#if ZMQ_CAN_MONITOR
+    this->monitor_socket_ = NULL;
+#endif
 
     uv_poll_init_socket(uv_default_loop(), poll_handle_, socket);
     uv_poll_start(poll_handle_, UV_READABLE, Socket::UV_PollCallback);
@@ -568,9 +651,9 @@ namespace zmq {
   #define GET_SOCKET(info)                                      \
       Socket* socket = GetSocket(info);                         \
       if (socket->state_ == STATE_CLOSED)                       \
-          return Nan::ThrowTypeError("Socket is closed");       \
+        return Nan::ThrowTypeError("Socket is closed");         \
       if (socket->state_ == STATE_BUSY)                         \
-          return Nan::ThrowTypeError("Socket is busy");
+        return Nan::ThrowTypeError("Socket is busy");
 
   NAN_GETTER(Socket::GetState) {
     Socket* socket = Nan::ObjectWrap::Unwrap<Socket>(info.Holder());
@@ -597,7 +680,7 @@ namespace zmq {
     while (true) {
       int rc = zmq_getsockopt(socket_, option, &value, &len);
       if (rc < 0) {
-        if(zmq_errno()==EINTR) {
+        if (zmq_errno() == EINTR) {
           continue;
         }
         Nan::ThrowError(ExceptionFromError());
@@ -749,14 +832,12 @@ namespace zmq {
                   UV_BindAsync,
                   (uv_after_work_cb)UV_BindAsyncAfter);
     socket->state_ = STATE_BUSY;
-
-    return;
   }
 
   void Socket::UV_BindAsync(uv_work_t* req) {
     BindState* state = static_cast<BindState*>(req->data);
     if (zmq_bind(state->sock, *state->addr) < 0)
-        state->error = zmq_errno();
+      state->error = zmq_errno();
   }
 
   void Socket::UV_BindAsyncAfter(uv_work_t* req) {
@@ -807,8 +888,6 @@ namespace zmq {
     }
 
     socket->endpoints += 1;
-
-    return;
   }
 
 #if ZMQ_CAN_UNBIND
@@ -830,13 +909,12 @@ namespace zmq {
                   UV_UnbindAsync,
                   (uv_after_work_cb)UV_UnbindAsyncAfter);
     socket->state_ = STATE_BUSY;
-    return;
   }
 
   void Socket::UV_UnbindAsync(uv_work_t* req) {
     BindState* state = static_cast<BindState*>(req->data);
     if (zmq_unbind(state->sock, *state->addr) < 0)
-        state->error = zmq_errno();
+      state->error = zmq_errno();
   }
 
   void Socket::UV_UnbindAsyncAfter(uv_work_t* req) {
@@ -884,8 +962,6 @@ namespace zmq {
       socket->Unref();
       socket->_DetachFromEventLoop();
     }
-
-    return;
   }
 #endif
 
@@ -904,96 +980,25 @@ namespace zmq {
       socket->Ref();
       socket->_AttachToEventLoop();
     }
-
-    return;
   }
 
 #if ZMQ_CAN_DISCONNECT
   NAN_METHOD(Socket::Disconnect) {
-
-    if (!info[0]->IsString()) {
+    if (!info[0]->IsString())
       return Nan::ThrowTypeError("Address must be a string!");
-    }
 
     GET_SOCKET(info);
 
     Nan::Utf8String address(info[0].As<String>());
     if (zmq_disconnect(socket->socket_, *address))
       return Nan::ThrowError(ErrorMessage());
+
     if (--socket->endpoints == 0) {
       socket->Unref();
       socket->_DetachFromEventLoop();
     }
-
-    return;
   }
 #endif
-
-  /*
-   * An object that creates an empty ØMQ message, which can be used for
-   * zmq_recv. After the receive call, a Buffer object wrapping the ØMQ
-   * message can be requested. The reference for the ØMQ message will
-   * remain while the data is in use by the Buffer.
-   */
-
-  class Socket::IncomingMessage {
-    public:
-      inline IncomingMessage() {
-        msgref_ = new MessageReference();
-      };
-
-      inline ~IncomingMessage() {
-        if (buf_.IsEmpty() && msgref_) {
-          delete msgref_;
-          msgref_ = NULL;
-        } else {
-          buf_.Reset();
-        }
-      };
-
-      inline operator zmq_msg_t*() {
-        return *msgref_;
-      }
-
-      inline Local<Value> GetBuffer() {
-        if (buf_.IsEmpty()) {
-          Local<Object> buf_obj = Nan::NewBuffer((char*)zmq_msg_data(*msgref_), zmq_msg_size(*msgref_), FreeCallback, msgref_).ToLocalChecked();
-          if (buf_obj.IsEmpty()) {
-            return Local<Value>();
-          }
-          buf_.Reset(buf_obj);
-        }
-        return Nan::New(buf_);
-      }
-
-    private:
-      static void FreeCallback(char* data, void* message) {
-        delete static_cast<MessageReference*>(message);
-      }
-
-      class MessageReference {
-        public:
-          inline MessageReference() {
-            if (zmq_msg_init(&msg_) < 0)
-              throw std::runtime_error(ErrorMessage());
-          }
-
-          inline ~MessageReference() {
-            if (zmq_msg_close(&msg_) < 0)
-              throw std::runtime_error(ErrorMessage());
-          }
-
-          inline operator zmq_msg_t*() {
-            return &msg_;
-          }
-
-        private:
-          zmq_msg_t msg_;
-      };
-
-      Nan::Persistent<Object> buf_;
-      MessageReference* msgref_;
-  };
 
 #if ZMQ_CAN_MONITOR
   NAN_METHOD(Socket::Monitor) {
@@ -1021,8 +1026,8 @@ namespace zmq {
     Context *context = Nan::ObjectWrap::Unwrap<Context>(Nan::New(socket->context_));
     sprintf(addr, "%s%d", "inproc://monitor.req.", monitors_count++);
 
-    if(zmq_socket_monitor(socket->socket_, addr, ZMQ_EVENT_ALL) != -1) {
-      socket->monitor_socket_ = zmq_socket (context->context_, ZMQ_PAIR);
+    if (zmq_socket_monitor(socket->socket_, addr, ZMQ_EVENT_ALL) != -1) {
+      socket->monitor_socket_ = zmq_socket(context->context_, ZMQ_PAIR);
       zmq_connect (socket->monitor_socket_, addr);
       socket->timer_interval_ = timer_interval;
       socket->num_of_events_ = num_of_events;
@@ -1032,8 +1037,6 @@ namespace zmq {
       uv_timer_init(uv_default_loop(), socket->monitor_handle_);
       uv_timer_start(socket->monitor_handle_, reinterpret_cast<uv_timer_cb>(Socket::UV_MonitorCallback), timer_interval, 0);
     }
-
-    return;
   }
 
   void
@@ -1059,12 +1062,10 @@ namespace zmq {
     // which might not always be the case
     Socket* socket = GetSocket(info);
     socket->Unmonitor();
-    return;
   }
-
 #endif
 
-  NAN_METHOD(Socket::Readv) {
+  NAN_METHOD(Socket::Read) {
     Socket* socket = GetSocket(info);
     if (socket->state_ != STATE_READY)
       return;
@@ -1075,7 +1076,13 @@ namespace zmq {
 
     int rc = 0;
     int flags = 0;
+
+#if ZMQ_VERSION_MAJOR <= 2
     int64_t more = 1;
+#else
+    int more = 1;
+#endif
+
     size_t more_size = sizeof(more);
     size_t index = 0;
 
@@ -1083,10 +1090,9 @@ namespace zmq {
 
     while (more == 1) {
       if (checkPollIn) {
-        while (zmq_getsockopt(socket->socket_, ZMQ_EVENTS, &events, &events_size)) {
+        while (zmq_getsockopt(socket->socket_, ZMQ_EVENTS, &events, &events_size))
           if (zmq_errno() != EINTR)
             return Nan::ThrowError(ErrorMessage());
-        }
 
         if ((events & ZMQ_POLLIN) == 0)
           return;
@@ -1095,25 +1101,14 @@ namespace zmq {
       IncomingMessage part;
 
       while (true) {
-        rc = zmq_msg_init(part);
-        if (rc != 0) {
-          if (zmq_errno()==EINTR) {
-            continue;
-          }
-          return Nan::ThrowError(ErrorMessage());
-        }
-        break;
-      }
-
-      while (true) {
-      #if ZMQ_VERSION_MAJOR == 2
+#if ZMQ_VERSION_MAJOR == 2
         rc = zmq_recv(socket->socket_, part, flags);
-      #elif ZMQ_VERSION_MAJOR == 3
+#elif ZMQ_VERSION_MAJOR == 3
         rc = zmq_recvmsg(socket->socket_, part, flags);
-      #else
+#else
         rc = zmq_msg_recv(part, socket->socket_, flags);
         checkPollIn = false;
-      #endif
+#endif
 
         if (rc < 0) {
           if (zmq_errno() == EINTR)
@@ -1134,99 +1129,7 @@ namespace zmq {
     info.GetReturnValue().Set(result);
   }
 
-  NAN_METHOD(Socket::Recv) {
-    int flags = 0;
-    int argc = info.Length();
-    if (argc == 1) {
-      if (!info[0]->IsNumber())
-        return Nan::ThrowTypeError("Argument should be an integer");
-      flags = Nan::To<int>(info[0]).FromJust();
-    } else if (argc != 0) {
-      return Nan::ThrowTypeError("Only one argument at most was expected");
-    }
-
-    GET_SOCKET(info);
-
-    IncomingMessage msg;
-    while (true) {
-      int rc;
-    #if ZMQ_VERSION_MAJOR == 2
-      rc = zmq_recv(socket->socket_, msg, flags);
-    #else
-      rc = zmq_recvmsg(socket->socket_, msg, flags);
-    #endif
-      if (rc < 0) {
-        if (zmq_errno()==EINTR) {
-          continue;
-        }
-        return Nan::ThrowError(ErrorMessage());
-      } else {
-        break;
-      }
-    }
-    info.GetReturnValue().Set(msg.GetBuffer());
-  }
-
-  /*
-   * An object that creates a ØMQ message from the given Buffer Object,
-   * and manages the reference to it using RAII. A persistent V8 handle
-   * for the Buffer object will remain while its data is in use by ØMQ.
-   */
-
-  class Socket::OutgoingMessage {
-    public:
-      inline OutgoingMessage(Local<Object> buf) {
-        bufref_ = new BufferReference(buf);
-        if (zmq_msg_init_data(&msg_, Buffer::Data(buf), Buffer::Length(buf),
-            BufferReference::FreeCallback, bufref_) < 0) {
-          delete bufref_;
-          throw std::runtime_error(ErrorMessage());
-        }
-      };
-
-      inline ~OutgoingMessage() {
-        if (zmq_msg_close(&msg_) < 0)
-          throw std::runtime_error(ErrorMessage());
-      };
-
-      inline operator zmq_msg_t*() {
-        return &msg_;
-      }
-
-    private:
-      class BufferReference {
-        public:
-          inline BufferReference(Local<Object> buf) {
-            loop = uv_default_loop();
-            uv_async_init(loop, &async, reinterpret_cast<uv_async_cb>(cleanup));
-            async.data = this;
-            persistent.Reset(buf);
-          }
-
-          inline ~BufferReference() {
-            persistent.Reset();
-          }
-
-          // Called by zmq when the message has been sent.
-          // NOTE: May be called from a worker thread. Do not modify V8/Node.
-          static void FreeCallback(void* data, void* message) {
-            uv_async_send(&static_cast<BufferReference *>(message)->async);
-          }
-
-          static void cleanup(uv_async_t *handle, int status) {
-            delete static_cast<BufferReference *>(handle->data);
-          }
-        private:
-          Nan::Persistent<Object> persistent;
-          uv_async_t async;
-          uv_loop_t *loop;
-      };
-
-    zmq_msg_t msg_;
-    BufferReference* bufref_;
-  };
-
-  NAN_METHOD(Socket::Sendv) {
+  NAN_METHOD(Socket::Send) {
     Socket* socket = GetSocket(info);
     if (socket->state_ != STATE_READY)
       return info.GetReturnValue().Set(false);
@@ -1274,14 +1177,14 @@ namespace zmq {
 
       while (true) {
         int rc;
-      #if ZMQ_VERSION_MAJOR == 2
+#if ZMQ_VERSION_MAJOR == 2
         rc = zmq_send(socket->socket_, &msg, flags);
-      #elif ZMQ_VERSION_MAJOR == 3
+#elif ZMQ_VERSION_MAJOR == 3
         rc = zmq_sendmsg(socket->socket_, &msg, flags);
-      #else
+#else
         rc = zmq_msg_send(&msg, socket->socket_, flags);
         checkPollOut = false;
-      #endif
+#endif
         if (rc < 0){
           if (zmq_errno() == EINTR) {
             continue;
@@ -1302,68 +1205,8 @@ namespace zmq {
     return info.GetReturnValue().Set(true);
   }
 
-  // WARNING: the buffer passed here will be kept alive
-  // until zmq_send completes, possibly on another thread.
-  // Do not modify or reuse any buffer passed to send.
-  // This is bad, but allows us to send without copying.
-  NAN_METHOD(Socket::Send) {
-
-    int argc = info.Length();
-    if (argc != 1 && argc != 2)
-      return Nan::ThrowTypeError("Must pass a Buffer and optionally flags");
-    if (!Buffer::HasInstance(info[0]))
-      return Nan::ThrowTypeError("First argument should be a Buffer");
-    int flags = 0;
-    if (argc == 2) {
-      if (!info[1]->IsNumber())
-        return Nan::ThrowTypeError("Second argument should be an integer");
-      flags = Nan::To<int>(info[1]).FromJust();
-    }
-
-    GET_SOCKET(info);
-
-#if 0  // zero-copy version, but doesn't properly pin buffer and so has GC issues
-    OutgoingMessage msg(info[0].As<Object>());
-    if (zmq_send(socket->socket_, msg, flags) < 0)
-        return Nan::ThrowError(ErrorMessage());
-#else // copying version that has no GC issues
-    zmq_msg_t msg;
-    Local<Object> buf = info[0].As<Object>();
-    size_t len = Buffer::Length(buf);
-    int res = zmq_msg_init_size(&msg, len);
-    if (res != 0)
-      return Nan::ThrowError(ErrorMessage());
-
-    char * cp = static_cast<char *>(zmq_msg_data(&msg));
-    const char * dat = Buffer::Data(buf);
-    std::copy(dat, dat + len, cp);
-    while (true) {
-      int rc;
-    #if ZMQ_VERSION_MAJOR == 2
-      rc = zmq_send(socket->socket_, &msg, flags);
-    #elif ZMQ_VERSION_MAJOR == 3
-      rc = zmq_sendmsg(socket->socket_, &msg, flags);
-    #else
-      rc = zmq_msg_send(&msg, socket->socket_, flags);
-    #endif
-      if (rc < 0){
-        if (zmq_errno()==EINTR) {
-          continue;
-        }
-        return Nan::ThrowError(ErrorMessage());
-      } else {
-        break;
-      }
-    }
-#endif // zero copy / copying version
-
-    return;
-  }
-
-
   static void
-  on_uv_close(uv_handle_t *handle)
-  {
+  on_uv_close(uv_handle_t *handle) {
     delete handle;
   }
 
@@ -1388,37 +1231,25 @@ namespace zmq {
   NAN_METHOD(Socket::Close) {
     GET_SOCKET(info);
     socket->Close();
-    return;
   }
-
-  // Make zeromq versions less than 2.1.3 work by defining
-  // the new constants if they don't already exist
-  #if (ZMQ_VERSION < 20103)
-  #   define ZMQ_DEALER ZMQ_XREQ
-  #   define ZMQ_ROUTER ZMQ_XREP
-  #endif
 
   /*
    * Module functions.
    */
 
-   static NAN_METHOD(ZmqVersion) {
-    int major, minor, patch;
-    zmq_version(&major, &minor, &patch);
-
+  static NAN_METHOD(ZmqVersion) {
     char version_info[16];
-    snprintf(version_info, 16, "%d.%d.%d", major, minor, patch);
+    snprintf(version_info, 16, "%d.%d.%d", ZMQ_VERSION_MAJOR, ZMQ_VERSION_MINOR, ZMQ_VERSION_PATCH);
 
     info.GetReturnValue().Set(Nan::New<String>(version_info).ToLocalChecked());
   }
 
 #if ZMQ_VERSION_MAJOR >= 4
    static NAN_METHOD(ZmqCurveKeypair) {
+    char public_key[41];
+    char secret_key[41];
 
-    char public_key [41];
-    char secret_key [41];
-
-    int rc = zmq_curve_keypair( public_key, secret_key);
+    int rc = zmq_curve_keypair(public_key, secret_key);
     if (rc < 0) {
       return Nan::ThrowError("zmq_curve_keypair operation failed. Method support in libzmq v4+ -with-libsodium.");
     }
@@ -1434,114 +1265,453 @@ namespace zmq {
   static NAN_MODULE_INIT(Initialize) {
     Nan::HandleScope scope;
 
-    opts_int.insert(14); // ZMQ_FD
-    opts_int.insert(16); // ZMQ_TYPE
-    opts_int.insert(17); // ZMQ_LINGER
-    opts_int.insert(18); // ZMQ_RECONNECT_IVL
-    opts_int.insert(19); // ZMQ_BACKLOG
-    opts_int.insert(21); // ZMQ_RECONNECT_IVL_MAX
-    opts_int.insert(23); // ZMQ_SNDHWM
-    opts_int.insert(24); // ZMQ_RCVHWM
-    opts_int.insert(25); // ZMQ_MULTICAST_HOPS
-    opts_int.insert(27); // ZMQ_RCVTIMEO
-    opts_int.insert(28); // ZMQ_SNDTIMEO
-    opts_int.insert(29); // ZMQ_RCVLABEL
-    opts_int.insert(30); // ZMQ_RCVCMD
-    opts_int.insert(31); // ZMQ_IPV4ONLY
-    opts_int.insert(33); // ZMQ_ROUTER_MANDATORY
-    opts_int.insert(34); // ZMQ_TCP_KEEPALIVE
-    opts_int.insert(35); // ZMQ_TCP_KEEPALIVE_CNT
-    opts_int.insert(36); // ZMQ_TCP_KEEPALIVE_IDLE
-    opts_int.insert(37); // ZMQ_TCP_KEEPALIVE_INTVL
-    opts_int.insert(39); // ZMQ_DELAY_ATTACH_ON_CONNECT
-    opts_int.insert(40); // ZMQ_XPUB_VERBOSE
-    opts_int.insert(41); // ZMQ_ROUTER_RAW
-    opts_int.insert(42); // ZMQ_IPV6
+    // empty objects to hold (string -> mixed) values for constants
 
-    opts_int64.insert(3); // ZMQ_SWAP
-    opts_int64.insert(8); // ZMQ_RATE
-    opts_int64.insert(10); // ZMQ_MCAST_LOOP
-    opts_int64.insert(20); // ZMQ_RECOVERY_IVL_MSEC
-    opts_int64.insert(22); // ZMQ_MAXMSGSIZE
+    Local<Object> sendFlags = Nan::New<Object>();
+    Local<Object> types = Nan::New<Object>();
+    Local<Object> options = Nan::New<Object>();
+    Local<Object> ctxOptions = Nan::New<Object>();
 
-    opts_uint64.insert(1); // ZMQ_HWM
-    opts_uint64.insert(4); // ZMQ_AFFINITY
+    // Helper macros for storing and exposing constants
 
-    opts_binary.insert(5); // ZMQ_IDENTITY
-    opts_binary.insert(6); // ZMQ_SUBSCRIBE
-    opts_binary.insert(7); // ZMQ_UNSUBSCRIBE
-    opts_binary.insert(32); // ZMQ_LAST_ENDPOINT
-    opts_binary.insert(38); // ZMQ_TCP_ACCEPT_FILTER
+    #define OPT(type, name) \
+      opts_ ## type.insert(name); \
+      Nan::Set(options, Nan::New<String>(#name).ToLocalChecked(), Nan::New<Integer>(name));
 
-    // transition types
-    #if ZMQ_VERSION_MAJOR >= 3
-    opts_int.insert(15); // ZMQ_EVENTS 3.x int
-    opts_int.insert(8); // ZMQ_RATE 3.x int
-    opts_int.insert(9); // ZMQ_RECOVERY_IVL 3.x int
-    opts_int.insert(13); // ZMQ_RCVMORE 3.x int
-    opts_int.insert(11); // ZMQ_SNDBUF 3.x int
-    opts_int.insert(12); // ZMQ_RCVBUF 3.x int
-    #else
-    opts_uint32.insert(15); // ZMQ_EVENTS 2.x uint32_t
-    opts_int64.insert(8); // ZMQ_RATE 2.x int64_t
-    opts_int64.insert(9); // ZMQ_RECOVERY_IVL 2.x int64_t
-    opts_int64.insert(13); // ZMQ_RCVMORE 2.x int64_t
-    opts_uint64.insert(11); // ZMQ_SNDBUF 2.x uint64_t
-    opts_uint64.insert(12); // ZMQ_RCVBUF 2.x uint64_t
+    #define CTX_OPT(name) \
+      Nan::Set(ctxOptions, Nan::New<String>(#name).ToLocalChecked(), Nan::New<Integer>(name));
+
+    #define SENDFLAG(name) \
+      Nan::Set(sendFlags, Nan::New<String>(#name).ToLocalChecked(), Nan::New<Integer>(name));
+
+    #define TYPE(name) \
+      Nan::Set(types, Nan::New<String>(#name).ToLocalChecked(), Nan::New<Integer>(name));
+
+    // Message send flags
+
+    // Message send flags since ZMQ 2.2
+    // http://api.zeromq.org/2-2:zmq-send
+
+    #ifdef ZMQ_NOBLOCK
+      SENDFLAG(ZMQ_NOBLOCK);
     #endif
 
-    #if ZMQ_VERSION_MAJOR >= 4
-    opts_int.insert(43); // ZMQ_MECHANISM
-    opts_int.insert(44); // ZMQ_PLAIN_SERVER
-    opts_binary.insert(45); // ZMQ_PLAIN_USERNAME
-    opts_binary.insert(46); // ZMQ_PLAIN_PASSWORD
-    opts_int.insert(47); // ZMQ_CURVE_SERVER
-    opts_binary.insert(48); // ZMQ_CURVE_PUBLICKEY
-    opts_binary.insert(49); // ZMQ_CURVE_SECRETKEY
-    opts_binary.insert(50); // ZMQ_CURVE_SERVERKEY
-    opts_binary.insert(55); // ZMQ_ZAP_DOMAIN
+    #ifdef ZMQ_SNDMORE
+      SENDFLAG(ZMQ_SNDMORE);
     #endif
 
-    NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
-    NODE_DEFINE_CONSTANT(target, ZMQ_CAN_UNBIND);
-    NODE_DEFINE_CONSTANT(target, ZMQ_CAN_MONITOR);
-    NODE_DEFINE_CONSTANT(target, ZMQ_CAN_SET_CTX);
-    NODE_DEFINE_CONSTANT(target, ZMQ_PUB);
-    NODE_DEFINE_CONSTANT(target, ZMQ_SUB);
-    #if ZMQ_VERSION_MAJOR >= 3
-    NODE_DEFINE_CONSTANT(target, ZMQ_XPUB);
-    NODE_DEFINE_CONSTANT(target, ZMQ_XSUB);
-    #endif
-    NODE_DEFINE_CONSTANT(target, ZMQ_REQ);
-    NODE_DEFINE_CONSTANT(target, ZMQ_XREQ);
-    NODE_DEFINE_CONSTANT(target, ZMQ_REP);
-    NODE_DEFINE_CONSTANT(target, ZMQ_XREP);
-    NODE_DEFINE_CONSTANT(target, ZMQ_DEALER);
-    NODE_DEFINE_CONSTANT(target, ZMQ_ROUTER);
-    NODE_DEFINE_CONSTANT(target, ZMQ_PUSH);
-    NODE_DEFINE_CONSTANT(target, ZMQ_PULL);
-    NODE_DEFINE_CONSTANT(target, ZMQ_PAIR);
-    #if ZMQ_VERSION_MAJOR >= 4
-    NODE_DEFINE_CONSTANT(target, ZMQ_STREAM);
+    // Message send flags since ZMQ 3.0
+    // http://api.zeromq.org/3-0:zmq-send
+
+    #ifdef ZMQ_DONTWAIT
+      SENDFLAG(ZMQ_DONTWAIT);
     #endif
 
-    NODE_DEFINE_CONSTANT(target, ZMQ_POLLIN);
-    NODE_DEFINE_CONSTANT(target, ZMQ_POLLOUT);
-    NODE_DEFINE_CONSTANT(target, ZMQ_POLLERR);
-
-    NODE_DEFINE_CONSTANT(target, ZMQ_SNDMORE);
-    #if ZMQ_VERSION_MAJOR == 2
-    NODE_DEFINE_CONSTANT(target, ZMQ_NOBLOCK);
+    #ifdef ZMQ_SNDLABEL
+      SENDFLAG(ZMQ_SNDLABEL);
     #endif
 
-    NODE_DEFINE_CONSTANT(target, STATE_READY);
-    NODE_DEFINE_CONSTANT(target, STATE_BUSY);
-    NODE_DEFINE_CONSTANT(target, STATE_CLOSED);
+
+    // Socket types
+
+    // Socket types since ZMQ 2.2:
+    // http://api.zeromq.org/2-2:zmq-socket
+
+    #ifdef ZMQ_REQ
+      TYPE(ZMQ_REQ);
+    #endif
+
+    #ifdef ZMQ_REP
+      TYPE(ZMQ_REP);
+    #endif
+
+    #ifdef ZMQ_DEALER
+      TYPE(ZMQ_DEALER);
+    #endif
+
+    #ifdef ZMQ_ROUTER
+      TYPE(ZMQ_ROUTER);
+    #endif
+
+    #ifdef ZMQ_PUB
+      TYPE(ZMQ_PUB);
+    #endif
+
+    #ifdef ZMQ_SUB
+      TYPE(ZMQ_SUB);
+    #endif
+
+    #ifdef ZMQ_PUSH
+      TYPE(ZMQ_PUSH);
+    #endif
+
+    #ifdef ZMQ_PULL
+      TYPE(ZMQ_PULL);
+    #endif
+
+    #ifdef ZMQ_PAIR
+      TYPE(ZMQ_PAIR);
+    #endif
+
+    // Socket types since ZMQ 3.0:
+    // http://api.zeromq.org/3-0:zmq-socket
+
+    #ifdef ZMQ_XREQ
+      TYPE(ZMQ_XREQ);
+    #endif
+
+    #ifdef ZMQ_XREP
+      TYPE(ZMQ_XREP);
+    #endif
+
+    #ifdef ZMQ_XPUB
+      TYPE(ZMQ_XPUB);
+    #endif
+
+    #ifdef ZMQ_XSUB
+      TYPE(ZMQ_XSUB);
+    #endif
+
+    // Socket types since ZMQ 4.0:
+    // http://api.zeromq.org/4-0:zmq-socket
+
+    #ifdef ZMQ_STREAM
+      TYPE(ZMQ_STREAM);
+    #endif
+
+
+    // Context options
+
+    // Context options since ZMQ 3.2:
+    // http://api.zeromq.org/3-2:zmq-ctx-set
+
+    #ifdef ZMQ_IO_THREADS
+      CTX_OPT(ZMQ_IO_THREADS);
+    #endif
+
+    #ifdef ZMQ_MAX_SOCKETS
+      CTX_OPT(ZMQ_MAX_SOCKETS);
+    #endif
+
+    // Context options since ZMQ 4.0:
+    // http://api.zeromq.org/4-0:zmq-ctx-set
+
+    #ifdef ZMQ_THREAD_SCHED_POLICY
+      CTX_OPT(ZMQ_THREAD_SCHED_POLICY);
+    #endif
+
+    #ifdef ZMQ_THREAD_PRIORITY
+      CTX_OPT(ZMQ_THREAD_PRIORITY);
+    #endif
+
+    #ifdef ZMQ_IPV6
+      CTX_OPT(ZMQ_IPV6);
+    #endif
+
+
+    // Socket options since ZMQ 2.2:
+    // http://api.zeromq.org/2-2:zmq-setsockopt
+    // http://api.zeromq.org/2-2:zmq-getsockopt
+
+    #ifdef ZMQ_TYPE
+      OPT(int, ZMQ_TYPE);
+    #endif
+
+    #ifdef ZMQ_RCVMORE
+      #if ZMQ_VERSION_MAJOR <= 2
+        OPT(int64, ZMQ_RCVMORE);
+      #else
+        OPT(int, ZMQ_RCVMORE);
+      #endif
+    #endif
+
+    #ifdef ZMQ_HWM
+      OPT(uint64, ZMQ_HWM);
+    #endif
+
+    #ifdef ZMQ_SWAP
+      OPT(int64, ZMQ_SWAP);
+    #endif
+
+    #ifdef ZMQ_AFFINITY
+      OPT(uint64, ZMQ_AFFINITY);
+    #endif
+
+    #ifdef ZMQ_IDENTITY
+      OPT(binary, ZMQ_IDENTITY);
+    #endif
+
+    #ifdef ZMQ_SUBSCRIBE
+      OPT(binary, ZMQ_SUBSCRIBE);
+    #endif
+
+    #ifdef ZMQ_UNSUBSCRIBE
+      OPT(binary, ZMQ_UNSUBSCRIBE);
+    #endif
+
+    #ifdef ZMQ_RCVTIMEO
+      OPT(int, ZMQ_RCVTIMEO);
+    #endif
+
+    #ifdef ZMQ_SNDTIMEO
+      OPT(int, ZMQ_SNDTIMEO);
+    #endif
+
+    #ifdef ZMQ_RATE
+      #if ZMQ_VERSION_MAJOR <= 2
+        OPT(int64, ZMQ_RATE);
+      #else
+        OPT(int, ZMQ_RATE);
+      #endif
+    #endif
+
+    #ifdef ZMQ_RECOVERY_IVL
+      #if ZMQ_VERSION_MAJOR <= 2
+        OPT(int64, ZMQ_RECOVERY_IVL);
+      #else
+        OPT(int, ZMQ_RECOVERY_IVL);
+      #endif
+    #endif
+
+    #ifdef ZMQ_RECOVERY_IVL_MSEC
+      OPT(int64, ZMQ_RECOVERY_IVL_MSEC);
+    #endif
+
+    #ifdef ZMQ_MCAST_LOOP
+      OPT(int64, ZMQ_MCAST_LOOP);
+    #endif
+
+    #ifdef ZMQ_SNDBUF
+      #if ZMQ_VERSION_MAJOR <= 2
+        OPT(uint64, ZMQ_SNDBUF);
+      #else
+        OPT(int, ZMQ_SNDBUF);
+      #endif
+    #endif
+
+    #ifdef ZMQ_RCVBUF
+      #if ZMQ_VERSION_MAJOR <= 2
+        OPT(uint64, ZMQ_RCVBUF);
+      #else
+        OPT(int, ZMQ_RCVBUF);
+      #endif
+    #endif
+
+    #ifdef ZMQ_LINGER
+      OPT(int, ZMQ_LINGER);
+    #endif
+
+    #ifdef ZMQ_RECONNECT_IVL
+      OPT(int, ZMQ_RECONNECT_IVL);
+    #endif
+
+    #ifdef ZMQ_RECONNECT_IVL_MAX
+      OPT(int, ZMQ_RECONNECT_IVL_MAX);
+    #endif
+
+    #ifdef ZMQ_BACKLOG
+      OPT(int, ZMQ_BACKLOG);
+    #endif
+
+    #ifdef ZMQ_FD
+      OPT(int, ZMQ_FD);
+    #endif
+
+    #ifdef ZMQ_EVENTS
+      #if ZMQ_VERSION_MAJOR <= 2
+        OPT(int, ZMQ_EVENTS);
+      #else
+        OPT(uint32, ZMQ_EVENTS);
+      #endif
+    #endif
+
+    // Socket options since ZMQ 3.0:
+    // http://api.zeromq.org/3-0:zmq-setsockopt
+    // http://api.zeromq.org/3-0:zmq-getsockopt
+
+    #ifdef ZMQ_RCVLABEL
+      OPT(int, ZMQ_RCVLABEL);
+    #endif
+
+    // Socket options since ZMQ 3.2:
+    // http://api.zeromq.org/3-2:zmq-setsockopt
+    // http://api.zeromq.org/3-2:zmq-getsockopt
+
+    #ifdef ZMQ_SNDHWM
+      OPT(int, ZMQ_SNDHWM);
+    #endif
+
+    #ifdef ZMQ_RCVHWM
+      OPT(int, ZMQ_RCVHWM);
+    #endif
+
+    #ifdef ZMQ_MAXMSGSIZE
+      OPT(int64, ZMQ_MAXMSGSIZE);
+    #endif
+
+    #ifdef ZMQ_MULTICAST_HOPS
+      OPT(int, ZMQ_MULTICAST_HOPS);
+    #endif
+
+    #ifdef ZMQ_IPV4ONLY
+      OPT(int, ZMQ_IPV4ONLY);
+    #endif
+
+    #ifdef ZMQ_DELAY_ATTACH_ON_CONNECT
+      OPT(int, ZMQ_DELAY_ATTACH_ON_CONNECT);
+    #endif
+
+    #ifdef ZMQ_LAST_ENDPOINT
+      OPT(binary, ZMQ_LAST_ENDPOINT);
+    #endif
+
+    #ifdef ZMQ_ROUTER_MANDATORY
+      OPT(int, ZMQ_ROUTER_MANDATORY);
+    #endif
+
+    #ifdef ZMQ_XPUB_VERBOSE
+      OPT(int, ZMQ_XPUB_VERBOSE);
+    #endif
+
+    #ifdef ZMQ_TCP_KEEPALIVE
+      OPT(int, ZMQ_TCP_KEEPALIVE);
+    #endif
+
+    #ifdef ZMQ_TCP_KEEPALIVE_IDLE
+      OPT(int, ZMQ_TCP_KEEPALIVE_IDLE);
+    #endif
+
+    #ifdef ZMQ_TCP_KEEPALIVE_CNT
+      OPT(int, ZMQ_TCP_KEEPALIVE_CNT);
+    #endif
+
+    #ifdef ZMQ_TCP_KEEPALIVE_INTVL
+      OPT(int, ZMQ_TCP_KEEPALIVE_INTVL);
+    #endif
+
+    #ifdef ZMQ_TCP_ACCEPT_FILTER
+      OPT(binary, ZMQ_TCP_ACCEPT_FILTER);
+    #endif
+
+    // Socket options since ZMQ 4.0:
+    // http://api.zeromq.org/4-0:zmq-setsockopt
+    // http://api.zeromq.org/4-0:zmq-getsockopt
+
+    #ifdef ZMQ_IPV6
+      OPT(int, ZMQ_IPV6);
+    #endif
+
+    #ifdef ZMQ_IMMEDIATE
+      OPT(int, ZMQ_IMMEDIATE);
+    #endif
+
+    #ifdef ZMQ_MECHANISM
+      OPT(int, ZMQ_MECHANISM);
+    #endif
+
+    #ifdef ZMQ_ROUTER_RAW
+      OPT(int, ZMQ_ROUTER_RAW);
+    #endif
+
+    #ifdef ZMQ_PROBE_ROUTER
+      OPT(int, ZMQ_PROBE_ROUTER);
+    #endif
+
+    #ifdef ZMQ_REQ_CORRELATE
+      OPT(int, ZMQ_REQ_CORRELATE);
+    #endif
+
+    #ifdef ZMQ_REQ_RELAXED
+      OPT(int, ZMQ_REQ_RELAXED);
+    #endif
+
+    #ifdef ZMQ_PLAIN_SERVER
+      OPT(int, ZMQ_PLAIN_SERVER);
+    #endif
+
+    #ifdef ZMQ_PLAIN_USERNAME
+      OPT(binary, ZMQ_PLAIN_USERNAME);
+    #endif
+
+    #ifdef ZMQ_PLAIN_PASSWORD
+      OPT(binary, ZMQ_PLAIN_PASSWORD);
+    #endif
+
+    #ifdef ZMQ_CURVE_SERVER
+      OPT(int, ZMQ_CURVE_SERVER);
+    #endif
+
+    #ifdef ZMQ_CURVE_PUBLICKEY
+      OPT(binary, ZMQ_CURVE_PUBLICKEY);
+    #endif
+
+    #ifdef ZMQ_CURVE_SECRETKEY
+      OPT(binary, ZMQ_CURVE_SECRETKEY);
+    #endif
+
+    #ifdef ZMQ_CURVE_SERVERKEY
+      OPT(binary, ZMQ_CURVE_SERVERKEY);
+    #endif
+
+    #ifdef ZMQ_ZAP_DOMAIN
+      OPT(binary, ZMQ_ZAP_DOMAIN);
+    #endif
+
+    #ifdef ZMQ_CONFLATE
+      OPT(int, ZMQ_CONFLATE);
+    #endif
+
+    // Socket options since ZMQ 4.1:
+    // http://api.zeromq.org/4-1:zmq-setsockopt
+    // http://api.zeromq.org/4-1:zmq-getsockopt
+
+    #ifdef ZMQ_CONNECT_RID
+      OPT(binary, ZMQ_CONNECT_RID);
+    #endif
+
+    #ifdef ZMQ_GSSAPI_PLAINTEXT
+      OPT(int, ZMQ_GSSAPI_PLAINTEXT);
+    #endif
+
+    #ifdef ZMQ_GSSAPI_PRINCIPAL
+      OPT(binary, ZMQ_GSSAPI_PRINCIPAL);
+    #endif
+
+    #ifdef ZMQ_GSSAPI_SERVER
+      OPT(int, ZMQ_GSSAPI_SERVER);
+    #endif
+
+    #ifdef ZMQ_GSSAPI_SERVICE_PRINCIPAL
+      OPT(binary, ZMQ_GSSAPI_SERVICE_PRINCIPAL);
+    #endif
+
+    #ifdef ZMQ_HANDSHAKE_IVL
+      OPT(int, ZMQ_HANDSHAKE_IVL);
+    #endif
+
+    #ifdef ZMQ_ROUTER_HANDOVER
+      OPT(int, ZMQ_ROUTER_HANDOVER);
+    #endif
+
+    #ifdef ZMQ_TOS
+      OPT(int, ZMQ_TOS);
+    #endif
+
+    // TODO: ZMQ_IPC_FILTER_GID
+    // TODO: ZMQ_IPC_FILTER_PID
+    // TODO: ZMQ_IPC_FILTER_UID
+
+    // Expose properties and methods
+
+    Nan::Set(target, Nan::New("sendFlags").ToLocalChecked(), sendFlags);
+    Nan::Set(target, Nan::New("types").ToLocalChecked(), types);
+    Nan::Set(target, Nan::New("options").ToLocalChecked(), options);
+    Nan::Set(target, Nan::New("ctxOptions").ToLocalChecked(), ctxOptions);
 
     Nan::SetMethod(target, "zmqVersion", ZmqVersion);
-    #if ZMQ_VERSION_MAJOR >= 4
+#if ZMQ_VERSION_MAJOR >= 4
     Nan::SetMethod(target, "zmqCurveKeypair", ZmqCurveKeypair);
-    #endif
+#endif
 
     Context::Initialize(target);
     Socket::Initialize(target);

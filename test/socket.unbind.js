@@ -2,9 +2,9 @@ var zmq = require('..')
   , should = require('should')
   , semver = require('semver');
 
-describe('socket.unbind', function(){
+describe('socket.unbind', function () {
 
-  it('should be able to unbind', function(done){
+  it('should be able to unbind', function (done) {
     if (!zmq.ZMQ_CAN_UNBIND) {
       done();
       return;
@@ -25,7 +25,7 @@ describe('socket.unbind', function(){
       });
     });
 
-    a.on('unbind', function(addr) {
+    a.on('unbind', function (addr) {
       if (addr === 'tcp://127.0.0.1:5420') {
         b.send('Error from b.');
         c.send('Messsage from c.');
@@ -35,7 +35,7 @@ describe('socket.unbind', function(){
       }
     });
 
-    a.on('message', function(msg) {
+    a.on('message', function (msg) {
       message_count++;
       if (msg.toString() === 'Hello from b.') {
         a.unbind('tcp://127.0.0.1:5420', function (error) {

@@ -1,15 +1,15 @@
-var zmq = require('..')
-  , should = require('should')
-  , semver = require('semver');
+var zmq = require('..');
+var should = require('should');
+var semver = require('semver');
 
-var addr = 'tcp://127.0.0.1'
-  , frontendAddr = addr+':5504'
-  , backendAddr = addr+':5505'
-  , captureAddr = addr+':5506';
+var addr = 'tcp://127.0.0.1';
+var frontendAddr = addr + ':5504';
+var backendAddr = addr + ':5505';
+var captureAddr = addr + ':5506';
 
-describe('proxy.router-dealer', function() {
+describe('proxy.router-dealer', function () {
 
-  it('should proxy req-rep connected over router-dealer', function (done){
+  it('should proxy req-rep connected over router-dealer', function (done) {
 
     var frontend = zmq.socket('router');
     var backend = zmq.socket('dealer');
@@ -23,7 +23,7 @@ describe('proxy.router-dealer', function() {
     req.connect(frontendAddr);
     rep.connect(backendAddr);
 
-    req.on('message',function(msg){
+    req.on('message', function (msg) {
       msg.should.be.an.instanceof(Buffer);
       msg.toString().should.equal('foo bar');
       frontend.close();
@@ -34,18 +34,18 @@ describe('proxy.router-dealer', function() {
     });
 
     rep.on('message', function (msg) {
-      rep.send(msg+' bar');
+      rep.send(msg + ' bar');
     });
 
-    setTimeout(function() {
+    setTimeout(function () {
       req.send('foo');
-    }, 100.0);
+    }, 100);
 
     zmq.proxy(frontend,backend);
 
   });
 
-  it('should proxy rep-req connections with capture', function (done){
+  it('should proxy rep-req connections with capture', function (done) {
 
     var frontend = zmq.socket('router');
     var backend = zmq.socket('dealer');
@@ -65,7 +65,7 @@ describe('proxy.router-dealer', function() {
     capSub.connect(captureAddr);
     capSub.subscribe('');
 
-    req.on('message',function (msg) {
+    req.on('message', function (msg) {
       req.close();
       rep.close();
     });
@@ -74,21 +74,21 @@ describe('proxy.router-dealer', function() {
       rep.send(msg+' bar');
     });
 
-    capSub.on('message',function (msg) {
+    capSub.on('message', function (msg) {
       backend.close();
       frontend.close();
       capture.close();
       capSub.close();
-      setTimeout(function() {
+      setTimeout(function () {
         msg.should.be.an.instanceof(Buffer);
         msg.toString().should.equal('foo bar');
         done();
-      },100.0)
+      }, 100);
     });
 
-    setTimeout(function() {
+    setTimeout(function () {
       req.send('foo');
-    },200.0)
+    }, 200);
 
     zmq.proxy(frontend,backend,capture);
 

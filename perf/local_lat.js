@@ -1,7 +1,7 @@
-var zmq = require('../');
+var zmq = require('..');
 var assert = require('assert');
 
-if (process.argv.length != 5) {
+if (process.argv.length !== 5) {
   console.log('usage: local_lat <bind-to> <message-size> <roundtrip-count>');
   process.exit(1);
 }
@@ -17,9 +17,9 @@ rep.bindSync(bind_to);
 rep.on('message', function (data) {
   assert.equal(data.length, message_size, 'message-size did not match');
   rep.send(data);
-  if (++counter === roundtrip_count){ 
-    setTimeout( function(){ 
+  if (++counter === roundtrip_count) {
+    setTimeout(function () {
       rep.close();
-    }, 1000); 
+    }, 1000);
   }
-})
+});
