@@ -91,7 +91,7 @@ describe('socket.router', function(){
     var router = zmq.socket('router');
     var dealer = zmq.socket('dealer');
     var addr = 'tcp://127.0.0.1:12345';
-    var expected = 100;
+    var expected = 1000;
     var counted = 0;
 
     router.bindSync(addr);
@@ -104,8 +104,12 @@ describe('socket.router', function(){
       router.send(msg);
     });
 
-    dealer.on('message', function (msg) {
-      msg.toString().should.equal('Hello');
+    dealer.on('message', function (part1, part2, part3, part4, part5) {
+      String(part1).should.equal('Hello');
+      String(part2).should.equal('world');
+      String(part3).should.equal('part3');
+      String(part4).should.equal('part4');
+      String(part5).should.equal('undefined');
 
       counted += 1;
       if (counted === expected) {
@@ -118,7 +122,7 @@ describe('socket.router', function(){
     dealer.connect(addr);
 
     for (var i = 0; i < expected; i += 1) {
-      dealer.send(['Hello']);
+      dealer.send(['Hello', 'world', 'part3', 'part4']);
     }
   });
 });
