@@ -1250,6 +1250,7 @@ namespace zmq {
     int events;
     size_t events_size = sizeof(events);
     bool checkPollOut = true;
+    bool readsReady = false;
 
     int rc;
 
@@ -1270,7 +1271,7 @@ namespace zmq {
         }
 
         if ((events & ZMQ_POLLIN) != 0) {
-          socket->NotifyReadReady();
+          readsReady = true;
         }
 
         if ((events & ZMQ_POLLOUT) == 0)
@@ -1312,15 +1313,17 @@ namespace zmq {
       }
     }
 
-    if (checkPollOut) {
-      while (zmq_getsockopt(socket->socket_, ZMQ_EVENTS, &events, &events_size)) {
-        if (zmq_errno() != EINTR)
-          return Nan::ThrowError(ErrorMessage());
-      }
+    while (zmq_getsockopt(socket->socket_, ZMQ_EVENTS, &events, &events_size)) {
+      if (zmq_errno() != EINTR)
+        return Nan::ThrowError(ErrorMessage());
+    }
 
-      if ((events & ZMQ_POLLIN) != 0) {
-        socket->NotifyReadReady();
-      }
+    if ((events & ZMQ_POLLIN) != 0) {
+      readsReady = true;
+    }
+
+    if (readsReady) {
+      socket->NotifyReadReady();
     }
 
     return info.GetReturnValue().Set(true);
