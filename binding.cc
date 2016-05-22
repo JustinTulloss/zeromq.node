@@ -103,7 +103,10 @@ namespace zmq {
     public:
       static NAN_MODULE_INIT(Initialize);
       virtual ~Socket();
+      void NotifyReadReady();
+      void NotifySendReady();
       void CallbackIfReady();
+
 #if ZMQ_CAN_MONITOR
       void MonitorEvent(uint16_t event_id, int32_t event_value, char *endpoint);
       void MonitorError(const char *error_msg);
@@ -181,7 +184,9 @@ namespace zmq {
       static void UV_PollCallback(uv_poll_t* handle, int status, int events);
   };
 
-  Nan::Persistent<String> callback_symbol;
+  Nan::Persistent<String> send_callback_symbol;
+  Nan::Persistent<String> read_callback_symbol;
+
 #if ZMQ_CAN_MONITOR
   Nan::Persistent<String> monitor_symbol;
   Nan::Persistent<String> monitor_error;
@@ -339,7 +344,8 @@ namespace zmq {
 
     Nan::Set(target, Nan::New("SocketBinding").ToLocalChecked(), Nan::GetFunction(t).ToLocalChecked());
 
-    callback_symbol.Reset(Nan::New("onReady").ToLocalChecked());
+    read_callback_symbol.Reset(Nan::New("onReadReady").ToLocalChecked());
+    send_callback_symbol.Reset(Nan::New("onSendReady").ToLocalChecked());
   }
 
   Socket::~Socket() {
@@ -387,21 +393,31 @@ namespace zmq {
   }
 
   void
+  Socket::NotifyReadReady() {
+    Nan::HandleScope scope;
+    Local<Value> callback_v = Nan::Get(this->handle(), Nan::New(read_callback_symbol)).ToLocalChecked();
+
+    Nan::MakeCallback(this->handle(), callback_v.As<Function>(), 0, NULL);
+  }
+
+  void
+  Socket::NotifySendReady() {
+    Nan::HandleScope scope;
+    Local<Value> callback_v = Nan::Get(this->handle(), Nan::New(send_callback_symbol)).ToLocalChecked();
+
+    Nan::MakeCallback(this->handle(), callback_v.As<Function>(), 0, NULL);
+  }
+
+  void
   Socket::CallbackIfReady() {
     short events = PollForEvents();
-    if (events != 0) {
-      Nan::HandleScope scope;
 
-      Local<Value> callback_v = Nan::Get(this->handle(), Nan::New(callback_symbol)).ToLocalChecked();
-      if (!callback_v->IsFunction()) {
-        return;
-      }
+    if ((events & ZMQ_POLLIN) != 0) {
+      NotifyReadReady();
+    }
 
-      Local<Value> argv[2];
-      argv[0] = Nan::New<Boolean>((events & ZMQ_POLLIN) != 0);
-      argv[1] = Nan::New<Boolean>((events & ZMQ_POLLOUT) != 0);
-
-      Nan::MakeCallback(this->handle(), callback_v.As<Function>(), 2, argv);
+    if ((events & ZMQ_POLLOUT) != 0) {
+      NotifySendReady();
     }
   }
 
@@ -1234,6 +1250,7 @@ namespace zmq {
     int events;
     size_t events_size = sizeof(events);
     bool checkPollOut = true;
+    bool readsReady = false;
 
     int rc;
 
@@ -1251,6 +1268,10 @@ namespace zmq {
         while (zmq_getsockopt(socket->socket_, ZMQ_EVENTS, &events, &events_size)) {
           if (zmq_errno() != EINTR)
             return Nan::ThrowError(ErrorMessage());
+        }
+
+        if ((events & ZMQ_POLLIN) != 0) {
+          readsReady = true;
         }
 
         if ((events & ZMQ_POLLOUT) == 0)
@@ -1292,11 +1313,17 @@ namespace zmq {
       }
     }
 
-    if (checkPollOut) {
-      while (zmq_getsockopt(socket->socket_, ZMQ_EVENTS, &events, &events_size)) {
-        if (zmq_errno() != EINTR)
-          return Nan::ThrowError(ErrorMessage());
-      }
+    while (zmq_getsockopt(socket->socket_, ZMQ_EVENTS, &events, &events_size)) {
+      if (zmq_errno() != EINTR)
+        return Nan::ThrowError(ErrorMessage());
+    }
+
+    if ((events & ZMQ_POLLIN) != 0) {
+      readsReady = true;
+    }
+
+    if (readsReady) {
+      socket->NotifyReadReady();
     }
 
     return info.GetReturnValue().Set(true);
