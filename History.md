@@ -1,3 +1,9 @@
+2.15.2 / 2016-5-22
+==================
+
+  * 2.15.0 introduced a bug where some messages would not be received. This release
+    should fix that [ronkorving]
+
 2.15.1 / 2016-5-8
 =================
 
