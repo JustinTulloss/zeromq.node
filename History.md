@@ -1,3 +1,9 @@
+2.15.3 / 2016-6-3
+=================
+
+  * 2.15.0 introduced a bug where request sockets could no longer batch up requests.
+    This release should fix that [ronkorving, jaleigh]
+
 2.15.2 / 2016-5-22
 ==================
 
