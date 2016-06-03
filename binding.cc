@@ -1274,8 +1274,12 @@ namespace zmq {
           readsReady = true;
         }
 
-        if ((events & ZMQ_POLLOUT) == 0)
+        if ((events & ZMQ_POLLOUT) == 0) {
+          if (readsReady) {
+            socket->NotifyReadReady();
+          }
           return info.GetReturnValue().Set(false);
+        }
       }
 
       Local<Object> buf = batch->Get(i).As<Object>();
