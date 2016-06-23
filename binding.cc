@@ -26,7 +26,6 @@
 #include <node_version.h>
 #include <node_buffer.h>
 #include <zmq.h>
-#include <zmq_utils.h>
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
