@@ -470,6 +470,9 @@ namespace zmq {
     Socket* s = static_cast<Socket*>(handle->data);
     zmq_msg_t msg1; /* 3.x has 1 message per event */
 
+    if (s->state_ == STATE_CLOSED)
+      return;
+
     zmq_pollitem_t item;
     item.socket = s->monitor_socket_;
     item.events = ZMQ_POLLIN;
