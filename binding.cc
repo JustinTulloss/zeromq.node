@@ -1245,7 +1245,7 @@ namespace zmq {
   NAN_METHOD(Socket::Sendv) {
     Socket* socket = GetSocket(info);
     if (socket->state_ != STATE_READY)
-      return info.GetReturnValue().Set(false);
+      return info.GetReturnValue().Set(0);
 
     int events;
     size_t events_size = sizeof(events);
@@ -1258,7 +1258,7 @@ namespace zmq {
     size_t len = batch->Length();
 
     if (len == 0)
-      return info.GetReturnValue().Set(true);
+      return info.GetReturnValue().Set(1);
 
     if (len % 2 != 0)
       return Nan::ThrowTypeError("Batch length must be even!");
@@ -1278,7 +1278,7 @@ namespace zmq {
           if (readsReady) {
             socket->NotifyReadReady();
           }
-          return info.GetReturnValue().Set(false);
+          return info.GetReturnValue().Set(0);
         }
       }
 
@@ -1330,7 +1330,7 @@ namespace zmq {
       socket->NotifyReadReady();
     }
 
-    return info.GetReturnValue().Set(true);
+    return info.GetReturnValue().Set(1);
   }
 
   // WARNING: the buffer passed here will be kept alive
