@@ -19,7 +19,7 @@ describe('socket.monitor', function() {
       rep.send('world');
     });
 
-    var testedEvents = ['listen', 'accept', 'disconnect', 'close'];
+    var testedEvents = ['listen', 'accept', 'disconnect'];
     testedEvents.forEach(function(e) {
       rep.on(e, function(event_value, event_endpoint_addr) {
         // Test the endpoint addr arg
