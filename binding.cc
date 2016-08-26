@@ -1487,7 +1487,6 @@ namespace zmq {
     opts_int.insert(35); // ZMQ_TCP_KEEPALIVE_CNT
     opts_int.insert(36); // ZMQ_TCP_KEEPALIVE_IDLE
     opts_int.insert(37); // ZMQ_TCP_KEEPALIVE_INTVL
-    opts_int.insert(39); // ZMQ_DELAY_ATTACH_ON_CONNECT
     opts_int.insert(40); // ZMQ_XPUB_VERBOSE
     opts_int.insert(41); // ZMQ_ROUTER_RAW
     opts_int.insert(42); // ZMQ_IPV6
@@ -1534,6 +1533,9 @@ namespace zmq {
     opts_binary.insert(49); // ZMQ_CURVE_SECRETKEY
     opts_binary.insert(50); // ZMQ_CURVE_SERVERKEY
     opts_binary.insert(55); // ZMQ_ZAP_DOMAIN
+    opts_int.insert(39); // ZMQ_IMMEDIATE
+    #else
+    opts_int.insert(39); // ZMQ_DELAY_ATTACH_ON_CONNECT
     #endif
 
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
