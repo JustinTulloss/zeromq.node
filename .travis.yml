@@ -1,5 +1,9 @@
 sudo: false
 
+os:
+ - linux
+ - osx
+
 addons:
   apt:
     sources:
@@ -36,7 +40,7 @@ before_install:
  - export LD_LIBRARY_PATH=$LDHACK/lib
  - export PKG_CONFIG_PATH=$LDHACK/lib/pkgconfig
  - echo $PKG_CONFIG_PATH
- - wget http://download.zeromq.org/zeromq-$ZMQ.tar.gz
+ - wget --no-check-certificate https://archive.org/download/zeromq_$ZMQ/zeromq-$ZMQ.tar.gz
  - tar xzvf zeromq-$ZMQ.tar.gz
  - '[ -z "$SODIUM" ] || wget https://download.libsodium.org/libsodium/releases/libsodium-$SODIUM.tar.gz'
  - '[ -z "$SODIUM" ] || tar xzvf libsodium-$SODIUM.tar.gz'
