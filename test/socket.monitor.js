@@ -57,7 +57,7 @@ describe('socket.monitor', function() {
 
     // We will try to connect to a non-existing server, zmq will issue events: "connect_retry", "close", "connect_retry"
     // The connect_retry will be issued immediately after the close event, so we will measure the time between the close
-    // event and connect_retry event, those should >= 10 (this will tell us that we are reading 1 event at a time from
+    // event and connect_retry event, those should >= 9 (this will tell us that we are reading 1 event at a time from
     // the monitor socket).
 
     var closeTime;
@@ -69,7 +69,7 @@ describe('socket.monitor', function() {
       var diff = Date.now() - closeTime;
       req.unmonitor();
       req.close();
-      diff.should.be.within(10, 20);
+      diff.should.be.within(9, 20);
       done();
     });
 
