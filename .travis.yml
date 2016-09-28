@@ -17,37 +17,29 @@ addons:
 language: node_js
 
 env:
- - ZMQ="2.2.0"
- - ZMQ="3.2.5"
- - ZMQ="4.0.5" SODIUM="1.0.5"
- - ZMQ="4.1.4" SODIUM="1.0.5"
+  global:
+    - CXX=g++-4.9
+    - CC=gcc-4.9
+    - LDHACK=`pwd`/ldlocal
+    - LDFLAGS=-L$LDHACK/lib
+    - CFLAGS=-I$LDHACK/include
+    - LD_RUN_PATH=$LDHACK/lib
+    - LD_LIBRARY_PATH=$LDHACK/lib
+    - PKG_CONFIG_PATH=$LDHACK/lib/pkgconfig
+  matrix:
+    - ZMQ="2.2.0" ZMQ_REPO=zeromq2-x
+    - ZMQ="3.2.5" ZMQ_REPO=zeromq3-x
+    - ZMQ="4.0.8" ZMQ_REPO=zeromq4-x
+    - ZMQ="4.1.5" ZMQ_REPO=zeromq4-1
 
 before_install:
- - export CXX=g++-4.9
- - export CC=gcc-4.9
  - mkdir ldlocal
- - export LDHACK=`pwd`/ldlocal
- - export LDFLAGS=-L$LDHACK/lib
- - export CFLAGS=-I$LDHACK/include
- - export LD_RUN_PATH=$LDHACK/lib
- - export LD_LIBRARY_PATH=$LDHACK/lib
- - export PKG_CONFIG_PATH=$LDHACK/lib/pkgconfig
- - echo $PKG_CONFIG_PATH
- - wget --no-check-certificate https://archive.org/download/zeromq_$ZMQ/zeromq-$ZMQ.tar.gz
+ - wget https://github.com/zeromq/$ZMQ_REPO/releases/download/v$ZMQ/zeromq-$ZMQ.tar.gz
  - tar xzvf zeromq-$ZMQ.tar.gz
- - '[ -z "$SODIUM" ] || wget https://download.libsodium.org/libsodium/releases/libsodium-$SODIUM.tar.gz'
- - '[ -z "$SODIUM" ] || tar xzvf libsodium-$SODIUM.tar.gz'
- - '[ -z "$SODIUM" ] || cd libsodium-$SODIUM'
- - '[ -z "$SODIUM" ] || ./autogen.sh'
- - '[ -z "$SODIUM" ] || ./configure --prefix=$LDHACK'
- - '[ -z "$SODIUM" ] || make'
- - '[ -z "$SODIUM" ] || make install'
- - '[ -z "$SODIUM" ] || cd ..'
- - '[ -z "$SODIUM" ] || export LIBS=-lsodium && export sodium_CFLAGS=$CFLAGS && export sodium_LIBS=$LDFLAGS'
  - cd zeromq-$ZMQ
  - ./autogen.sh
- - if [[ -z "$SODIUM" ]]; then ./configure --prefix=$LDHACK; else ./configure --prefix=$LDHACK --with-libsodium=$LDHACK; fi
- - make
+ - ./configure --prefix=$LDHACK
+ - make -j
  - make install
  - cd ..
 
