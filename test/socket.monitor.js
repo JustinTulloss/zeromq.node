@@ -10,8 +10,7 @@ describe('socket.monitor', function() {
 
   it('should be able to monitor the socket', function(done) {
     var rep = zmq.socket('rep')
-      , req = zmq.socket('req')
-      , events = [];
+      , req = zmq.socket('req');
 
     rep.on('message', function(msg){
       msg.should.be.an.instanceof(Buffer);
@@ -25,14 +24,10 @@ describe('socket.monitor', function() {
         // Test the endpoint addr arg
         event_endpoint_addr.toString().should.equal('tcp://127.0.0.1:5423');
 
-        // If this is a disconnect event we can now close the rep socket
-        if (e === 'disconnect') {
-          rep.close();
-        }
-
         testedEvents.pop();
         if (testedEvents.length === 0) {
           rep.unmonitor();
+          rep.close();
           done();
         }
       });
