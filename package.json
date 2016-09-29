@@ -8,13 +8,13 @@
     "url": "http://github.com/JustinTulloss/zeromq.node.git"
   },
   "dependencies": {
-    "nan": "~2.3.0",
-    "bindings": "~1.2.1"
+    "bindings": "~1.2.1",
+    "nan": "^2.4.0"
   },
   "devDependencies": {
-    "should": "2.1.x",
-    "semver": "~4.1.1",
-    "mocha": "~1.13.0"
+    "mocha": "^3.1.0",
+    "semver": "^5.3.0",
+    "should": "^11.1.0"
   },
   "engines": {
     "node": ">=0.8"
