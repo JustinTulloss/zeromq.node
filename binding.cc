@@ -1536,6 +1536,7 @@ namespace zmq {
     opts_int.insert(51); //ZMQ_PROBE_ROUTER
     opts_binary.insert(55); // ZMQ_ZAP_DOMAIN
     opts_int.insert(66); //ZMQ_HANDSHAKE_IVL
+    opts_int.insert(56); // ZMQ_ROUTER_HANDOVER
     #endif
 
     NODE_DEFINE_CONSTANT(target, ZMQ_CAN_DISCONNECT);
