@@ -48,6 +48,17 @@ describe('socket.monitor', function() {
         msg.toString().should.equal('world');
         req.close();
       });
+
+      // Test that bind errors pass an Error both to the callback
+      // and to the monitor event
+      var doubleRep = zmq.socket('rep');
+      doubleRep.monitor();
+      doubleRep.on('bind_error', function (errno, bindAddr, ex) {
+        (ex instanceof Error).should.equal(true);
+      });
+      doubleRep.bind('tcp://127.0.0.1:5423', function (error) {
+        (error instanceof Error).should.equal(true);
+      });
     });
   });
 
