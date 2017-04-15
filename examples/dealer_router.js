@@ -15,7 +15,7 @@ if (cluster.isMaster) {
     console.log('worker ' + worker.pid + ' died');
   });
 
-  //dealer = client
+  //dealer = server
 
   var socket = zmq.socket('dealer');
 
@@ -38,7 +38,7 @@ if (cluster.isMaster) {
     });
   });
 } else {
-  //router = server
+  //router = client
 
   var socket = zmq.socket('router');
 
