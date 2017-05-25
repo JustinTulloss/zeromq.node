@@ -26,7 +26,6 @@
 #include <node_version.h>
 #include <node_buffer.h>
 #include <zmq.h>
-#include <zmq_utils.h>
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -69,6 +68,7 @@ enum {
   , STATE_CLOSED
 };
 
+namespace nsolid {
 namespace zmq {
 
   std::set<int> opts_int;
@@ -252,7 +252,7 @@ namespace zmq {
 
   Context::Context(int io_threads) : Nan::ObjectWrap() {
     context_ = zmq_init(io_threads);
-    if (!context_) throw std::runtime_error(ErrorMessage());
+    if (!context_) Nan::ThrowError(ErrorMessage());
   }
 
   Context *
@@ -263,7 +263,7 @@ namespace zmq {
   void
   Context::Close() {
     if (context_ != NULL) {
-      if (zmq_term(context_) < 0) throw std::runtime_error(ErrorMessage());
+      if (zmq_term(context_) < 0) Nan::ThrowError(ErrorMessage());
       context_ = NULL;
     }
   }
@@ -384,7 +384,7 @@ namespace zmq {
         if (zmq_errno()==EINTR) {
           continue;
         }
-        throw std::runtime_error(ErrorMessage());
+        Nan::ThrowError(ErrorMessage());
       } else {
         break;
       }
@@ -574,7 +574,7 @@ namespace zmq {
     size_t len = sizeof(uv_os_sock_t);
 
     if (zmq_getsockopt(socket_, ZMQ_FD, &socket, &len)) {
-      throw std::runtime_error(ErrorMessage());
+      Nan::ThrowError(ErrorMessage());
     }
 
     #if ZMQ_CAN_MONITOR
@@ -1004,12 +1004,12 @@ namespace zmq {
         public:
           inline MessageReference() {
             if (zmq_msg_init(&msg_) < 0)
-              throw std::runtime_error(ErrorMessage());
+              Nan::ThrowError(ErrorMessage());
           }
 
           inline ~MessageReference() {
             if (zmq_msg_close(&msg_) < 0)
-              throw std::runtime_error(ErrorMessage());
+              Nan::ThrowError(ErrorMessage());
           }
 
           inline operator zmq_msg_t*() {
@@ -1077,7 +1077,7 @@ namespace zmq {
 
     // Close the monitor socket and stop timer
     if (zmq_close(this->monitor_socket_) < 0)
-      throw std::runtime_error(ErrorMessage());
+      Nan::ThrowError(ErrorMessage());
     uv_timer_stop(this->monitor_handle_);
     this->monitor_handle_ = NULL;
     this->monitor_socket_ = NULL;
@@ -1209,13 +1209,13 @@ namespace zmq {
         if (zmq_msg_init_data(&msg_, Buffer::Data(buf), Buffer::Length(buf),
             BufferReference::FreeCallback, bufref_) < 0) {
           delete bufref_;
-          throw std::runtime_error(ErrorMessage());
+          Nan::ThrowError(ErrorMessage());
         }
       };
 
       inline ~OutgoingMessage() {
         if (zmq_msg_close(&msg_) < 0)
-          throw std::runtime_error(ErrorMessage());
+          Nan::ThrowError(ErrorMessage());
       };
 
       inline operator zmq_msg_t*() {
@@ -1415,7 +1415,7 @@ namespace zmq {
   Socket::Close() {
     if (socket_) {
       if (zmq_close(socket_) < 0)
-        throw std::runtime_error(ErrorMessage());
+        Nan::ThrowError(ErrorMessage());
       socket_ = NULL;
       state_ = STATE_CLOSED;
       context_.Reset();
@@ -1593,6 +1593,7 @@ namespace zmq {
     Socket::Initialize(target);
   }
 } // namespace zmq
+} // namespace nsolid
 
 
 // module
@@ -1628,7 +1629,7 @@ extern "C" NAN_MODULE_INIT(init) {
     }
   }
 #endif
-  zmq::Initialize(target);
+  nsolid::zmq::Initialize(target);
 }
 
 NODE_MODULE(zmq, init)
