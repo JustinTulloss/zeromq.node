@@ -26,7 +26,11 @@
 #include <node_version.h>
 #include <node_buffer.h>
 #include <zmq.h>
+
+#if ZMQ_VERSION < ZMQ_MAKE_VERSION(4,2,0)
 #include <zmq_utils.h>
+#endif
+
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
