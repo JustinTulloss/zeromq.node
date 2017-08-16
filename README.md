@@ -2,6 +2,20 @@
 
 [ØMQ](http://www.zeromq.org/) bindings for node.js.
 
+## Project Status
+
+**This project has moved!**
+
+The same people (and more) who brought you `zmq` now bring you `zeromq`, under the
+official `zeromq` GitHub organization.
+
+* GitHub: https://github.com/zeromq/zeromq.js
+* NPM: https://www.npmjs.com/package/zeromq
+
+We suggest **all users migrate** to this fork. Issues and Pull Requests on *this*
+(JustinTulloss/zeromq.node) repository will no longer be handled by the core team.
+
+
 ## Installation
 
 ### on Windows:
