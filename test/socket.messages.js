@@ -20,9 +20,6 @@ describe('socket.messages', function(){
           msg.should.equal('string');
           break;
         case 1:
-          msg.should.equal('15.99');
-          break;
-        case 2:
           msg.should.equal('buffer');
           push.close();
           pull.close();
@@ -35,16 +32,21 @@ describe('socket.messages', function(){
       if (error) throw error;
       push.connect('inproc://stuff_ssm');
       push.send('string');
-      push.send(15.99);
       push.send(new Buffer('buffer'));
     });
   });
 
+  it('should not support messages other than string and Buffer', function(){
+    push.connect('inproc://stuff_ssm');
+    should.throws(function () {
+      push.send(15.99);
+    }, TypeError);
+  });
+
   it('should support multipart messages', function(done){
-    pull.on('message', function(msg1, msg2, msg3){
+    pull.on('message', function(msg1, msg2){
       msg1.toString().should.equal('string');
-      msg2.toString().should.equal('15.99');
-      msg3.toString().should.equal('buffer');
+      msg2.toString().should.equal('buffer');
       push.close();
       pull.close();
       done();
@@ -53,7 +55,7 @@ describe('socket.messages', function(){
     pull.bind('inproc://stuff_ssmm', function (error) {
       if (error) throw error;
       push.connect('inproc://stuff_ssmm');
-      push.send(['string', 15.99, new Buffer('buffer')]);
+      push.send(['string', new Buffer('buffer')]);
     });
   });
 
@@ -88,9 +90,6 @@ describe('socket.messages', function(){
           msg.should.equal('string');
           break;
         case 1:
-          msg.should.equal('15.99');
-          break;
-        case 2:
           msg.should.equal('buffer');
           push.close();
           pull.close();
@@ -110,7 +109,6 @@ describe('socket.messages', function(){
     push.bind('tcp://127.0.0.1:12345', function (error) {
       if (error) throw error;
       push.send('string');
-      push.send(15.99);
       push.send(new Buffer('buffer'));
       pull.connect('tcp://127.0.0.1:12345');
     });
