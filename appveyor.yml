@@ -2,23 +2,22 @@ environment:
   matrix:
     - nodejs_version: "0.10"
     - nodejs_version: "0.12"
-    - nodejs_version: "2"
+    - nodejs_version: "4"
+    - nodejs_version: "5"
+    - nodejs_version: "6"
 
-#platform:
-#  - x86
-#  - x64
+platform:
+ - x86
+ - x64
 
 install:
-  - ps: Install-Product node $env:nodejs_version #$env:platform
+  - ps: Install-Product node $env:nodejs_version $env:platform
+  - npm install -g npm@3
   - npm install
 
 test_script:
   - node --version
   - npm --version
-  - npm test
+  - appveyor-retry call npm test
 
 build: off
-
-matrix:
-  allow_failures:
-    - nodejs_version: "2"
