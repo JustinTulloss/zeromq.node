@@ -58,9 +58,10 @@ and therefore known to work.
 ```js
 // producer.js
 var zmq = require('zmq')
-  , sock = zmq.socket('push');
+  , sock = zmq.socket('push')
+  , endpont = 'tcp://127.0.0.1:3000';
 
-sock.bindSync('tcp://127.0.0.1:3000');
+sock.bindSync(endpoint);
 console.log('Producer bound to port 3000');
 
 setInterval(function(){
@@ -72,13 +73,18 @@ setInterval(function(){
 ```js
 // worker.js
 var zmq = require('zmq')
-  , sock = zmq.socket('pull');
+  , sock = zmq.socket('pull')
+  , endpont = 'tcp://127.0.0.1:3000';
 
-sock.connect('tcp://127.0.0.1:3000');
+sock.connect(endpoint);
 console.log('Worker connected to port 3000');
 
 sock.on('message', function(msg){
   console.log('work: %s', msg.toString());
+});
+
+process.on('SIGINT', function() {
+  sock.disconnect(endpoint);
 });
 ```
 
@@ -87,9 +93,10 @@ sock.on('message', function(msg){
 ```js
 // pubber.js
 var zmq = require('zmq')
-  , sock = zmq.socket('pub');
+  , sock = zmq.socket('pub')
+  , endpont = 'tcp://127.0.0.1:3000';
 
-sock.bindSync('tcp://127.0.0.1:3000');
+sock.bindSync(endpoint);
 console.log('Publisher bound to port 3000');
 
 setInterval(function(){
@@ -101,14 +108,19 @@ setInterval(function(){
 ```js
 // subber.js
 var zmq = require('zmq')
-  , sock = zmq.socket('sub');
+  , sock = zmq.socket('sub')
+  , endpont = 'tcp://127.0.0.1:3000';
 
-sock.connect('tcp://127.0.0.1:3000');
+sock.connect(endpoint);
 sock.subscribe('kitty cats');
 console.log('Subscriber connected to port 3000');
 
 sock.on('message', function(topic, message) {
   console.log('received a message related to:', topic, 'containing message:', message);
+});
+
+process.on('SIGINT', function() {
+  sock.disconnect(endpoint);
 });
 ```
 ## Monitoring
@@ -148,8 +160,9 @@ Stop the monitoring process
 
 ```js
 // Create a socket
-var zmq = require('zmq');
-socket = zmq.socket('req');
+var zmq = require('zmq')
+  , socket = zmq.socket('req')
+  , endpont = 'tcp://127.0.0.1:3000';
 
 // Register to monitoring events
 socket.on('connect', function(fd, ep) {console.log('connect, endpoint:', ep);});
@@ -172,13 +185,16 @@ socket.on('monitor_error', function(err) {
 // Call monitor, check for events every 500ms and get all available events.
 console.log('Start monitoring...');
 socket.monitor(500, 0);
-socket.connect('tcp://127.0.0.1:1234');
+socket.connect(endpoint);
 
 setTimeout(function() {
 	console.log('Stop the monitoring...');
 	socket.unmonitor();
 }, 20000);
 
+process.on('SIGINT', function() {
+  socket.disconnect(endpoint);
+});
 ```
 
 ## Detaching from the event loop
