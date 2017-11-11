@@ -70,6 +70,11 @@
             '<!(pkg-config libzmq --libs 2>/dev/null || echo "")',
           ],
         }],
+        ['OS=="android"', {
+          'libraries': ['-lzmq'],
+          'cflags': ['-fPIC'],
+          'cflags_cc': ['-fPIC'],
+        }],
       ]
     }
   ]
