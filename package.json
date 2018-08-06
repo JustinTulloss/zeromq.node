@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "bindings": "~1.2.1",
-    "nan": "^2.4.0"
+    "nan": "^2.10.0"
   },
   "devDependencies": {
     "mocha": "^3.1.0",
